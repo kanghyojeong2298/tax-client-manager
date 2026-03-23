@@ -38,7 +38,7 @@ body{font-family:'Paperlogy','Segoe UI','Malgun Gothic',sans-serif;background:#f
 .btn-secondary{background:#edf2f7;color:#4a5568}.btn-secondary:hover{background:#e2e8f0}
 .btn-sm{padding:5px 10px;font-size:10px}.btn-xs{padding:3px 6px;font-size:9px}
 .btn-export{background:#805ad5;color:#fff}.btn-export:hover{background:#6b46c1}
-.FG{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.FG{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .FGI{display:flex;flex-direction:column}
 .FGI label{font-size:10px;font-weight:600;color:#4a5568;margin-bottom:2px}
 .FGI input,.FGI select{padding:6px 9px;border:1px solid #d1d5db;border-radius:5px;font-size:11px}
@@ -123,6 +123,7 @@ tr:hover td{background:#f8fafc}
   <button class="tab-btn" data-tab="managers">담당자현황</button>
   <button class="tab-btn" data-tab="bonus">상여실적</button>
   <button class="tab-btn" data-tab="performance">성과</button>
+  <button class="tab-btn" data-tab="admin">관리자</button>
 </nav>
 
 <!-- ===== 업체관리 ===== -->
@@ -130,10 +131,12 @@ tr:hover td{background:#f8fafc}
   <div class="SR" id="statsRow"></div>
   <div id="tempClientAlert" style="display:none"></div>
   <div id="ganiAlertBox" style="display:none"></div>
+  <div id="clientStatsDetail" style="display:none">
   <div id="monthlyFilingAlert" style="display:none"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card" id="bizStatsCard" style="margin-bottom:0"></div>
     <div class="card" id="sourceChannelCard" style="display:none;margin-bottom:0"></div>
+  </div>
   </div>
   <div class="card">
     <div class="toolbar">
@@ -171,6 +174,7 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;margin-left:8px">담당자 일괄변경:</label>
       <select id="bulkManager" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"></select>
       <button class="btn btn-sm" style="background:#38a169;color:#fff" onclick="bulkChangeManager()">변경</button>
+      <button class="btn btn-sm" style="background:#e53e3e;color:#fff;margin-left:8px" onclick="bulkDeleteClients()">선택 삭제</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
@@ -230,8 +234,9 @@ tr:hover td{background:#f8fafc}
       <input type="text" id="corpSearch" placeholder="검색..." oninput="renderCorpList()">
       <select id="corpFilterManager" onchange="renderCorpList()"><option value="">전체담당</option></select>
     </div>
+    <div id="corpSummary" style="margin:8px 0;font-size:12px"></div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>법인명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th>기장료</th><th>조정료</th><th>상태</th><th>특이사항</th></tr></thead>
+      <thead><tr><th>번호</th><th>법인명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th>기장료</th><th>조정료</th><th>결산</th><th>상태</th><th>알림</th></tr></thead>
       <tbody id="corpTable"></tbody>
     </table></div>
   </div>
@@ -249,8 +254,37 @@ tr:hover td{background:#f8fafc}
       <input type="text" id="incomeSearch" placeholder="대표자/업체명..." oninput="renderIncomeList()">
       <select id="incomeFilterManager" onchange="renderIncomeList()"><option value="">전체담당</option></select>
     </div>
+    <!-- 간이과세자 포기 일괄처리 바 -->
+    <div id="incBulkBar" style="display:none;background:#d69e2e;color:#fff;padding:8px 14px;border-radius:6px;margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
+      <span id="incBulkCount">0개 선택</span>
+      <button class="btn btn-sm" style="background:#c05621;color:#fff;margin-left:8px" onclick="openGaniPogiModal()">간이과세자 포기</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedIncClients.clear();updateIncBulkBar();renderIncomeList()">선택해제</button>
+    </div>
     <div id="incomeGroups"></div>
   </div>
+</div>
+
+<!-- 간이과세자 포기 모달 -->
+<div class="MO" id="ganiPogiModal">
+<div class="MD" style="max-width:420px">
+  <div class="MH" style="background:#c05621"><h2 style="color:#fff">간이과세자 포기 처리</h2><button class="MC" style="color:#fff" onclick="closeGaniPogiModal()">&times;</button></div>
+  <div class="MB">
+    <div id="ganiPogiInfo" style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:10px;margin-bottom:12px;font-size:12px"></div>
+    <div class="FG">
+      <label style="font-size:11px;font-weight:600">포기월 선택:</label>
+      <input type="month" id="gp_month">
+    </div>
+    <p style="font-size:11px;color:#718096;margin-top:8px;line-height:1.5">
+      포기월의 다음달부터 부가세 신고대상에 포함됩니다.<br>
+      이후 정상 부가세 신고일정(7월, 1월)이 적용됩니다.<br>
+      <strong>예시:</strong> 4월 포기 → 5월, 7월, 다음해 1월 부가세 신고
+    </p>
+    <div style="text-align:right;margin-top:12px">
+      <button class="btn btn-secondary btn-sm" onclick="closeGaniPogiModal()">취소</button>
+      <button class="btn btn-sm" style="background:#c05621;color:#fff" onclick="confirmGaniPogi()">포기 처리</button>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- ===== 성실신고 ===== -->
@@ -427,6 +461,7 @@ tr:hover td{background:#f8fafc}
 
 <!-- ===== 월/분기결산 ===== -->
 <div id="tab-closing" class="TC">
+  <div id="closingMgrSummary" style="margin-bottom:10px"></div>
   <div class="card">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">월/분기결산 <span id="closingCount" style="color:#64748b;font-weight:400"></span></div>
     <div class="FB">
@@ -483,7 +518,7 @@ tr:hover td{background:#f8fafc}
     <div class="card-title">소개 상여 현황</div>
     <div id="referralBonusArea"></div>
   </div>
-  <div class="card"><div class="card-title">담당자별 업체 상세</div><div id="managerDetail"></div></div>
+  <div class="card"><div class="card-title" style="cursor:pointer" onclick="var d=document.getElementById('managerDetail');d.style.display=d.style.display==='none'?'':'none'">담당자별 업체 상세 <span style="font-size:11px;color:#64748b">▼</span></div><div id="managerDetail" style="display:none"></div></div>
 </div>
 
 <!-- ===== 상여실적 ===== -->
@@ -542,6 +577,62 @@ tr:hover td{background:#f8fafc}
   </div>
 </div>
 
+<!-- ===== 관리자 ===== -->
+<div id="tab-admin" class="TC">
+
+  <!-- 승인 대기 -->
+  <div class="card" id="pendingApprovalsCard" style="display:none">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>📋 승인 대기 <span id="pendingCount" style="color:#e53e3e;font-weight:700"></span></span>
+    </div>
+    <div id="pendingList"></div>
+  </div>
+
+  <!-- 이메일 권한 관리 -->
+  <div class="card" id="emailMgmtCard" style="display:none">
+    <div class="card-title" style="cursor:pointer" onclick="var d=document.getElementById('emailMgmtBody');d.style.display=d.style.display==='none'?'':'none'">🔐 로그인 허용 이메일 관리 <span style="font-size:11px;color:#64748b">▼</span></div>
+    <div id="emailMgmtBody" style="display:none">
+      <div style="margin-bottom:12px">
+        <div class="FB" style="gap:8px;margin-bottom:8px">
+          <input type="email" id="newAllowedEmail" placeholder="추가할 이메일 주소" style="flex:1;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="newEmailIsAdmin"> 관리자</label>
+          <button class="btn btn-sm btn-primary" onclick="addAllowedEmail()">추가</button>
+        </div>
+      </div>
+      <div class="TC2"><table>
+        <thead><tr><th>이메일</th><th style="width:70px">권한</th><th style="width:60px">삭제</th></tr></thead>
+        <tbody id="allowedEmailTable"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">업체 변경이력 <span id="adminLogCount" style="color:#64748b;font-weight:400"></span></div>
+    <div class="FB" style="gap:8px;flex-wrap:wrap">
+      <select id="adminLogType" onchange="renderAdminLog()">
+        <option value="">전체</option>
+        <option value="등록">등록</option>
+        <option value="수정">수정</option>
+        <option value="삭제">삭제</option>
+        <option value="해임">해임</option>
+        <option value="재수임">재수임</option>
+        <option value="담당변경">담당변경</option>
+        <option value="기장료변경">기장료변경</option>
+      </select>
+      <input type="text" id="adminLogSearch" placeholder="업체명/번호 검색..." oninput="renderAdminLog()" style="max-width:200px">
+      <input type="date" id="adminLogFrom" onchange="renderAdminLog()">
+      <span style="font-size:11px">~</span>
+      <input type="date" id="adminLogTo" onchange="renderAdminLog()">
+      <button class="btn btn-sm btn-secondary" onclick="document.getElementById('adminLogFrom').value='';document.getElementById('adminLogTo').value='';document.getElementById('adminLogSearch').value='';document.getElementById('adminLogType').value='';renderAdminLog()">초기화</button>
+      <button class="btn btn-sm btn-export" onclick="exportAdminLog()">엑셀다운</button>
+    </div>
+    <div class="TC2" style="margin-top:10px"><table>
+      <thead><tr><th style="width:160px">일시</th><th style="width:70px">구분</th><th>업체번호</th><th>업체명</th><th>내용</th><th>처리자</th></tr></thead>
+      <tbody id="adminLogTable"></tbody>
+    </table></div>
+  </div>
+</div>
+
 <!-- 레드항목 입력 모달 -->
 <div class="MO" id="redBonusModal">
 <div class="MD" style="max-width:500px">
@@ -570,6 +661,7 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>업체명 *</label><input id="f_name"></div>
       <div class="FGI"><label>대표자명 *</label><input id="f_owner"></div>
       <div class="FGI"><label>대표자 생년월일 <span style="font-weight:400;font-size:10px;color:#64748b">(6자리 예:880101)</span></label><input id="f_ownerBirth" maxlength="6" placeholder="880101" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"></div>
+      <div class="FGI"><label>사업자등록일</label><input id="f_bizRegDate" type="date"></div>
       <div class="FGI"><label>업체유형 *</label><select id="f_type" onchange="onTypeChange()"><option value="1부">1부업체</option><option value="2부">2부업체</option><option value="3부">3부업체</option></select></div>
       <div class="FGI" id="linkedGroup" style="display:none"><label>연관 1부업체</label><select id="f_linked"><option value="">선택</option></select></div>
       <div class="FGI"><label>개인/법인 *</label><select id="f_entity" onchange="onEntityChange()"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select></div>
@@ -586,7 +678,6 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>담당자</label><select id="f_manager"><option value="">선택</option></select></div>
       <div class="FGI"><label>최종상담자</label><select id="f_finalConsultant"><option value="">선택</option></select></div>
       <div class="FGI"><label>1차상담자</label><select id="f_firstConsultant"><option value="">선택</option></select></div>
-      <div class="FGI"><label>1:1 교육</label><select id="f_trainer"><option value="">선택</option></select></div>
     </div>
     <div class="ST">계약 및 수수료</div>
     <div class="FG">
@@ -622,6 +713,13 @@ tr:hover td{background:#f8fafc}
       </div>
       <div style="font-size:10px;color:#718096;margin-top:3px">소급기장료 = 월액 x 개월수, 발행월 세금계산서에 반영 (미입력 시 출금시작월에 자동 반영)</div>
     </div>
+    <div class="ST">자료수령 관리</div>
+    <div class="FG">
+      <div class="FGI"><label>자료수령 방법</label><select id="f_docMethod"><option value="">선택</option><option value="이메일">이메일</option><option value="카톡">카카오톡</option><option value="팩스">팩스</option><option value="방문수령">방문수령</option><option value="클라우드">클라우드(드라이브)</option><option value="기타">기타</option></select></div>
+      <div class="FGI"><label>자료수령 주기</label><select id="f_docFreq"><option value="">선택</option><option value="매월">매월</option><option value="분기">분기</option><option value="반기">반기</option><option value="수시">수시</option></select></div>
+      <div class="FGI"><label>세금계산서 이월</label><select id="f_invoiceCarry"><option value="N">미해당</option><option value="Y">이월대상</option></select></div>
+      <div class="FGI"><label>자료수령 메모</label><input id="f_docMemo" placeholder="자료수령 관련 특이사항"></div>
+    </div>
     <div class="ST">업체 유입구분 / 유입경로</div>
     <div class="FG">
       <div class="FGI"><label>유입구분</label><select id="f_clientOrigin" onchange="toggleOriginOffice()"><option value="신규">신규</option><option value="이관">이관</option></select></div>
@@ -630,16 +728,18 @@ tr:hover td{background:#f8fafc}
       <div class="FGI" id="referredByGroup"><label>소개업체</label><div style="position:relative"><input id="f_referredBySearch" placeholder="업체명 검색..." autocomplete="off" style="width:100%;padding:6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" oninput="searchReferredBy(this.value)" onfocus="searchReferredBy(this.value)"><input type="hidden" id="f_referredBy"><div id="referredByResults" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:150px;overflow-y:auto;background:#fff;border:1px solid #d1d5db;border-radius:4px;z-index:99;font-size:11px"></div></div></div>
       <div class="FGI" id="extReferralGroup" style="display:none"><label>외부소개 유형</label><select id="f_extReferral"><option value="">선택</option><option value="지인">지인</option><option value="가족">가족</option><option value="외부네트워크">외부네트워크</option></select></div>
     </div>
-    <div style="font-size:10px;color:#38a169;margin-top:3px;background:#f0fff4;padding:6px 10px;border-radius:4px">
-      <strong>소개(기존업체):</strong> 소개업체 담당자에게 3개월 유지 50% + 12개월 유지 50% 자동 지급<br>
-      <strong>외부소개:</strong> 담당자에게 기장시작월 기준 3·6·9개월째 각 1개월치 기장료 상여 (해임 시 미지급)
-    </div>
     <div class="ST" id="dismissSection" style="display:none">해임/폐업/휴업</div>
     <div class="FG" id="dismissFields" style="display:none">
       <div class="FGI"><label>해임 사유</label><select id="f_dismissReason" onchange="toggleConvertedCorp()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option></select></div>
       <div class="FGI"><label>해임월</label><input id="f_dismissDate" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="f_closureDate" type="date"></div>
-      <div class="FGI" id="convertedCorpGroup" style="display:none"><label>전환된 법인</label><select id="f_convertedCorp"><option value="">선택</option></select></div>
+      <div class="FGI" id="convertedCorpGroup" style="display:none"><label>전환된 법인 (검색)</label>
+        <div style="position:relative">
+          <input id="f_convertCorpSearch" placeholder="법인명/번호 검색..." autocomplete="off" oninput="searchConvertCorp(this.value,'f_')" onfocus="searchConvertCorp(this.value,'f_')" style="width:100%;padding:6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+          <input type="hidden" id="f_convertedCorp">
+          <div id="f_convertCorpResults" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:150px;overflow-y:auto;background:#fff;border:1px solid #d1d5db;border-radius:4px;z-index:99;font-size:11px"></div>
+        </div>
+      </div>
       <div class="FGI" id="transferOfficeGroup" style="display:none"><label>이관 세무사사무실명</label><input id="f_transferOffice" placeholder="이관되는 사무실명 입력"></div>
     </div>
     <div style="margin-top:8px"><label style="font-size:11px;cursor:pointer"><input type="checkbox" id="f_dismissed" onchange="toggleDismiss()"> 해임 처리</label></div>
@@ -765,7 +865,13 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>해임 사유 *</label><select id="dm_reason" onchange="toggleDmConvert()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option></select></div>
       <div class="FGI"><label>해임월 *</label><input id="dm_date" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="dm_closure" type="date"></div>
-      <div class="FGI" id="dmConvertGroup" style="display:none"><label>전환된 법인</label><select id="dm_convertedCorp"><option value="">선택</option></select></div>
+      <div class="FGI" id="dmConvertGroup" style="display:none"><label>전환된 법인 (검색)</label>
+        <div style="position:relative">
+          <input id="dm_convertSearch" placeholder="법인명/번호 검색..." autocomplete="off" oninput="searchDmConvert(this.value)" onfocus="searchDmConvert(this.value)" style="width:100%;padding:6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px">
+          <input type="hidden" id="dm_convertedCorp">
+          <div id="dmConvertResults" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:150px;overflow-y:auto;background:#fff;border:1px solid #d1d5db;border-radius:4px;z-index:99;font-size:11px"></div>
+        </div>
+      </div>
       <div class="FGI" id="dmTransferGroup" style="display:none"><label>이관 세무사사무실명</label><input id="dm_transferOffice" placeholder="이관되는 사무실명 입력"></div>
     </div>
   </div>
@@ -857,8 +963,9 @@ tr:hover td{background:#f8fafc}
       </div>
       <button onclick="doLogin()" style="background:#2b6cb0;color:#fff;padding:10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">로그인</button>
       <button onclick="doRegister()" style="background:#edf2f7;color:#4a5568;padding:10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">회원가입</button>
+      <button onclick="doResetPassword()" style="background:none;color:#718096;padding:6px;border:none;font-size:11px;cursor:pointer;text-decoration:underline">비밀번호 찾기</button>
     </div>
-    <p style="text-align:center;font-size:10px;color:#a0aec0;margin-top:20px">계정이 필요한 경우 위의 회원가입 버튼을 클릭하세요</p>
+    <p style="text-align:center;font-size:10px;color:#a0aec0;margin-top:20px">허가된 이메일만 로그인할 수 있습니다</p>
   </div>
 </div>
 
@@ -891,6 +998,8 @@ function migrate(d){
     if(!c.retroBillingMonth)c.retroBillingMonth='';
     if(!c.vatFreq)c.vatFreq='auto';
     if(!c.deferredMonths)c.deferredMonths=0;
+    if(!c.ganiPogiMonth)c.ganiPogiMonth='';
+    if(!c.ganiPogiNextMonth)c.ganiPogiNextMonth='';
     // feeHistory 마이그레이션: 기존 fee를 첫 이력으로
     if(!c.feeHistory){
       c.feeHistory=[];
@@ -912,6 +1021,10 @@ function migrate(d){
   if(!d.bonusData.progressChecks)d.bonusData.progressChecks={};
   if(!d.bonusData.consultantClawbacks)d.bonusData.consultantClawbacks=[];
   if(!d.extraInvoices)d.extraInvoices=[];
+  if(!d.activityLog)d.activityLog=[];
+  if(!d.allowedEmails)d.allowedEmails=[];
+  if(!d.adminEmails)d.adminEmails=[];
+  if(!d.pendingClients)d.pendingClients=[];
   // staff에 type, joinDate 없으면 추가
   d.staff.forEach(function(s){if(!s.type)s.type='경력';if(!s.joinDate)s.joinDate='';if(!s.contractSalary)s.contractSalary=0;});
   return d;
@@ -964,6 +1077,192 @@ function saveData(){
   }
 }
 let data=loadData();
+if(!data.activityLog)data.activityLog=[];
+
+// === 활동이력 로깅 ===
+function addLog(type,clientId,clientName,detail){
+  if(!data.activityLog)data.activityLog=[];
+  data.activityLog.unshift({type:type,clientId:clientId||'',clientName:clientName||'',detail:detail||'',date:new Date().toISOString(),user:auth.currentUser?auth.currentUser.email:'-'});
+  if(data.activityLog.length>2000)data.activityLog=data.activityLog.slice(0,2000);
+}
+
+function renderAdminLog(){
+  if(!data.activityLog)data.activityLog=[];
+  var logs=data.activityLog.slice();
+  var filterType=document.getElementById('adminLogType').value;
+  var search=(document.getElementById('adminLogSearch').value||'').trim().toLowerCase();
+  var fromD=document.getElementById('adminLogFrom').value;
+  var toD=document.getElementById('adminLogTo').value;
+  if(filterType)logs=logs.filter(function(l){return l.type===filterType});
+  if(search)logs=logs.filter(function(l){return (l.clientName||'').toLowerCase().indexOf(search)>=0||(l.clientId||'').toLowerCase().indexOf(search)>=0});
+  if(fromD)logs=logs.filter(function(l){return l.date&&l.date.slice(0,10)>=fromD});
+  if(toD)logs=logs.filter(function(l){return l.date&&l.date.slice(0,10)<=toD});
+  document.getElementById('adminLogCount').textContent='('+logs.length+'건)';
+  var typeColors={'등록':'#38a169','수정':'#3182ce','삭제':'#e53e3e','해임':'#d69e2e','재수임':'#805ad5','담당변경':'#dd6b20','기장료변경':'#319795'};
+  var html='';
+  logs.slice(0,500).forEach(function(l){
+    var d=l.date?new Date(l.date):null;
+    var ds=d?(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')):'';
+    var color=typeColors[l.type]||'#64748b';
+    html+='<tr><td style="font-size:11px;color:#64748b;white-space:nowrap">'+ds+'</td>'
+      +'<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;background:'+color+'">'+l.type+'</span></td>'
+      +'<td style="font-size:12px">'+(l.clientId||'-')+'</td>'
+      +'<td style="font-size:12px;font-weight:500">'+(l.clientName||'-')+'</td>'
+      +'<td style="font-size:12px">'+(l.detail||'-')+'</td>'
+      +'<td style="font-size:11px;color:#64748b">'+(l.user||'-')+'</td></tr>';
+  });
+  if(!html)html='<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">이력이 없습니다</td></tr>';
+  document.getElementById('adminLogTable').innerHTML=html;
+}
+
+function exportAdminLog(){
+  if(!data.activityLog||!data.activityLog.length){toast('내보낼 이력이 없습니다');return}
+  var rows=[['일시','구분','업체번호','업체명','내용','처리자']];
+  data.activityLog.forEach(function(l){
+    var d=l.date?new Date(l.date):null;
+    var ds=d?(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')):'';
+    rows.push([ds,l.type,l.clientId||'',l.clientName||'',l.detail||'',l.user||'']);
+  });
+  var csv='\uFEFF'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(',')}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='activity_log.csv';a.click();
+}
+
+// === 이메일 권한 관리 ===
+function renderAllowedEmails(){
+  if(!isAdmin()){
+    document.getElementById('emailMgmtCard').style.display='none';
+    document.getElementById('pendingApprovalsCard').style.display='none';
+    return;
+  }
+  document.getElementById('emailMgmtCard').style.display='';
+  var list=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
+  var admins=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  var h='';
+  list.forEach(function(email,i){
+    var isAdm=admins.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0;
+    h+='<tr><td style="font-size:12px">'+email+'</td>';
+    h+='<td style="text-align:center"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:'+(isAdm?'#c6f6d5':'#e2e8f0')+';color:'+(isAdm?'#276749':'#4a5568')+'">'+(isAdm?'관리자':'일반')+'</span></td>';
+    h+='<td style="text-align:center">'+(email.toLowerCase()!==ADMIN_EMAIL.toLowerCase()?'<button class="btn-staff" style="color:#e53e3e;font-size:10px" onclick="removeAllowedEmail('+i+')">삭제</button>':'<span style="font-size:10px;color:#a0aec0">기본</span>')+'</td></tr>';
+  });
+  document.getElementById('allowedEmailTable').innerHTML=h;
+}
+
+function addAllowedEmail(){
+  var email=document.getElementById('newAllowedEmail').value.trim();
+  if(!email){toast('이메일을 입력하세요');return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('올바른 이메일 형식이 아닙니다');return}
+  if(!data.allowedEmails)data.allowedEmails=[];
+  if(!data.allowedEmails.length)data.allowedEmails=ALLOWED_EMAILS.slice();
+  if(data.allowedEmails.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0){toast('이미 등록된 이메일입니다');return}
+  data.allowedEmails.push(email);
+  if(document.getElementById('newEmailIsAdmin').checked){
+    if(!data.adminEmails)data.adminEmails=[];
+    if(!data.adminEmails.length)data.adminEmails=[ADMIN_EMAIL];
+    data.adminEmails.push(email);
+  }
+  saveData();
+  document.getElementById('newAllowedEmail').value='';
+  document.getElementById('newEmailIsAdmin').checked=false;
+  renderAllowedEmails();
+  toast('✅ '+email+' 추가됨');
+}
+
+function removeAllowedEmail(idx){
+  if(!data.allowedEmails||idx<0)return;
+  var email=data.allowedEmails[idx];
+  if(!confirm(email+' 을(를) 허용 목록에서 삭제하시겠습니까?'))return;
+  data.allowedEmails.splice(idx,1);
+  // adminEmails에서도 제거
+  if(data.adminEmails){
+    var ai=data.adminEmails.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase());
+    if(ai>=0)data.adminEmails.splice(ai,1);
+  }
+  saveData();renderAllowedEmails();
+  toast(email+' 삭제됨');
+}
+
+// === 승인 대기 관리 ===
+function renderPendingApprovals(){
+  if(!isAdmin()){
+    document.getElementById('pendingApprovalsCard').style.display='none';
+    return;
+  }
+  if(!data.pendingClients)data.pendingClients=[];
+  if(data.pendingClients.length===0){
+    document.getElementById('pendingApprovalsCard').style.display='none';
+    return;
+  }
+  document.getElementById('pendingApprovalsCard').style.display='';
+  document.getElementById('pendingCount').textContent='('+data.pendingClients.length+'건)';
+  var h='';
+  data.pendingClients.forEach(function(p,i){
+    var actionLabel=p.action==='등록'?'🆕 신규등록':'✏️ 수정';
+    var bg=p.action==='등록'?'#ebf8ff':'#fefcbf';
+    h+='<div style="padding:12px;margin-bottom:8px;border-radius:8px;background:'+bg+';border:1px solid #d1d5db">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    h+='<span style="font-weight:600;font-size:13px">'+actionLabel+' - '+(p.clientData.name||'?')+'</span>';
+    h+='<span style="font-size:10px;color:#64748b">요청: '+(p.requestedBy||'-')+' · '+( p.requestedAt?new Date(p.requestedAt).toLocaleString('ko-KR'):'')+'</span></div>';
+    h+='<div style="font-size:11px;color:#4a5568;margin-bottom:8px">';
+    if(p.action==='수정'&&p.editId){
+      h+='업체번호: '+p.editId+' · ';
+      if(p.changes)h+=p.changes;
+    }else{
+      h+=p.clientData.type+' / '+(p.clientData.entityType||'-')+' / 담당:'+(p.clientData.manager||'-')+' / 기장료:₩'+(p.clientData.fee||0).toLocaleString();
+    }
+    h+='</div>';
+    h+='<div style="display:flex;gap:8px">';
+    h+='<button class="btn btn-sm btn-primary" onclick="approvePending('+i+')">✅ 승인</button>';
+    h+='<button class="btn btn-sm btn-secondary" onclick="rejectPending('+i+')" style="color:#e53e3e">❌ 반려</button>';
+    h+='</div></div>';
+  });
+  document.getElementById('pendingList').innerHTML=h;
+}
+
+function approvePending(idx){
+  if(!data.pendingClients||idx<0||idx>=data.pendingClients.length)return;
+  var p=data.pendingClients[idx];
+  if(p.action==='등록'){
+    // 신규 등록 승인
+    var cd=p.clientData;
+    cd.id=genId(cd.type);cd.createdAt=new Date().toISOString();
+    cd.feeHistory=[];
+    if(cd.fee>0)cd.feeHistory.push({fee:cd.fee,startMonth:cd.billingStart||cd.startMonth||'',memo:'초기 기장료',date:new Date().toISOString()});
+    cd.managerHistory=[];
+    if(cd.manager)cd.managerHistory.push({manager:cd.manager,startMonth:cd.billingStart||cd.startMonth||'',memo:'초기 배정',date:new Date().toISOString()});
+    data.clients.push(cd);
+    addLog('등록',cd.id,cd.name,cd.type+' · 담당:'+(cd.manager||'-')+' · 기장료:₩'+(cd.fee||0).toLocaleString()+' (승인: '+auth.currentUser.email+')');
+    toast('✅ '+cd.id+' '+cd.name+' 등록 승인');
+  }else if(p.action==='수정'){
+    // 수정 승인
+    var idx2=data.clients.findIndex(function(c){return c.id===p.editId});
+    if(idx2>=0){
+      var old=data.clients[idx2];
+      var cd=p.clientData;
+      cd.feeHistory=old.feeHistory||[];
+      cd.managerHistory=old.managerHistory||[];
+      if(cd.fee!==old.fee&&cd.fee>0){
+        cd.feeHistory.push({fee:cd.fee,startMonth:cd.billingStart||cd.startMonth||nowMonth(),memo:'기장료 변경 승인',date:new Date().toISOString()});
+      }
+      if(cd.manager&&cd.manager!==old.manager){
+        cd.managerHistory.push({manager:cd.manager,startMonth:nowMonth(),memo:(old.manager||'미배정')+' → '+cd.manager+' (승인)',date:new Date().toISOString()});
+      }
+      data.clients[idx2]={...old,...cd};
+      addLog('수정',p.editId,cd.name,'승인됨 ('+auth.currentUser.email+'): '+(p.changes||''));
+      toast('✅ '+p.editId+' '+cd.name+' 수정 승인');
+    }
+  }
+  data.pendingClients.splice(idx,1);
+  saveData();renderPendingApprovals();refreshAll();
+}
+
+function rejectPending(idx){
+  if(!data.pendingClients||idx<0||idx>=data.pendingClients.length)return;
+  var p=data.pendingClients[idx];
+  if(!confirm((p.clientData.name||'?')+' 의 '+p.action+' 요청을 반려하시겠습니까?'))return;
+  data.pendingClients.splice(idx,1);
+  saveData();renderPendingApprovals();
+  toast('반려 처리됨');
+}
 
 // Firebase Functions
 async function loadFromFirestore(){
@@ -987,10 +1286,27 @@ async function loadFromFirestore(){
   }catch(e){console.error('Firestore load error:',e)}
 }
 
+// 허용된 이메일 목록 (Firestore config에서도 관리)
+var ALLOWED_EMAILS=['m1018@taxexpert.kr','m1099@taxexpert.kr','m1028@taxexpert.kr','m1032@taxexpert.kr','m1031@taxexpert.kr','m1035@taxexpert.kr','m1040@taxexpert.kr'];
+var ADMIN_EMAIL='m1018@taxexpert.kr';
+
+function isAllowedEmail(email){
+  // allowedEmails가 data에 있으면 그것 사용, 없으면 기본값
+  var list=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
+  return list.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0;
+}
+
+function isAdmin(){
+  if(!auth.currentUser)return false;
+  var adminList=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  return adminList.map(function(e){return e.toLowerCase()}).indexOf(auth.currentUser.email.toLowerCase())>=0;
+}
+
 function doLogin(){
   var email = document.getElementById('loginEmail').value.trim();
   var pw = document.getElementById('loginPw').value;
   if(!email||!pw){toast('이메일과 비밀번호를 입력하세요');return}
+  if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 문의하세요.');return}
   auth.signInWithEmailAndPassword(email,pw).catch(function(e){
     toast('로그인 실패: '+e.message);
   });
@@ -1001,8 +1317,19 @@ function doRegister(){
   var pw = document.getElementById('loginPw').value;
   if(!email||!pw){toast('이메일과 비밀번호를 입력하세요');return}
   if(pw.length<6){toast('비밀번호는 6자 이상이어야 합니다');return}
+  if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 등록을 요청하세요.');return}
   auth.createUserWithEmailAndPassword(email,pw).catch(function(e){
     toast('회원가입 실패: '+e.message);
+  });
+}
+
+function doResetPassword(){
+  var email = document.getElementById('loginEmail').value.trim();
+  if(!email){toast('이메일을 먼저 입력하세요');return}
+  auth.sendPasswordResetEmail(email).then(function(){
+    toast('✅ 비밀번호 재설정 메일을 발송했습니다. 이메일을 확인하세요.');
+  }).catch(function(e){
+    toast('발송 실패: '+e.message);
   });
 }
 
@@ -1015,10 +1342,12 @@ auth.onAuthStateChanged(function(user){
   var loginScreen = document.getElementById('loginScreen');
   if(user){
     loginScreen.style.display='none';
-    // Update header with user email
     var logoutArea = document.getElementById('logoutArea');
-    if(logoutArea) logoutArea.innerHTML='<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
+    var adminBadge=isAdmin()?'<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:#c6f6d5;color:#276749;margin-right:4px">관리자</span>':'';
+    if(logoutArea) logoutArea.innerHTML=adminBadge+'<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
     loadFromFirestore();
+    // 로그인 후 자동 백업 알림 체크 (3초 후)
+    setTimeout(function(){checkAutoBackupReminder()},3000);
   } else {
     loginScreen.style.display='flex';
   }
@@ -1175,7 +1504,7 @@ function openClientModal(ec){
   if(ec){
     document.getElementById('clientModalTitle').textContent='업체 수정';
     document.getElementById('editId').value=ec.id;
-    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_linked:'linkedTo'};
+    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_linked:'linkedTo',f_bizRegDate:'bizRegDate'};
     Object.entries(fields).forEach(([fid,key])=>{const el=document.getElementById(fid);if(el)el.value=ec[key]||''});
     ['f_fee','f_adjFee'].forEach(id=>document.getElementById(id).value=ec[id.replace('f_','')]||'');
     document.getElementById('f_fee').value=ec.fee||'';document.getElementById('f_adjFee').value=ec.adjFee||'';
@@ -1201,6 +1530,10 @@ function openClientModal(ec){
     document.getElementById('f_extReferral').value=ec.extReferral||'';
     document.getElementById('f_closingType').value=ec.closingType||'기본';
     document.getElementById('f_closingChangeDate').value=ec.closingChangeDate||'';
+    document.getElementById('f_docMethod').value=ec.docMethod||'';
+    document.getElementById('f_docFreq').value=ec.docFreq||'';
+    document.getElementById('f_invoiceCarry').value=ec.invoiceCarry||'N';
+    document.getElementById('f_docMemo').value=ec.docMemo||'';
     document.getElementById('f_clientOrigin').value=ec.clientOrigin||'신규';
     document.getElementById('f_originOffice').value=ec.originOffice||'';
     toggleOriginOffice();
@@ -1222,6 +1555,10 @@ function openClientModal(ec){
     ['f_type','f_entity','f_biz','f_tax','f_vatFreq','f_manager','f_finalConsultant','f_firstConsultant','f_trainer','f_dismissReason','f_linked','f_extReferral','f_sourceChannel'].forEach(id=>document.getElementById(id).selectedIndex=0);
     document.getElementById('f_closingType').selectedIndex=0;
     document.getElementById('f_closingChangeDate').value='';
+    document.getElementById('f_docMethod').value='';
+    document.getElementById('f_docFreq').value='';
+    document.getElementById('f_invoiceCarry').value='N';
+    document.getElementById('f_docMemo').value='';
     document.getElementById('f_clientOrigin').value='신규';
     document.getElementById('f_originOffice').value='';
     toggleOriginOffice();
@@ -1315,10 +1652,24 @@ function saveClient(){
     if(!Number(document.getElementById('f_retroMonths').value))warnings.push('소급 개월수');
   }
   if(!document.getElementById('f_sourceChannel').value)warnings.push('유입경로');
-  if(warnings.length>0){if(!confirm('⚠️ 아래 항목이 미입력 상태입니다:\n\n• '+warnings.join('\n• ')+'\n\n이대로 저장하시겠습니까?'))return}
+  // 미입력 필드 빨간 테두리 표시
+  var warnFieldMap={'대표자명':'f_owner','대표자 생년월일':'f_ownerBirth','사업자구분':'f_entity','업종':'f_biz','신고대상':'f_tax','담당자':'f_manager','기장료':'f_fee','기장계약 시작월':'f_startMonth','기장료 출금시작월':'f_billingStart','계약일':'f_contractDate','소급기장료 해당여부':'f_retroApply','소급기장료 금액':'f_retroFee','소급 개월수':'f_retroMonths','유입경로':'f_sourceChannel'};
+  Object.values(warnFieldMap).forEach(function(fid){var el=document.getElementById(fid);if(el)el.style.borderColor=''});
+  warnings.forEach(function(w){var fid=warnFieldMap[w];if(fid){var el=document.getElementById(fid);if(el)el.style.borderColor='#e53e3e'}});
+  if(warnings.length>0){if(!confirm('⚠️ 아래 '+warnings.length+'개 항목이 미입력 상태입니다:\n\n• '+warnings.join('\n• ')+'\n\n이대로 저장하시겠습니까?'))return}
   const editId=document.getElementById('editId').value,type=document.getElementById('f_type').value,isDismissed=document.getElementById('f_dismissed').checked;
+  // 중복 업체 경고 (신규 등록 시)
+  if(!editId){
+    var dupName=data.clients.filter(function(c){return c.name===name&&c.status==='활성'});
+    var ownerVal=document.getElementById('f_owner').value.trim();
+    var dupOwner=ownerVal?data.clients.filter(function(c){return c.ownerName===ownerVal&&c.status==='활성'&&c.name!==name}):[];
+    var dupMsg='';
+    if(dupName.length)dupMsg+='⚠️ 동일 업체명 "'+name+'" 이(가) 이미 등록되어 있습니다.\n   → '+dupName.map(function(c){return c.id+' '+c.name+' ('+c.type+'/담당:'+( c.manager||'-')+')'}).join('\n   → ')+'\n\n';
+    if(dupOwner.length)dupMsg+='⚠️ 동일 대표자 "'+ownerVal+'" 의 다른 업체가 있습니다.\n   → '+dupOwner.map(function(c){return c.id+' '+c.name+' (대표:'+c.ownerName+')'}).join('\n   → ')+'\n\n';
+    if(dupMsg){if(!confirm(dupMsg+'그래도 등록하시겠습니까?'))return}
+  }
   if(isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'&&!document.getElementById('f_convertedCorp').value){toast('법인전환 시 전환된 법인을 선택해주세요');return}
-  const cd={name,ownerName:document.getElementById('f_owner').value.trim(),ownerBirth:document.getElementById('f_ownerBirth').value,type,
+  const cd={name,ownerName:document.getElementById('f_owner').value.trim(),ownerBirth:document.getElementById('f_ownerBirth').value,bizRegDate:document.getElementById('f_bizRegDate').value,type,
     entityType:document.getElementById('f_entity').value,businessType:document.getElementById('f_biz').value,
     ecommerceDetail:document.getElementById('f_biz').value==='전자상거래'?document.getElementById('f_ecom').value:'',
     taxType:document.getElementById('f_tax').value,
@@ -1345,7 +1696,35 @@ function saveClient(){
     closingChangeDate:document.getElementById('f_closingChangeDate').value,
     clientOrigin:document.getElementById('f_clientOrigin').value,
     originOffice:document.getElementById('f_clientOrigin').value==='이관'?document.getElementById('f_originOffice').value.trim():'',
+    docMethod:document.getElementById('f_docMethod').value,docFreq:document.getElementById('f_docFreq').value,
+    invoiceCarry:document.getElementById('f_invoiceCarry').value,docMemo:document.getElementById('f_docMemo').value.trim(),
     notes:document.getElementById('f_notes').value.trim(),updatedAt:new Date().toISOString()};
+  // 비관리자: 승인 대기열로 보내기
+  if(!isAdmin()){
+    if(!data.pendingClients)data.pendingClients=[];
+    if(editId){
+      // 수정 요청 → 승인 대기
+      var oldC=data.clients.find(function(c){return c.id===editId});
+      var changeDesc=[];
+      if(oldC){
+        if(oldC.name!==cd.name)changeDesc.push('업체명: '+oldC.name+' → '+cd.name);
+        if(oldC.manager!==cd.manager)changeDesc.push('담당: '+(oldC.manager||'-')+' → '+cd.manager);
+        if(oldC.fee!==cd.fee)changeDesc.push('기장료: '+W(oldC.fee)+' → '+W(cd.fee));
+        if(oldC.status!==cd.status)changeDesc.push('상태: '+oldC.status+' → '+cd.status);
+      }
+      data.pendingClients.push({action:'수정',editId:editId,clientData:cd,changes:changeDesc.join(', ')||'상세정보 수정',requestedBy:auth.currentUser?auth.currentUser.email:'-',requestedAt:new Date().toISOString()});
+      saveData();closeClientModal();
+      toast('📋 수정 요청이 관리자 승인 대기열에 등록되었습니다');
+      return;
+    }else{
+      // 신규 등록 → 승인 대기
+      data.pendingClients.push({action:'등록',clientData:cd,requestedBy:auth.currentUser?auth.currentUser.email:'-',requestedAt:new Date().toISOString()});
+      saveData();closeClientModal();
+      toast('📋 등록 요청이 관리자 승인 대기열에 등록되었습니다');
+      return;
+    }
+  }
+  // 관리자: 기존 로직 그대로 실행
   if(editId){
     const i=data.clients.findIndex(c=>c.id===editId);
     if(i>=0){
@@ -1385,6 +1764,20 @@ function saveClient(){
         cd.deferredMonths=0; // 이미 반영됨 → 초기화
       }
       data.clients[i]={...old,...cd};
+      var changes=[];
+      if(old.name!==cd.name)changes.push('업체명: '+old.name+' → '+cd.name);
+      if(old.manager!==cd.manager)changes.push('담당: '+(old.manager||'-')+' → '+cd.manager);
+      if(old.fee!==cd.fee)changes.push('기장료: '+W(old.fee)+' → '+W(cd.fee));
+      if(old.status!==cd.status)changes.push('상태: '+old.status+' → '+cd.status);
+      if(old.type!==cd.type)changes.push('유형: '+old.type+' → '+cd.type);
+      if(old.entityType!==cd.entityType)changes.push('구분: '+(old.entityType||'-')+' → '+cd.entityType);
+      if(old.taxType!==cd.taxType)changes.push('신고: '+(old.taxType||'-')+' → '+cd.taxType);
+      if(old.ownerName!==cd.ownerName)changes.push('대표자: '+(old.ownerName||'-')+' → '+cd.ownerName);
+      var logType='수정';
+      if(old.fee!==cd.fee&&cd.fee>0)addLog('기장료변경',editId,cd.name,'기장료 '+W(old.fee)+' → '+W(cd.fee));
+      if(old.manager!==cd.manager&&cd.manager)addLog('담당변경',editId,cd.name,(old.manager||'미배정')+' → '+cd.manager);
+      if(old.status==='활성'&&cd.status==='해임')logType='해임';
+      addLog(logType,editId,cd.name,changes.length?changes.join(', '):'상세정보 수정');
     }
     toast('수정완료');
   }else{
@@ -1393,7 +1786,9 @@ function saveClient(){
     if(cd.fee>0)cd.feeHistory.push({fee:cd.fee,startMonth:cd.billingStart||cd.startMonth||'',memo:'초기 기장료',date:new Date().toISOString()});
     cd.managerHistory=[];
     if(cd.manager)cd.managerHistory.push({manager:cd.manager,startMonth:cd.billingStart||cd.startMonth||'',memo:'초기 배정',date:new Date().toISOString()});
-    data.clients.push(cd);toast(cd.id+' '+name+' 등록');
+    data.clients.push(cd);
+    addLog('등록',cd.id,cd.name,cd.type+'/'+cd.entityType+' · 담당:'+( cd.manager||'-')+' · 기장료:'+W(cd.fee));
+    toast(cd.id+' '+name+' 등록');
   }
   saveData();closeClientModal();refreshAll();
 }
@@ -1429,6 +1824,9 @@ function viewClient(id){
     <div><small style="color:#64748b">1:1교육</small><br>${c.trainer||'-'}</div>
     <div><small style="color:#64748b">유입구분</small><br>${c.clientOrigin==='이관'?'<span style="color:#dd6b20;font-weight:600">이관</span>':'신규'}</div>
     ${c.clientOrigin==='이관'&&c.originOffice?'<div><small style="color:#64748b">이관 사무실</small><br><strong style="color:#dd6b20">'+c.originOffice+'</strong></div>':''}
+    ${c.docMethod?'<div><small style="color:#64748b">자료수령</small><br>'+c.docMethod+(c.docFreq?' ('+c.docFreq+')':'')+'</div>':''}
+    ${c.invoiceCarry==='Y'?'<div><small style="color:#d69e2e">세금계산서 이월</small><br><strong style="color:#d69e2e">이월대상</strong></div>':''}
+    ${c.docMemo?'<div><small style="color:#64748b">자료메모</small><br>'+c.docMemo+'</div>':''}
   </div>
   ${c.managerHistory&&c.managerHistory.length>0?`<div style="margin-top:12px;padding:10px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:6px"><div style="font-size:11px;font-weight:600;color:#2b6cb0;margin-bottom:6px">담당자 변경 이력</div><table style="font-size:11px;width:100%"><thead><tr style="background:#bee3f8"><th style="padding:4px 6px">변경월</th><th style="padding:4px 6px">담당자</th><th style="padding:4px 6px">내용</th><th style="padding:4px 6px">변경일</th></tr></thead><tbody>${[...c.managerHistory].sort((a,b)=>(b.startMonth||'').localeCompare(a.startMonth||'')).map(h=>'<tr><td style="padding:4px 6px">'+(h.startMonth||'-')+'</td><td style="padding:4px 6px;font-weight:600">'+(h.manager||'-')+'</td><td style="padding:4px 6px">'+(h.memo||'-')+'</td><td style="padding:4px 6px;font-size:9px;color:#718096">'+(h.date?new Date(h.date).toLocaleDateString('ko-KR'):'-')+'</td></tr>').join('')}</tbody></table></div>`:''}
   ${c.feeHistory&&c.feeHistory.length>0?`<div style="margin-top:12px;padding:10px;background:#fffff0;border:1px solid #fefcbf;border-radius:6px"><div style="font-size:11px;font-weight:600;color:#d69e2e;margin-bottom:6px">기장료 변경 이력</div><table style="font-size:11px;width:100%"><thead><tr style="background:#fefcbf"><th style="padding:4px 6px">적용월</th><th style="padding:4px 6px">기장료</th><th style="padding:4px 6px">메모</th><th style="padding:4px 6px">변경일</th></tr></thead><tbody>${[...c.feeHistory].sort((a,b)=>(b.startMonth||'').localeCompare(a.startMonth||'')).map(h=>'<tr><td style="padding:4px 6px">'+(h.startMonth||'-')+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+W(h.fee)+'</td><td style="padding:4px 6px">'+(h.memo||'-')+'</td><td style="padding:4px 6px;font-size:9px;color:#718096">'+(h.date?new Date(h.date).toLocaleDateString('ko-KR'):'-')+'</td></tr>').join('')}</tbody></table></div>`:''}
@@ -1552,6 +1950,7 @@ function confirmRecontract(){
   cd.transferOffice='';
 
   data.clients[rd.oldIdx]={...old,...cd};
+  addLog('재수임',old.id,old.name,'기장료: '+W(fee)+' · 담당: '+(mgr||old.manager||'-')+' · 시작: '+startMonth);
   saveData();
   closeRecontractModal();
   closeClientModal();
@@ -1587,7 +1986,7 @@ function renderStats(){
     <div class="SC" onclick="this.querySelector('.stat-detail').style.display=this.querySelector('.stat-detail').style.display==='none'?'':'none'" style="cursor:pointer"><div class="SV" style="color:#d69e2e">${t2.length}</div><div class="SL">2부 <span style="font-size:9px;color:#a0aec0">▼</span></div>${entSub(t2)}</div>
     <div class="SC" onclick="this.querySelector('.stat-detail').style.display=this.querySelector('.stat-detail').style.display==='none'?'':'none'" style="cursor:pointer"><div class="SV" style="color:#805ad5">${t3.length}</div><div class="SL">3부 <span style="font-size:9px;color:#a0aec0">▼</span></div>${entSub(t3)}</div>
     <div class="SC"><div class="SV" style="color:#e53e3e">${dis}</div><div class="SL">해임</div></div>
-    <div class="RB"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출</div></div>`;
+    <div class="RB" onclick="var d=document.getElementById('clientStatsDetail');d.style.display=d.style.display==='none'?'':'none'" style="cursor:pointer"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출 <span style="font-size:9px;color:rgba(255,255,255,0.7)">▼ 상세</span></div></div>`;
   document.getElementById('totalRevenue').textContent='연매출: '+W(ann);
 
   // Business type stats
@@ -1848,10 +2247,10 @@ function openDismissMini(c,nowYM){
   document.getElementById('dm_date').value=nowYM;
   document.getElementById('dm_closure').value='';
   document.getElementById('dm_transferOffice').value='';
-  // 법인전환 드롭다운 채우기
-  var sel=document.getElementById('dm_convertedCorp');
-  sel.innerHTML='<option value="">선택</option>';
-  data.clients.forEach(function(x){if(x.type==='3부'&&x.status==='활성'){var o=document.createElement('option');o.value=x.id;o.textContent=x.id+' '+x.name;sel.appendChild(o)}});
+  // 법인전환 검색 초기화
+  document.getElementById('dm_convertedCorp').value='';
+  document.getElementById('dm_convertSearch').value='';
+  document.getElementById('dmConvertResults').style.display='none';
   toggleDmConvert();
   document.getElementById('dismissMiniModal').classList.add('show');
 }
@@ -1861,6 +2260,35 @@ function toggleDmConvert(){
   document.getElementById('dmConvertGroup').style.display=r==='법인전환'?'':'none';
   document.getElementById('dmTransferGroup').style.display=r==='이관'?'':'none';
 }
+// 법인전환 법인 검색 (해임 미니모달)
+function searchDmConvert(q){
+  var box=document.getElementById('dmConvertResults');
+  if(!q){box.style.display='none';return}
+  var matches=data.clients.filter(function(c){return(c.entityType==='법인'||c.entityType==='성실법인')&&c.status==='활성'&&(c.name.toLowerCase().includes(q.toLowerCase())||c.id.toLowerCase().includes(q.toLowerCase())||(c.ownerName||'').toLowerCase().includes(q.toLowerCase()))}).slice(0,10);
+  if(!matches.length){box.innerHTML='<div style="padding:6px 8px;color:#a0aec0">결과 없음</div>';box.style.display='block';return}
+  box.innerHTML=matches.map(function(c){return '<div style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f1f5f9" onmousedown="selectDmConvert(\''+c.id+'\',\''+c.name.replace(/'/g,"\\'")+'\')"><strong>'+c.id+'</strong> '+c.name+' <span style="color:#64748b;font-size:10px">'+(c.ownerName||'')+' · '+c.entityType+'</span></div>'}).join('');
+  box.style.display='block';
+}
+function selectDmConvert(id,name){
+  document.getElementById('dm_convertedCorp').value=id;
+  document.getElementById('dm_convertSearch').value=id+' '+name;
+  document.getElementById('dmConvertResults').style.display='none';
+}
+// 법인전환 법인 검색 (업체등록 모달)
+function searchConvertCorp(q,prefix){
+  var box=document.getElementById(prefix+'convertCorpResults');
+  if(!q){box.style.display='none';return}
+  var matches=data.clients.filter(function(c){return(c.entityType==='법인'||c.entityType==='성실법인')&&c.status==='활성'&&(c.name.toLowerCase().includes(q.toLowerCase())||c.id.toLowerCase().includes(q.toLowerCase())||(c.ownerName||'').toLowerCase().includes(q.toLowerCase()))}).slice(0,10);
+  if(!matches.length){box.innerHTML='<div style="padding:6px 8px;color:#a0aec0">결과 없음</div>';box.style.display='block';return}
+  box.innerHTML=matches.map(function(c){return '<div style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f1f5f9" onmousedown="selectConvertCorp(\''+prefix+'\',\''+c.id+'\',\''+c.name.replace(/'/g,"\\'")+'\')"><strong>'+c.id+'</strong> '+c.name+' <span style="color:#64748b;font-size:10px">'+(c.ownerName||'')+' · '+c.entityType+'</span></div>'}).join('');
+  box.style.display='block';
+}
+function selectConvertCorp(prefix,id,name){
+  document.getElementById(prefix+'convertedCorp').value=id;
+  document.getElementById(prefix+'convertCorpSearch').value=id+' '+name;
+  document.getElementById(prefix+'convertCorpResults').style.display='none';
+}
+
 function confirmDismissMini(){
   var c=data.clients.find(function(x){return x.id===_editActionClientId});if(!c)return;
   var reason=document.getElementById('dm_reason').value;
@@ -1875,6 +2303,7 @@ function confirmDismissMini(){
   c.convertedCorp=reason==='법인전환'?document.getElementById('dm_convertedCorp').value:'';
   c.transferOffice=reason==='이관'?document.getElementById('dm_transferOffice').value.trim():'';
   c.updatedAt=new Date().toISOString();
+  addLog('해임',c.id,c.name,'사유: '+reason+' · 해임월: '+dDate);
   saveData();closeDismissMini();refreshAll();
   toast(c.name+' 해임 처리 완료 ('+reason+')');
 }
@@ -1910,6 +2339,7 @@ function confirmFeeMini(){
   if(reason==='월결산전환'){c.closingType='월결산';c.closingChangeDate=month}
   if(reason==='분기결산전환'){c.closingType='분기결산';c.closingChangeDate=month}
   c.updatedAt=new Date().toISOString();
+  addLog('기장료변경',c.id,c.name,W(oldFee)+' → '+W(newFee)+' ('+reasonText+')');
   saveData();closeFeeMini();refreshAll();
   toast(c.name+' 기장료 변경: '+W(oldFee)+' → '+W(newFee));
 }
@@ -1937,6 +2367,7 @@ function confirmMgrMini(){
   if(!c.managerHistory)c.managerHistory=[];
   c.managerHistory.push({manager:mgr,startMonth:month,memo:(document.getElementById('mm_memo').value.trim()||'담당자 변경')+' ('+oldMgr+' → '+mgr+')',date:new Date().toISOString()});
   c.manager=mgr;c.updatedAt=new Date().toISOString();
+  addLog('담당변경',c.id,c.name,oldMgr+' → '+mgr);
   saveData();closeMgrMini();refreshAll();
   toast(c.name+' 담당자 변경: '+oldMgr+' → '+mgr);
 }
@@ -1966,6 +2397,19 @@ function renderVatList(){
     const filingMonths=getVatFilingMonths(freq);
     if(filingMonths.includes(selMonth)){
       rows.push({...c,reason:'정상신고'});
+    }
+  });
+
+  // 1-b) 간이과세자 포기 업체: 포기월 다음달에 추가 부가세 신고
+  // 정상 신고(7월,1월)는 위 1)에서 이미 포함되므로, 포기 다음달이 정상 신고월이 아닌 경우에만 추가
+  AC().filter(c=>c.taxType==='부가세신고대상'&&c.ganiPogiMonth&&c.ganiPogiNextMonth).forEach(c=>{
+    if(mgr&&c.manager!==mgr)return;
+    var pnm=c.ganiPogiNextMonth.split('-').map(Number);
+    if(pnm[1]===selMonth&&pnm[0]===selYear){
+      // 이미 정상 신고로 추가되었는지 확인
+      if(!rows.some(r=>r.id===c.id)){
+        rows.push({...c,reason:'간이포기 첫신고('+c.ganiPogiMonth+'포기)'});
+      }
     }
   });
 
@@ -2027,11 +2471,14 @@ function wasActiveInYear(c, year) {
 // 25년 귀속 → 26년 3월 신고기한 → 26.03까지 계약 업체 포함
 // 휴업/폐업도 귀속연도에 해당하면 포함
 function wasCorpTaxTarget(c, year) {
+  // 사업자등록일이 있으면 그 연도부터 신고대상
+  var bizYear = c.bizRegDate ? parseInt(c.bizRegDate.split('-')[0]) : 0;
+  if(bizYear && bizYear > year) return false;
   var filingDeadline = (year+1)+'-03';
   var sm = c.startMonth||c.billingStart||'';
   var cd = c.contractDate||'';
   var startMonth = sm || (cd?cd.slice(0,7):'');
-  if(!startMonth || startMonth > filingDeadline) return false;
+  if(!bizYear && (!startMonth || startMonth > filingDeadline)) return false;
   if(c.status==='활성') return true;
   var endDate = c.closureDate||c.dismissDate||'';
   if(!endDate) return true;
@@ -2039,13 +2486,16 @@ function wasCorpTaxTarget(c, year) {
   return endYear >= year;
 }
 
-// 소득세 귀속연도 판정: 귀속연도+1년 5월까지 계약한 개인 포함
+// 소득세 귀속연도 판정: 사업자등록일 연도부터 신고대상
 function wasIncomeTaxTarget(c, year) {
+  // 사업자등록일이 있으면 그 연도부터 신고대상
+  var bizYear = c.bizRegDate ? parseInt(c.bizRegDate.split('-')[0]) : 0;
+  if(bizYear && bizYear > year) return false;
   var filingDeadline = (year+1)+'-05';
   var sm = c.startMonth||c.billingStart||'';
   var cd = c.contractDate||'';
   var startMonth = sm || (cd?cd.slice(0,7):'');
-  if(!startMonth || startMonth > filingDeadline) return false;
+  if(!bizYear && (!startMonth || startMonth > filingDeadline)) return false;
   if(c.status==='활성') return true;
   var endDate = c.closureDate||c.dismissDate||'';
   if(!endDate) return true;
@@ -2133,27 +2583,66 @@ function renderCorpList(){
   if(closedCount||convertCount)countText+=' · <span style="color:#e53e3e">폐업 '+closedCount+'</span> · <span style="color:#38a169">법인전환 '+convertCount+'</span>';
   countText+=')';
   document.getElementById('corpCount').innerHTML=countText;
+  // 1부/2부 갯수 분리
+  var bu1Count=list.filter(function(c){return c.type==='1부'}).length;
+  var bu2Count=list.filter(function(c){return c.type==='2부'}).length;
+  var bu3Count=list.filter(function(c){return c.type==='3부'}).length;
+  var sumHtml='<span style="display:inline-flex;gap:10px;flex-wrap:wrap">';
+  sumHtml+='<span class="badge badge-1" style="padding:3px 10px">1부 '+bu1Count+'건</span>';
+  sumHtml+='<span class="badge badge-2" style="padding:3px 10px">2부 '+bu2Count+'건</span>';
+  if(bu3Count)sumHtml+='<span class="badge badge-3" style="padding:3px 10px">3부 '+bu3Count+'건</span>';
+  // 기장료 합계
+  var totalFee=list.reduce(function(s,c){return s+(c.fee||0)},0);
+  var totalAdj=list.reduce(function(s,c){return s+(c.adjFee||0)},0);
+  sumHtml+='<span style="color:#2b6cb0;font-weight:600">기장료합계 '+W(totalFee)+'/월</span>';
+  if(totalAdj)sumHtml+='<span style="color:#805ad5;font-weight:600">조정료합계 '+W(totalAdj)+'</span>';
+  sumHtml+='</span>';
+  document.getElementById('corpSummary').innerHTML=sumHtml;
   const tb=document.getElementById('corpTable');
-  if(!list.length){tb.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:#a0aec0">해당 연도 법인세신고대상 없음</td></tr>';return}
+  if(!list.length){tb.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#a0aec0">해당 연도 법인세신고대상 없음</td></tr>';return}
+  // 세금계산서 미발행 체크 (이번달 기준)
+  var curMonth=nowMonth();
+  var invoiceClients={};
+  if(data.extraInvoices){
+    data.extraInvoices.forEach(function(e){if(e.month===curMonth)invoiceClients[e.client]=true});
+  }
   tb.innerHTML=list.map(function(c){
     var cvts=convertedCorpIds[c.id];
-    var note='';
+    var alerts=[];
+    // 법인전환 알림
     if(cvts){
-      note=cvts.map(function(v){
-        var ym=v.date?v.date.slice(0,7).replace('-','년 ')+'월':'';
-        return'<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#f0fff4;color:#38a169;font-weight:600">법인전환 ('+v.fromName+', '+ym+')</span>';
-      }).join(' ');
+      cvts.forEach(function(v){
+        var ym=v.date?v.date.slice(0,7).replace('-','.'):'';
+        alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#f0fff4;color:#38a169;font-weight:600">법인전환 ('+v.fromName+')</span>');
+      });
     }
-    if(!note&&c.dismissReason==='법인전환'){
-      note='<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#f0fff4;color:#38a169;font-weight:600">법인전환</span>';
+    // 신설 알림 (해당 귀속연도에 생성된 법인)
+    var startY=c.startMonth?parseInt(c.startMonth.split('-')[0]):0;
+    if(startY===year){
+      alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#ebf8ff;color:#2b6cb0;font-weight:600">🆕 신설</span>');
     }
+    // 이관 알림
+    if(c.clientOrigin==='이관'){
+      alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#faf5ff;color:#805ad5;font-weight:600">📥 이관'+(c.originOffice?' ('+c.originOffice+')':'')+'</span>');
+    }
+    // 세금계산서 미발행 알림 (활성 법인 중 이번달 세금계산서가 없는 경우)
+    if(c.status==='활성'&&c.fee>0){
+      var bs=c.billingStart||c.startMonth||'';
+      if(bs&&bs<=curMonth&&!invoiceClients[c.name]){
+        // 기본 세금계산서 목록에도 없는지 체크
+        var hasBasicInvoice=(bs<=curMonth);
+        // extraInvoices에 없으면 기본은 renderInvoice에서 자동생성되므로 여기선 extraInvoices만 체크
+      }
+    }
+    var closingLabel=c.closingType||'기본';
     return'<tr'+(cvts?' style="background:#f0fff4"':'')+'>'+
       '<td>'+c.id+'</td><td>'+c.name+'</td><td>'+(c.ownerName||'-')+'</td>'+
       '<td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td><td>'+c.entityType+'</td>'+
       '<td>'+bizLabel(c)+'</td><td>'+(c.manager||'-')+'</td>'+
       '<td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:right">'+fmt(c.adjFee)+'</td>'+
+      '<td style="font-size:11px">'+closingLabel+'</td>'+
       '<td>'+getStatusBadge(c)+'</td>'+
-      '<td>'+note+'</td></tr>';
+      '<td>'+(alerts.length?alerts.join(' '):'')+'</td></tr>';
   }).join('');
 }
 
@@ -2162,7 +2651,7 @@ function renderIncomeList(){
   populateYearSelect('incomeYear');
   const year = parseInt(document.getElementById('incomeYear').value) || new Date().getFullYear();
   const s=(document.getElementById('incomeSearch').value||'').toLowerCase(),m=document.getElementById('incomeFilterManager').value;
-  const list=data.clients.filter(c=>(c.entityType==='개인'||c.entityType==='성실개인')
+  const list=data.clients.filter(c=>(c.entityType==='개인'||c.entityType==='성실개인'||c.entityType==='간이')
     && wasIncomeTaxTarget(c, year)
     &&(!s||c.name.toLowerCase().includes(s)||(c.ownerName||'').toLowerCase().includes(s)||c.id.toLowerCase().includes(s))&&(!m||c.manager===m));
   // 이름+생년월일 기준으로 그룹핑 (동명이인 구분)
@@ -2177,20 +2666,40 @@ function renderIncomeList(){
   document.getElementById('incomeCount').innerHTML='('+year+'년 귀속 <strong style="color:#2b6cb0">신고 '+filingCount+'건</strong> · <strong style="color:#d69e2e">사업장 '+bizCount+'개</strong> / 신고기한 '+(year+1)+'.05)';
   const el=document.getElementById('incomeGroups');
   if(!keys.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#a0aec0">없음</div>';return}
-  el.innerHTML=keys.map(k=>{
-    const cs=groups[k];
+  // 단일 테이블로 인별 묶기 (셀병합)
+  var h='<table><thead><tr><th style="width:30px"></th><th>대표자</th><th>번호</th><th>업체명</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th>기장료</th><th>조정료</th><th>상태</th></tr></thead><tbody>';
+  keys.forEach(function(k,gi){
+    var cs=groups[k];
     var parts=k.split('|');
     var displayName=parts[0];
     var birth=parts[1]||'';
-    var birthLabel=birth?' <span style="color:#718096;font-size:10px">('+birth+')</span>':'';
-    return`<div class="GC"><div class="GH"><div><strong>${displayName}</strong>${birthLabel} <span style="color:#64748b;font-size:11px">사업장 ${cs.length}개</span> <span style="background:#2b6cb0;color:#fff;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600">신고 1건</span></div>
-      <div style="font-size:11px;color:#2b6cb0;font-weight:600">기장료: ${W(cs.reduce((s,c)=>s+(c.fee||0),0))}/월</div></div>
-      <div><table><thead><tr><th>번호</th><th>업체명</th><th>유형</th><th>구분</th><th>업종</th><th>신고</th><th>담당</th><th>기장료</th><th>조정료</th><th>상태</th></tr></thead>
-      <tbody>${cs.map(c=>`<tr><td>${c.id}</td><td>${c.name}</td><td><span class="badge ${typeBadge(c.type)}">${c.type}</span></td>
-        <td>${c.entityType}</td><td>${bizLabel(c)}</td><td>${c.taxType==='부가세신고대상'?'부가세':c.taxType==='면세신고대상'?'면세':'-'}</td>
-        <td>${c.manager||'-'}</td><td style="text-align:right">${fmt(c.fee)}</td><td style="text-align:right">${fmt(c.adjFee)}</td><td>${getStatusBadge(c)}</td></tr>`).join('')}
-      </tbody></table></div></div>`;
-  }).join('');
+    var birthLabel=birth?'<br><span style="color:#718096;font-size:10px">'+birth+'</span>':'';
+    var totalFee=cs.reduce(function(s,c){return s+(c.fee||0)},0);
+    var rowspan=cs.length;
+    if(gi>0)h+='<tr style="height:3px;background:#e2e8f0"><td colspan="11"></td></tr>';
+    cs.forEach(function(c,ci){
+      var isGani=c.entityType==='간이';
+      var chk=selectedIncClients.has(c.id)?'checked':'';
+      var pogiLabel=c.ganiPogiMonth?'<span style="background:#e53e3e;color:#fff;padding:1px 6px;border-radius:4px;font-size:9px;margin-left:4px">포기('+c.ganiPogiMonth+')</span>':'';
+      h+='<tr>';
+      h+='<td>'+(isGani?'<input type="checkbox" data-id="'+c.id+'" '+chk+' onchange="toggleIncClient(this.checked,\''+c.id+'\')">':'')+'</td>';
+      if(ci===0){
+        h+='<td rowspan="'+rowspan+'" style="vertical-align:middle;font-weight:600;background:#f8fafc;border-right:2px solid #e2e8f0;min-width:80px">'+displayName+birthLabel;
+        h+='<div style="font-size:10px;color:#2b6cb0;margin-top:4px">사업장 '+cs.length+'개</div>';
+        h+='<div style="font-size:10px;color:#64748b">합계 '+W(totalFee)+'/월</div></td>';
+      }
+      h+='<td>'+c.id+'</td><td>'+c.name+pogiLabel+'</td>';
+      h+='<td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>';
+      h+='<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td>';
+      h+='<td>'+(c.manager||'-')+'</td>';
+      h+='<td style="text-align:right">'+fmt(c.fee)+'</td>';
+      h+='<td style="text-align:right">'+fmt(c.adjFee)+'</td>';
+      h+='<td>'+getStatusBadge(c)+'</td></tr>';
+    });
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+  updateIncBulkBar();
 }
 
 // 성실신고 (연도별)
@@ -2660,6 +3169,26 @@ function renderClosingList(){
     const checkBtn='<button class="btn btn-sm" style="'+(c.done?'background:#38a169;color:#fff':'background:#edf2f7')+'" onclick="toggleClosingDone(\''+c.id+'\',\''+ym+'\')">'+(c.done?'완료':'미완료')+'</button>';
     return'<tr><td>'+c.id+'</td><td>'+c.name+'</td><td>'+(c.ownerName||'-')+'</td><td>'+c.type+'</td><td>'+c.entityType+'</td><td><span style="color:'+(c.closingType==='월결산'?'#e53e3e':c.closingType==='분기결산'?'#805ad5':'#a0aec0')+';font-weight:600">'+closingLabel+'</span></td><td>'+(c.manager||'-')+'</td><td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:center">'+checkBtn+'</td></tr>';
   }).join('');
+
+  // 담당자별 결산 업체수 요약
+  var mgrMap={};rows.forEach(function(r){
+    var mgr=r.manager||'미배정';
+    if(!mgrMap[mgr])mgrMap[mgr]={total:0,done:0,monthly:0,quarterly:0};
+    mgrMap[mgr].total++;
+    if(r.done)mgrMap[mgr].done++;
+    if(r.closingType==='월결산')mgrMap[mgr].monthly++;
+    if(r.closingType==='분기결산')mgrMap[mgr].quarterly++;
+  });
+  var mgrKeys=Object.keys(mgrMap).sort();
+  var summaryHtml='<div class="SR" style="gap:8px;flex-wrap:wrap">';
+  mgrKeys.forEach(function(mgr){
+    var m=mgrMap[mgr];
+    summaryHtml+='<div class="card" style="padding:10px 14px;margin-bottom:0;min-width:140px;flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:4px">'+mgr+'</div>'
+      +'<div style="font-size:20px;font-weight:700;color:#2b6cb0">'+m.total+'<span style="font-size:11px;font-weight:400;color:#64748b">건</span></div>'
+      +'<div style="font-size:10px;color:#64748b;margin-top:2px">월결산 '+m.monthly+' · 분기 '+m.quarterly+' · 완료 <span style="color:#38a169;font-weight:600">'+m.done+'</span></div></div>';
+  });
+  summaryHtml+='</div>';
+  document.getElementById('closingMgrSummary').innerHTML=rows.length?summaryHtml:'';
 }
 
 function toggleClosingDone(clientId,ym){
@@ -2897,9 +3426,35 @@ function renderManagers(){
   let tDef=0;sl.forEach(s=>{
     const rev=sm('fee',s.name)*12+sm('adjFee',s.name),tgt=s.targetRevenue||0,def=tgt-rev;tDef+=def;
     const cls=def>0?'deficit':'surplus';
-    h+=`<td class="NC ${cls}" style="font-weight:600">${tgt?(def>0?W(def):W(Math.abs(def))+' 초과'):''}</td>`;
+    var warn80=tgt>0&&rev<tgt*0.8?' ⚠️':'';
+    h+=`<td class="NC ${cls}" style="font-weight:600">${tgt?(def>0?W(def)+warn80:W(Math.abs(def))+' 초과'):''}</td>`;
   });
   h+=`<td class="NC"></td><td class="NC" style="font-weight:600">${tDef>0?'<span class="deficit">'+W(tDef)+'</span>':'<span class="surplus">'+W(Math.abs(tDef))+' 초과</span>'}</td></tr>`;
+
+  // 결산/신고 건수 행 추가
+  h+='<tr style="height:3px;background:#e2e8f0"><td colspan="'+(sl.length+3)+'"></td></tr>';
+  var ym=nowMonth();
+  // 월결산 건수
+  h+='<tr><td class="RL2" style="background:#e6fffa">월결산</td>';
+  var tClose=0;sl.forEach(function(s){var v=ac.filter(function(c){return c.manager===s.name&&c.closingType==='월결산'}).length;tClose+=v;h+='<td class="NC">'+( v||'')+'</td>'});
+  var uClose=ac.filter(function(c){return !c.manager&&c.closingType==='월결산'}).length;tClose+=uClose;
+  h+='<td class="NC">'+(uClose||'')+'</td><td class="NC" style="font-weight:600">'+tClose+'</td></tr>';
+  // 분기결산 건수
+  h+='<tr><td class="RL2" style="background:#e6fffa">분기결산</td>';
+  var tQClose=0;sl.forEach(function(s){var v=ac.filter(function(c){return c.manager===s.name&&c.closingType==='분기결산'}).length;tQClose+=v;h+='<td class="NC">'+(v||'')+'</td>'});
+  var uQClose=ac.filter(function(c){return !c.manager&&c.closingType==='분기결산'}).length;tQClose+=uQClose;
+  h+='<td class="NC">'+(uQClose||'')+'</td><td class="NC" style="font-weight:600">'+tQClose+'</td></tr>';
+  // 법인세신고 대상 건수
+  h+='<tr><td class="RL2" style="background:#ebf8ff">법인세신고</td>';
+  var tCorp=0;sl.forEach(function(s){var v=ac.filter(function(c){return c.manager===s.name&&(c.entityType==='법인'||c.entityType==='성실법인')}).length;tCorp+=v;h+='<td class="NC">'+(v||'')+'</td>'});
+  var uCorp=ac.filter(function(c){return !c.manager&&(c.entityType==='법인'||c.entityType==='성실법인')}).length;tCorp+=uCorp;
+  h+='<td class="NC">'+(uCorp||'')+'</td><td class="NC" style="font-weight:600">'+tCorp+'</td></tr>';
+  // 소득세신고 대상 건수
+  h+='<tr><td class="RL2" style="background:#ebf8ff">소득세신고</td>';
+  var tInc=0;sl.forEach(function(s){var v=ac.filter(function(c){return c.manager===s.name&&(c.entityType==='개인'||c.entityType==='성실개인'||c.entityType==='간이')}).length;tInc+=v;h+='<td class="NC">'+(v||'')+'</td>'});
+  var uInc=ac.filter(function(c){return !c.manager&&(c.entityType==='개인'||c.entityType==='성실개인'||c.entityType==='간이')}).length;tInc+=uInc;
+  h+='<td class="NC">'+(uInc||'')+'</td><td class="NC" style="font-weight:600">'+tInc+'</td></tr>';
+
   h+='</tbody>';t.innerHTML=h;
 
   // Detail
@@ -3124,6 +3679,64 @@ function updateBulkBar(){
   if(selectedClients.size>0){bar.style.display='flex';document.getElementById('bulkCount').textContent=selectedClients.size+'개 선택'}
   else{bar.style.display='none'}
 }
+
+// === 소득세신고 탭 간이과세자 포기 ===
+let selectedIncClients=new Set();
+function toggleIncClient(checked,id){
+  if(checked)selectedIncClients.add(id);else selectedIncClients.delete(id);
+  updateIncBulkBar();
+}
+function updateIncBulkBar(){
+  var bar=document.getElementById('incBulkBar');if(!bar)return;
+  if(selectedIncClients.size>0){bar.style.display='flex';document.getElementById('incBulkCount').textContent=selectedIncClients.size+'개 선택'}
+  else{bar.style.display='none'}
+}
+function openGaniPogiModal(){
+  if(!selectedIncClients.size){toast('업체를 선택하세요');return}
+  var names=[];selectedIncClients.forEach(function(id){var c=data.clients.find(function(x){return x.id===id});if(c)names.push(c.id+' '+c.name)});
+  document.getElementById('ganiPogiInfo').innerHTML='<strong>'+names.join(', ')+'</strong> ('+selectedIncClients.size+'건)을 간이과세자 포기 처리합니다.';
+  var now=new Date();document.getElementById('gp_month').value=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
+  document.getElementById('ganiPogiModal').classList.add('show');
+}
+function closeGaniPogiModal(){document.getElementById('ganiPogiModal').classList.remove('show')}
+function confirmGaniPogi(){
+  var month=document.getElementById('gp_month').value;
+  if(!month){toast('포기월을 선택하세요');return}
+  if(!selectedIncClients.size)return;
+  // 포기월의 다음달 계산
+  var parts=month.split('-').map(Number);
+  var ny=parts[0],nm=parts[1]+1;if(nm>12){nm=1;ny++}
+  var nextMonth=ny+'-'+(nm<10?'0':'')+nm;
+  var cnt=0;
+  selectedIncClients.forEach(function(id){
+    var c=data.clients.find(function(x){return x.id===id});
+    if(c&&c.entityType==='간이'){
+      c.ganiPogiMonth=month;
+      c.ganiPogiNextMonth=nextMonth;
+      c.entityType='개인';
+      c.taxType='부가세신고대상';
+      c.vatFreq='2';
+      addLog('수정',c.id,c.name,'간이과세자 포기 ('+month+') → 일반과세자 전환, '+nextMonth+'부터 부가세 신고');
+      cnt++;
+    }
+  });
+  if(cnt===0){toast('간이과세자가 선택되지 않았습니다');closeGaniPogiModal();return}
+  saveData();selectedIncClients.clear();updateIncBulkBar();closeGaniPogiModal();refreshAll();
+  toast(cnt+'건 간이과세자 포기 처리 완료');
+}
+
+function bulkDeleteClients(){
+  if(!selectedClients.size)return;
+  var names=[];selectedClients.forEach(function(id){var c=data.clients.find(function(x){return x.id===id});if(c)names.push(c.name)});
+  if(!confirm(selectedClients.size+'개 업체를 삭제하시겠습니까?\n\n'+names.join(', ')))return;
+  selectedClients.forEach(function(id){
+    var c=data.clients.find(function(x){return x.id===id});
+    if(c)addLog('삭제',c.id,c.name,c.type+'/'+(c.entityType||'-')+' · 담당:'+(c.manager||'-')+' · 기장료:'+W(c.fee));
+    var idx=data.clients.findIndex(function(x){return x.id===id});
+    if(idx>=0)data.clients.splice(idx,1);
+  });
+  saveData();selectedClients.clear();updateBulkBar();refreshAll();toast(names.length+'개 업체 삭제 완료');
+}
 function bulkChangeManager(){
   const mgr=document.getElementById('bulkManager').value;
   if(!mgr){toast('담당자를 선택하세요');return}
@@ -3133,6 +3746,7 @@ function bulkChangeManager(){
     const c=data.clients.find(x=>x.id===id);
     if(c){
       if(c.manager!==mgr){
+        addLog('담당변경',c.id,c.name,(c.manager||'미배정')+' → '+mgr);
         if(!c.managerHistory)c.managerHistory=[];
         c.managerHistory.push({manager:mgr,startMonth:nowMonth(),memo:(c.manager||'미배정')+' → '+mgr,date:new Date().toISOString()});
       }
@@ -3164,6 +3778,7 @@ function bulkDismiss(reason){
     if(c&&c.status==='활성'){
       c.status='해임';c.dismissReason=reason;c.dismissDate=dismissDate;
       if(reason==='폐업'||reason==='휴업')c.closureDate=closureDate;
+      addLog('해임',c.id,c.name,'사유: '+reason+' · 해임일: '+dismissDate);
     }
   });
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast(reason+' 처리 완료');
@@ -3879,14 +4494,39 @@ function renderMgrPerf(){
 }
 
 // ===== 백업 / 복원 =====
+function getBackupSummary(d){
+  var s=[];
+  s.push('업체: '+(d.clients?d.clients.length:0)+'건');
+  s.push('활성: '+(d.clients?d.clients.filter(function(c){return c.status==='활성'}).length:0)+'건');
+  s.push('직원: '+(d.staff?d.staff.length:0)+'명');
+  s.push('활동이력: '+(d.activityLog?d.activityLog.length:0)+'건');
+  s.push('상여데이터: '+(d.bonusData&&d.bonusData.redItems?d.bonusData.redItems.length:0)+'건');
+  s.push('추가발행: '+(d.extraInvoices?d.extraInvoices.length:0)+'건');
+  s.push('결산데이터: '+(d.closingData?Object.keys(d.closingData).length:0)+'건');
+  s.push('허용이메일: '+(d.allowedEmails?d.allowedEmails.length:0)+'건');
+  s.push('승인대기: '+(d.pendingClients?d.pendingClients.length:0)+'건');
+  return s;
+}
+
 function backupData(){
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  // 백업 시점 메타데이터 추가
+  var backupObj=JSON.parse(JSON.stringify(data));
+  backupObj._backupMeta={
+    date:new Date().toISOString(),
+    user:auth.currentUser?auth.currentUser.email:'-',
+    version:'v5',
+    totalClients:data.clients?data.clients.length:0,
+    totalStaff:data.staff?data.staff.length:0
+  };
+  var blob=new Blob([JSON.stringify(backupObj,null,2)],{type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   var d=new Date();
-  a.download='고객관리_백업_'+d.getFullYear()+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+(d.getDate()<10?'0':'')+d.getDate()+'.json';
+  a.download='고객관리_백업_'+d.getFullYear()+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+(d.getDate()<10?'0':'')+d.getDate()+'_'+d.getHours()+d.getMinutes()+'.json';
   a.click();
-  toast('백업 파일 다운로드 완료 ('+data.clients.length+'건)');
+  var summary=getBackupSummary(data);
+  localStorage.setItem('lastBackupDate',new Date().toISOString());
+  toast('✅ 백업 완료!\n'+summary.join(' · '));
 }
 
 function restoreData(input){
@@ -3896,19 +4536,55 @@ function restoreData(input){
     try{
       var parsed=JSON.parse(e.target.result);
       if(!parsed.clients||!Array.isArray(parsed.clients)){toast('올바른 백업 파일이 아닙니다');return}
-      // 기존 데이터와 병합할지 덮어쓸지 선택
-      var existing=data.clients.length;
-      var incoming=parsed.clients.length;
-      var msg='백업 파일: '+incoming+'개 업체\n현재 데이터: '+existing+'개 업체\n\n';
-      msg+='[확인] = 기존 데이터를 백업으로 교체\n[취소] = 취소';
-      if(existing>0&&!confirm(msg)){input.value='';return}
+      // 백업 파일 상세 확인
+      var backupSummary=getBackupSummary(parsed);
+      var currentSummary=getBackupSummary(data);
+      var meta=parsed._backupMeta||{};
+      var msg='📂 백업 파일 정보:\n';
+      if(meta.date)msg+='  백업일시: '+new Date(meta.date).toLocaleString('ko-KR')+'\n';
+      if(meta.user)msg+='  백업자: '+meta.user+'\n';
+      msg+='  '+backupSummary.join('\n  ')+'\n\n';
+      msg+='📊 현재 데이터:\n  '+currentSummary.join('\n  ')+'\n\n';
+      msg+='⚠️ 기존 데이터가 백업으로 완전히 교체됩니다.\n계속하시겠습니까?';
+      if(!confirm(msg)){input.value='';return}
+      // _backupMeta는 제거
+      delete parsed._backupMeta;
       data=migrate(parsed);
       saveData();refreshAll();
-      toast('복원 완료! '+data.clients.length+'개 업체, '+data.staff.length+'명 직원');
+      toast('✅ 복원 완료! '+getBackupSummary(data).join(' · '));
     }catch(ex){toast('파일 읽기 오류: '+ex.message)}
   };
   reader.readAsText(file);
   input.value='';
+}
+
+// ===== 자동 백업 (7일마다 알림) =====
+function checkAutoBackupReminder(){
+  var lastBackup=localStorage.getItem('lastBackupDate');
+  if(!lastBackup){
+    // 한번도 백업하지 않음
+    showBackupReminder('아직 백업을 한 적이 없습니다. 지금 백업하시겠습니까?');
+    return;
+  }
+  var daysSince=Math.floor((Date.now()-new Date(lastBackup).getTime())/(1000*60*60*24));
+  if(daysSince>=7){
+    showBackupReminder('마지막 백업이 '+daysSince+'일 전입니다. 지금 백업하시겠습니까?');
+  }
+}
+
+function showBackupReminder(msg){
+  var el=document.createElement('div');
+  el.id='backupReminder';
+  el.style.cssText='position:fixed;bottom:20px;right:20px;background:#fffff0;border:2px solid #d69e2e;border-radius:10px;padding:14px 18px;z-index:9998;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:320px;font-size:12px';
+  el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<strong style="color:#92400e">💾 백업 알림</strong>'
+    +'<span style="cursor:pointer;font-size:16px;color:#a0aec0" onclick="document.getElementById(\'backupReminder\').remove()">×</span></div>'
+    +'<div style="color:#744210;margin-bottom:10px">'+msg+'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn btn-sm" style="background:#d69e2e;color:#fff;font-size:11px;padding:6px 14px" onclick="backupData();document.getElementById(\'backupReminder\').remove()">지금 백업</button>'
+    +'<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:6px 14px" onclick="localStorage.setItem(\'lastBackupDate\',new Date().toISOString());document.getElementById(\'backupReminder\').remove()">7일 후 알림</button>'
+    +'</div>';
+  document.body.appendChild(el);
 }
 
 // =============== 추가발행 (세금계산서 탭) ===============
@@ -4279,10 +4955,11 @@ function toggleExtraInvoicePaid(idx,val){
   if(!data.extraInvoices||idx<0||idx>=data.extraInvoices.length)return;
   var e=data.extraInvoices[idx];
   e.paid=val;
+  if(val==='Y'){e.paidDate=new Date().toISOString();}else{delete e.paidDate;}
   // bonusData.redItems도 동기화
   if(data.bonusData.redItems){
     data.bonusData.redItems.forEach(function(r){
-      if(r.staff===e.staff&&r.type===e.type&&r.client===e.client&&r.amount===e.amount&&r.month===e.month)r.paid=val;
+      if(r.staff===e.staff&&r.type===e.type&&r.client===e.client&&r.amount===e.amount&&r.month===e.month){r.paid=val;if(val==='Y'){r.paidDate=e.paidDate;}else{delete r.paidDate;}}
     });
   }
   saveData();renderInvoice();renderExtraInvoices();renderBu2Fee();renderBonus();
@@ -4451,7 +5128,6 @@ var BONUS_ITEMS={
   rectify:{name:'경정청구',lv:'red',basis:'입금',auto:false},
   property:{name:'재산세(20%)',lv:'red',basis:'입금',auto:false},
   explain:{name:'해명자료대응(10%)',lv:'red',basis:'입금',auto:false},
-  schedule:{name:'일정관리왕',lv:'blue',basis:'진도율',auto:false},
   closeProg:{name:'가결산진도율왕',lv:'blue',basis:'진도율',auto:false},
   errorShare:{name:'오류공유왕',lv:'blue',basis:'건수',auto:false},
   vatProgress:{name:'부가세진도율',lv:'blue',basis:'진도율',auto:false},
@@ -4537,21 +5213,34 @@ function calcAutoBonus(staffName,year,month){
     });
     result.bu2=bu2Total;
   }
-  // 2부업체 수수료 인센티브 (1월/7월, 세무팀 전용)
-  if((month===1||month===7)&&(!staffObj||staffObj.team==='세무팀')){
-    var bu2FeeTotal=0;var bu2FeeDetails=[];
-    var bu2Extras=(data.extraInvoices||[]).filter(function(e){return e.type==='부가세신고수수료'&&e.month===ym&&e.staff===staffName});
-    var bu2Sum=bu2Extras.reduce(function(s,e){return s+e.amount},0);
-    var bonus=0;
-    if(bu2Sum<=300000)bonus=30000;
-    else if(bu2Sum<=700000)bonus=50000;
-    else if(bu2Sum<=1000000)bonus=80000;
-    else if(bu2Sum<=1500000)bonus=100000;
-    else if(bu2Sum<=2000000)bonus=200000;
-    else bonus=200000;
-    result.bu2Fee=bonus;
-    result.bu2FeeSum=bu2Sum;
-    result.bu2FeeDetails=bu2Extras;
+  // 2부업체 수수료 인센티브 (세금계산서탭 업로드 기준, 세무팀 전용)
+  // 해당월에 업로드된 2부업체 수수료 건이 있으면 인센티브 반영
+  if(!staffObj||staffObj.team==='세무팀'){
+    var bu2Extras=(data.extraInvoices||[]).filter(function(e){
+      if(e.type!=='부가세신고수수료'||e.staff!==staffName)return false;
+      // 업로드일(date) 기준으로 해당월에 업로드된 건 포함
+      var uploadMonth=e.date?e.date.substring(0,7):'';
+      return e.month===ym||uploadMonth===ym;
+    });
+    // 중복 제거 (같은 건이 month와 uploadMonth 둘 다 매칭될 수 있음)
+    var bu2Seen={};var bu2Unique=[];
+    bu2Extras.forEach(function(e){
+      var key=e.staff+'|'+e.client+'|'+e.amount+'|'+e.month;
+      if(!bu2Seen[key]){bu2Seen[key]=true;bu2Unique.push(e)}
+    });
+    var bu2Sum=bu2Unique.reduce(function(s,e){return s+e.amount},0);
+    if(bu2Sum>0){
+      var bonus=0;
+      if(bu2Sum<=300000)bonus=30000;
+      else if(bu2Sum<=700000)bonus=50000;
+      else if(bu2Sum<=1000000)bonus=80000;
+      else if(bu2Sum<=1500000)bonus=100000;
+      else if(bu2Sum<=2000000)bonus=200000;
+      else bonus=200000;
+      result.bu2Fee=bonus;
+      result.bu2FeeSum=bu2Sum;
+      result.bu2FeeDetails=bu2Unique;
+    }
   }
   // 소개왕 자동 (3개월+12개월 각 50%)
   var refTotal=0;var refDetails=[];
@@ -4825,7 +5514,7 @@ function renderBonus(){
   data.staff.filter(function(s){return isStaffActiveForMonth(s,ym)}).forEach(function(staff){
     var auto=calcAutoBonus(staff.name,year,month);
     var total=0;
-    sumFeeAutoIdsPreCalc.forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(auto[id]||0);});
+    sumFeeAutoIdsPreCalc.forEach(function(id){if(id==='bu2Fee'||(schedule.indexOf(id)!==-1))total+=(auto[id]||0);});
     total+=(auto.referral||0)+(auto.extReferral||0)+(auto.consultant||0)+(auto.firstConsultBonus||0)-(auto.firstConsultClawback||0)+(auto.instaBonus||0)+(auto.bizDevBonus||0)-(auto.bizDevClawback||0);
     var entry=getBonusEntry(staff.name,ym);
     manualAmountIdsPreCalc.forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(entry[id]||0);});
@@ -5051,10 +5740,15 @@ function renderBonus(){
     itemsHTML+='</div>';
   }
 
-  // 그룹 2-1: 2부업체 수수료 인센티브 (1월/7월)
-  if(schedule.indexOf('bu2Fee')!==-1){
+  // 그룹 2-1: 2부업체 수수료 인센티브 (세금계산서탭 업로드 기준)
+  var hasBu2ForMonth=(data.extraInvoices||[]).some(function(e){
+    if(e.type!=='부가세신고수수료')return false;
+    var uploadMonth=e.date?e.date.substring(0,7):'';
+    return e.month===ym||uploadMonth===ym;
+  });
+  if(schedule.indexOf('bu2Fee')!==-1||hasBu2ForMonth){
     var taxStaffBu2=data.staff.filter(function(s){return (!s.team||s.team==='세무팀')&&isStaffActiveForMonth(s,ym)});
-    itemsHTML+='<div class="card"><div class="card-title">2부업체 수수료 인센티브 (세무팀)</div>';
+    itemsHTML+='<div class="card"><div class="card-title">2부업체 수수료 인센티브 (세무팀) <span style="font-size:10px;color:#64748b;font-weight:400">세금계산서탭 업로드 기준</span></div>';
     var bu2FeeTable='<table><thead><tr><th>담당자</th><th style="text-align:right">수수료합</th><th style="text-align:right">인센티브</th><th></th></tr></thead><tbody>';
     var bu2DetIdx=0;
     taxStaffBu2.forEach(function(staff){
@@ -5328,7 +6022,7 @@ function renderBonus(){
       var ym2Schedule=MONTH_SCHEDULE[ym2]||[];
       var auto2=calcAutoBonus(staff.name,year,ym2);
       var mTotal=0;
-      ['bu2','bu2Fee'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)mTotal+=(auto2[id]||0);});
+      ['bu2'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)mTotal+=(auto2[id]||0);});mTotal+=(auto2.bu2Fee||0);
       mTotal+=(auto2.referral||0)+(auto2.extReferral||0)+(auto2.consultant||0)+(auto2.firstConsultBonus||0)-(auto2.firstConsultClawback||0)+(auto2.instaBonus||0)+(auto2.bizDevBonus||0)-(auto2.bizDevClawback||0);
       var e2=getBonusEntry(staff.name,ym2Str);
       ['umbrella','edi','feeH1','fee15','fee6','feeH2','corpAdj','incomeAdj','sincereAdj'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)mTotal+=(e2[id]||0);});
@@ -5351,7 +6045,7 @@ function renderBonus(){
     data.staff.forEach(function(staff){
       if(!isStaffActiveForMonth(staff,ym2Str))return;
       var auto2=calcAutoBonus(staff.name,year,ym2);
-      ['bu2','bu2Fee'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)monthSum+=(auto2[id]||0);});
+      ['bu2'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)monthSum+=(auto2[id]||0);});monthSum+=(auto2.bu2Fee||0);
       monthSum+=(auto2.referral||0)+(auto2.extReferral||0)+(auto2.consultant||0)+(auto2.firstConsultBonus||0)-(auto2.firstConsultClawback||0)+(auto2.instaBonus||0)+(auto2.bizDevBonus||0)-(auto2.bizDevClawback||0);
       var e2=getBonusEntry(staff.name,ym2Str);
       ['umbrella','edi','feeH1','fee15','fee6','feeH2','corpAdj','incomeAdj','sincereAdj'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1)monthSum+=(e2[id]||0);});
@@ -5396,7 +6090,7 @@ function previewBonusReport(year,month){
 
     var total=0;
     var items=[];
-    sumFeeAutoIdsR.forEach(function(id){if(schedule.indexOf(id)!==-1){var v=auto[id]||0;if(v>0){total+=v;items.push({name:BONUS_ITEMS[id].name,val:v});}}});
+    sumFeeAutoIdsR.forEach(function(id){if(id==='bu2Fee'||(schedule.indexOf(id)!==-1)){var v=auto[id]||0;if(v>0){total+=v;items.push({name:BONUS_ITEMS[id].name,val:v});}}});
     if(auto.referral>0){total+=auto.referral;items.push({name:'소개왕',val:auto.referral});}
     if(auto.extReferral>0){total+=auto.extReferral;items.push({name:'외부소개',val:auto.extReferral});}
     if(auto.consultant>0){total+=auto.consultant;items.push({name:'최종상담',val:auto.consultant});}
@@ -5450,7 +6144,7 @@ function downloadBonusPDF(year,month){
     var redRatesR={'법인전환':0.2,'수정신고':0.2,'경정청구(업무지시)':0.2,'경정청구(본인발견)':0.3,'재산세':0.2,'해명자료대응':0.1,'기한후신고':0.2};
     var checkAmountsR={schedule:100000,closeProg:100000,errorShare:100000,vatProgress:200000,corpProgress:100000,incomeProgress:100000};
     var total=0;
-    ['bu2','bu2Fee'].forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(auto[id]||0);});
+    ['bu2'].forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(auto[id]||0);});total+=(auto.bu2Fee||0);
     total+=(auto.referral||0)+(auto.extReferral||0)+(auto.consultant||0)+(auto.firstConsultBonus||0)-(auto.firstConsultClawback||0)+(auto.instaBonus||0)+(auto.bizDevBonus||0)-(auto.bizDevClawback||0);
     ['umbrella','edi','feeH1','fee15','fee6','feeH2','corpAdj','incomeAdj','sincereAdj'].forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(entry[id]||0);});
     getRedItemsForMonth(ym).filter(function(r){return r.staff===staff.name&&r.paid==='Y';}).forEach(function(r){total+=Math.round((r.amount||0)*(redRatesR[r.type]||0.2));});
@@ -5484,23 +6178,38 @@ function toggleTeamGroup(team){
   rows.forEach(function(r){r.style.display=visible?'none':'table-row';});
   if(toggle)toggle.textContent=visible?'상세내역 ▶':'상세내역 ▼';
 }
-// 해당 월의 레드항목 + 이전월 미입금 이월건 포함
+// 해당 월의 레드항목 + 이전월 미입금 이월건 + 이전월에서 이번달 입금완료건 포함
 function getRedItemsForMonth(ym){
   var allRed=data.bonusData.redItems||[];
   var result=[];
-  // 해당월 건
+  var addedIdx={};
+  // 해당월 건 (단, paid with paidDate가 다른 월이면 해당월에서 제외 → paidDate 월에 표시)
   allRed.forEach(function(r,i){
-    if(r.month===ym)result.push(Object.assign({},r,{_origIdx:i,_carried:false}));
+    if(r.month===ym){
+      if(r.paid==='Y'&&r.paidDate&&r.paidDate.substring(0,7)!==ym){return;}
+      result.push(Object.assign({},r,{_origIdx:i,_carried:false}));
+      addedIdx[i]=true;
+    }
   });
-  // 이전월 미입금건 이월 (최대 12개월 전까지 탐색)
+  // 이전월 미입금건 이월 + 이전월에서 이번달에 입금완료된 건 (최대 12개월 전까지 탐색)
   var parts=ym.split('-');var y=parseInt(parts[0]);var m=parseInt(parts[1]);
   for(var back=1;back<=12;back++){
     var pm=m-back;var py=y;
     while(pm<=0){pm+=12;py--;}
     var prevYm=py+'-'+(pm<10?'0'+pm:pm);
     allRed.forEach(function(r,i){
-      if(r.month===prevYm&&r.paid!=='Y'){
-        result.push(Object.assign({},r,{_origIdx:i,_carried:true,_origMonth:r.month}));
+      if(addedIdx[i])return;
+      if(r.month===prevYm){
+        // 미입금 이월
+        if(r.paid!=='Y'){
+          result.push(Object.assign({},r,{_origIdx:i,_carried:true,_origMonth:r.month}));
+          addedIdx[i]=true;
+        }
+        // 이번달에 입금완료된 건 (입금일 기준 상여 반영 + 내역 유지)
+        else if(r.paid==='Y'&&r.paidDate&&r.paidDate.substring(0,7)===ym){
+          result.push(Object.assign({},r,{_origIdx:i,_carried:true,_origMonth:r.month}));
+          addedIdx[i]=true;
+        }
       }
     });
   }
@@ -5509,12 +6218,13 @@ function getRedItemsForMonth(ym){
 function toggleRedPaid(origIdx,val){
   if(!data.bonusData.redItems||origIdx<0||origIdx>=data.bonusData.redItems.length)return;
   data.bonusData.redItems[origIdx].paid=val;
+  if(val==='Y'){data.bonusData.redItems[origIdx].paidDate=new Date().toISOString();}else{delete data.bonusData.redItems[origIdx].paidDate;}
   saveData();renderBonus();
   // 세금계산서 추가발행 내역도 동기화
   var r=data.bonusData.redItems[origIdx];
   if(data.extraInvoices){
     data.extraInvoices.forEach(function(e){
-      if(e.staff===r.staff&&e.type===r.type&&e.client===r.client&&e.amount===r.amount&&e.month===r.month)e.paid=val;
+      if(e.staff===r.staff&&e.type===r.type&&e.client===r.client&&e.amount===r.amount&&e.month===r.month){e.paid=val;if(val==='Y'){e.paidDate=r.paidDate;}else{delete e.paidDate;}}
     });
     saveData();
   }
@@ -5758,7 +6468,7 @@ function saveEdiForm(ym){
   closeEdiForm();renderBonus();toast('EDI지원금 저장됨');
 }
 
-function refreshAll(){popDropdowns();renderStats();renderClients();renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList();renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices();renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()}
+function refreshAll(){popDropdowns();renderStats();renderClients();renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList();renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices();renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus();renderAdminLog();renderAllowedEmails();renderPendingApprovals()}
 
 // Init
 document.getElementById('invoiceMonth').value=nowMonth();
