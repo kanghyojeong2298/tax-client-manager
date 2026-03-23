@@ -1382,7 +1382,16 @@ function getVatFilingMonths(freq){
 }
 
 // Tabs
+var ADMIN_TAB_PIN='expert2026';
+var adminTabUnlocked=false;
 document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{
+  // 관리자 탭 비밀번호 보호
+  if(b.dataset.tab==='admin'&&!adminTabUnlocked){
+    var pin=prompt('🔒 관리자 탭 비밀번호를 입력하세요:');
+    if(!pin)return;
+    if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');return}
+    adminTabUnlocked=true;
+  }
   document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.TC').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');refreshAll();
@@ -3533,74 +3542,128 @@ function handleExcelUpload(input){
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!rows.length){toast('데이터가 없습니다');return}
-      let added=0,errors=[];
-      rows.forEach((r,i)=>{
-        const name=String(r['업체명']||'').trim();
-        if(!name){errors.push((i+2)+'행: 업체명 없음');return}
-        const typeRaw=String(r['유형(1부/2부/3부)']||'1부').trim();
-        const type=['1부','2부','3부'].includes(typeRaw)?typeRaw:'1부';
-        const entityRaw=String(r['구분(개인/법인/간이/성실개인/성실법인)']||r['구분(개인/법인/성실개인/성실법인)']||'개인').trim();
-        const entity=['개인','법인','간이','성실개인','성실법인'].includes(entityRaw)?entityRaw:'개인';
-        const bizRaw=String(r['업종(일반/스타트업/전자상거래)']||'일반').trim();
-        const biz=['일반','스타트업','전자상거래'].includes(bizRaw)?bizRaw:'일반';
-        const taxRaw=String(r['신고대상(부가세신고대상/면세신고대상/해당없음)']||'부가세신고대상').trim();
-        const tax=['부가세신고대상','면세신고대상','해당없음'].includes(taxRaw)?taxRaw:'부가세신고대상';
-        const vfRaw=String(r['부가세주기(auto/2/4/12)']||'auto').trim();
-        const vatFreq=['auto','2','4','12'].includes(vfRaw)?vfRaw:'auto';
-        const closingRaw=String(r['결산유형(기본/월결산/분기결산/외부조정)']||'기본').trim();
-        const closingType=['기본','월결산','분기결산','외부조정'].includes(closingRaw)?closingRaw:'기본';
-        const retroApplyRaw=String(r['소급기장료해당여부(해당/미해당)']||'').trim();
-        const retroApply=['해당','미해당'].includes(retroApplyRaw)?retroApplyRaw:'';
-        const originRaw=String(r['유입구분(신규/이관)']||'신규').trim();
-        const clientOrigin=['신규','이관'].includes(originRaw)?originRaw:'신규';
-        const sourceRaw=String(r['유입경로(소개/외부소개/블로그/홈페이지/인스타그램/유튜브/세무서/기타)']||'').trim();
-        const sourceChannel=['소개','외부소개','블로그','홈페이지','인스타그램','유튜브','세무서','기타'].includes(sourceRaw)?sourceRaw:'';
-        const extRefRaw=String(r['외부소개유형(지인/가족/외부네트워크)']||'').trim();
-        const extReferral=['지인','가족','외부네트워크'].includes(extRefRaw)?extRefRaw:'';
 
-        const fee=Number(r['기장료(월)'])||0;
-        const startMonth=String(r['기장계약시작월(YYYY-MM)']||'').trim();
-        const billingStart=String(r['출금시작월(YYYY-MM)']||'').trim();
+      // 진행률 표시
+      var progressEl=document.createElement('div');
+      progressEl.id='bulkProgress';
+      progressEl.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #2b6cb0;border-radius:12px;padding:30px 40px;z-index:99999;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center;min-width:300px';
+      progressEl.innerHTML='<div style="font-size:16px;font-weight:700;color:#1a365d;margin-bottom:12px">📋 업체 일괄등록 중...</div>'
+        +'<div id="bulkProgressBar" style="width:100%;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:8px"><div id="bulkProgressFill" style="width:0%;height:100%;background:#2b6cb0;transition:width 0.1s"></div></div>'
+        +'<div id="bulkProgressText" style="font-size:12px;color:#64748b">0 / '+rows.length+' 처리 중...</div>';
+      document.body.appendChild(progressEl);
 
-        const cd={
-          id:genId(type), name, ownerName:String(r['대표자명']||'').trim(),
-          ownerBirth:String(r['생년월일(6자리)']||'').trim().replace(/[^0-9]/g,'').slice(0,6),
-          type, entityType:entity,
-          businessType:biz,
-          ecommerceDetail:biz==='전자상거래'?String(r['전자상거래세부(국내/해외/국내+해외/구매대행)']||r['전자상거래세부(국내/해외(큐텐,쇼피)/국내+해외/구매대행)']||'국내').trim():'',
-          taxType:tax, vatFreq, closingType:closingType, closingChangeDate:'',
-          manager:String(r['담당자']||'').trim(),
-          fee:fee, adjFee:Number(r['예상조정료'])||0,
-          startMonth:startMonth, billingStart:billingStart,
-          contractDate:String(r['계약일(YYYY-MM-DD)']||'').trim(),
-          retroApply:retroApply,
-          retroFee:retroApply==='해당'?(Number(r['소급기장료(월)'])||0):0,
-          retroMonths:retroApply==='해당'?(Number(r['소급개월수'])||0):0,
-          retroBillingMonth:String(r['세금계산서발행월(YYYY-MM)']||'').trim(),
-          clientOrigin:clientOrigin,
-          originOffice:clientOrigin==='이관'?String(r['이관사무실']||'').trim():'',
-          sourceChannel:sourceChannel,
-          referredBy:String(r['소개업체번호']||'').trim(),
-          extReferral:sourceChannel==='외부소개'?extReferral:'',
-          finalConsultant:String(r['최종상담자']||'').trim(),
-          firstConsultant:String(r['1차상담자']||'').trim(),
-          trainer:String(r['1:1교육']||'').trim(),
-          linkedTo:type==='2부'?String(r['2부연결업체번호']||'').trim():'',
-          notes:String(r['비고']||'').trim(),
-          status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
-          deferredMonths:0,
-          feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:new Date().toISOString()}]:[],
-          managerHistory:[],
-          createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        };
-        data.clients.push(cd);added++;
-      });
-      saveData();refreshAll();
-      let msg=added+'건 등록 완료';
-      if(errors.length)msg+='\n오류 '+errors.length+'건: '+errors.slice(0,3).join(', ')+(errors.length>3?'..':'');
-      toast(msg);
-      if(errors.length)alert('등록 오류:\n'+errors.join('\n'));
-    }catch(ex){toast('파일 읽기 오류: '+ex.message);console.error(ex)}
+      var added=0,errors=[];
+      var batchSize=50; // 50개씩 배치 처리
+      var idx=0;
+      var nowStr=new Date().toISOString();
+
+      function processBatch(){
+        var end=Math.min(idx+batchSize,rows.length);
+        for(var bi=idx;bi<end;bi++){
+          var r=rows[bi];var i=bi;
+          var name=String(r['업체명']||'').trim();
+          if(!name){errors.push((i+2)+'행: 업체명 없음');continue}
+          var typeRaw=String(r['유형(1부/2부/3부)']||'1부').trim();
+          var type=['1부','2부','3부'].indexOf(typeRaw)>=0?typeRaw:'1부';
+          var entityRaw=String(r['구분(개인/법인/간이/성실개인/성실법인)']||r['구분(개인/법인/성실개인/성실법인)']||'개인').trim();
+          var entity=['개인','법인','간이','성실개인','성실법인'].indexOf(entityRaw)>=0?entityRaw:'개인';
+          var bizRaw=String(r['업종(일반/스타트업/전자상거래)']||'일반').trim();
+          var biz=['일반','스타트업','전자상거래'].indexOf(bizRaw)>=0?bizRaw:'일반';
+          var taxRaw=String(r['신고대상(부가세신고대상/면세신고대상/해당없음)']||'부가세신고대상').trim();
+          var tax=['부가세신고대상','면세신고대상','해당없음'].indexOf(taxRaw)>=0?taxRaw:'부가세신고대상';
+          var vfRaw=String(r['부가세주기(auto/2/4/12)']||'auto').trim();
+          var vatFreq=['auto','2','4','12'].indexOf(vfRaw)>=0?vfRaw:'auto';
+          var closingRaw=String(r['결산유형(기본/월결산/분기결산/외부조정)']||'기본').trim();
+          var closingType=['기본','월결산','분기결산','외부조정'].indexOf(closingRaw)>=0?closingRaw:'기본';
+          var retroApplyRaw=String(r['소급기장료해당여부(해당/미해당)']||'').trim();
+          var retroApply=['해당','미해당'].indexOf(retroApplyRaw)>=0?retroApplyRaw:'';
+          var originRaw=String(r['유입구분(신규/이관)']||'신규').trim();
+          var clientOrigin=['신규','이관'].indexOf(originRaw)>=0?originRaw:'신규';
+          var sourceRaw=String(r['유입경로(소개/외부소개/블로그/홈페이지/인스타그램/유튜브/세무서/기타)']||'').trim();
+          var sourceChannel=['소개','외부소개','블로그','홈페이지','인스타그램','유튜브','세무서','기타'].indexOf(sourceRaw)>=0?sourceRaw:'';
+          var extRefRaw=String(r['외부소개유형(지인/가족/외부네트워크)']||'').trim();
+          var extReferral=['지인','가족','외부네트워크'].indexOf(extRefRaw)>=0?extRefRaw:'';
+
+          var fee=Number(r['기장료(월)'])||0;
+          var startMonth=String(r['기장계약시작월(YYYY-MM)']||'').trim();
+          var billingStart=String(r['출금시작월(YYYY-MM)']||'').trim();
+
+          var cd={
+            id:genId(type), name:name, ownerName:String(r['대표자명']||'').trim(),
+            ownerBirth:String(r['생년월일(6자리)']||'').trim().replace(/[^0-9]/g,'').slice(0,6),
+            type:type, entityType:entity,
+            businessType:biz,
+            ecommerceDetail:biz==='전자상거래'?String(r['전자상거래세부(국내/해외/국내+해외/구매대행)']||r['전자상거래세부(국내/해외(큐텐,쇼피)/국내+해외/구매대행)']||'국내').trim():'',
+            taxType:tax, vatFreq:vatFreq, closingType:closingType, closingChangeDate:'',
+            manager:String(r['담당자']||'').trim(),
+            fee:fee, adjFee:Number(r['예상조정료'])||0,
+            startMonth:startMonth, billingStart:billingStart,
+            contractDate:String(r['계약일(YYYY-MM-DD)']||'').trim(),
+            retroApply:retroApply,
+            retroFee:retroApply==='해당'?(Number(r['소급기장료(월)'])||0):0,
+            retroMonths:retroApply==='해당'?(Number(r['소급개월수'])||0):0,
+            retroBillingMonth:String(r['세금계산서발행월(YYYY-MM)']||'').trim(),
+            clientOrigin:clientOrigin,
+            originOffice:clientOrigin==='이관'?String(r['이관사무실']||'').trim():'',
+            sourceChannel:sourceChannel,
+            referredBy:String(r['소개업체번호']||'').trim(),
+            extReferral:sourceChannel==='외부소개'?extReferral:'',
+            finalConsultant:String(r['최종상담자']||'').trim(),
+            firstConsultant:String(r['1차상담자']||'').trim(),
+            trainer:String(r['1:1교육']||'').trim(),
+            linkedTo:type==='2부'?String(r['2부연결업체번호']||'').trim():'',
+            notes:String(r['비고']||'').trim(),
+            status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
+            deferredMonths:0,
+            feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:nowStr}]:[],
+            managerHistory:[],
+            createdAt:nowStr, updatedAt:nowStr
+          };
+          data.clients.push(cd);added++;
+        }
+        idx=end;
+        // 진행률 업데이트
+        var pct=Math.round(idx/rows.length*100);
+        var fillEl=document.getElementById('bulkProgressFill');
+        var textEl=document.getElementById('bulkProgressText');
+        if(fillEl)fillEl.style.width=pct+'%';
+        if(textEl)textEl.textContent=idx+' / '+rows.length+' 처리 중... ('+pct+'%)';
+
+        if(idx<rows.length){
+          // 다음 배치를 setTimeout으로 비동기 처리 (UI 블로킹 방지)
+          setTimeout(processBatch,10);
+        }else{
+          // 완료: localStorage 저장 (Firestore는 별도)
+          if(textEl)textEl.textContent='💾 저장 중...';
+          setTimeout(function(){
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+            // Firestore 저장 (비동기)
+            if(auth.currentUser){
+              db.collection('users').doc(auth.currentUser.uid).set({
+                data:JSON.stringify(data),
+                updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+              }).then(function(){
+                console.log('Firestore bulk save OK');
+              }).catch(function(e){console.error('Firestore bulk save error:',e)});
+            }
+            // 활동이력 1건만 추가
+            addLog('등록','BULK','일괄등록',added+'건 엑셀 일괄등록');
+            // 진행률 표시 제거 후 화면 갱신
+            var pe=document.getElementById('bulkProgress');if(pe)pe.remove();
+            refreshAll();
+            var msg='✅ '+added+'건 등록 완료!';
+            if(errors.length)msg+='\n⚠️ 오류 '+errors.length+'건';
+            toast(msg);
+            if(errors.length)alert('등록 오류:\n'+errors.join('\n'));
+          },50);
+        }
+      }
+      // 첫 배치 시작
+      processBatch();
+    }catch(ex){
+      var pe=document.getElementById('bulkProgress');if(pe)pe.remove();
+      toast('파일 읽기 오류: '+ex.message);console.error(ex);
+    }
   };
   reader.readAsArrayBuffer(file);
   input.value='';// reset
@@ -5120,6 +5183,7 @@ var BONUS_ITEMS={
   feeH2:{name:'하반기 기장료(2%)',lv:'white',basis:'매출',auto:false},
   bu2:{name:'2부업체 인센티브',lv:'white',basis:'매출',auto:true},
   bu2Fee:{name:'2부업체 수수료 인센티브',lv:'white',basis:'수수료합',auto:true},
+  schedule:{name:'스케줄관리왕',lv:'blue',basis:'진도율',auto:false},
   corpAdj:{name:'법인세 조정료(실제)',lv:'white',basis:'매출',auto:false},
   incomeAdj:{name:'소득세 조정료(실제)',lv:'white',basis:'매출',auto:false},
   sincereAdj:{name:'성실 조정료(실제)',lv:'white',basis:'매출',auto:false},
