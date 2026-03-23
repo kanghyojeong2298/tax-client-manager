@@ -7,9 +7,20 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+<script>
+var _lazyLibs={xlsx:false,jspdf:false};
+function loadXLSX(cb){
+  if(_lazyLibs.xlsx){if(cb)cb();return}
+  var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=function(){_lazyLibs.xlsx=true;if(cb)cb()};document.head.appendChild(s);
+}
+function loadJsPDF(cb){
+  if(_lazyLibs.jspdf){if(cb)cb();return}
+  var s1=document.createElement('script');s1.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s1.onload=function(){var s2=document.createElement('script');s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+  s2.onload=function(){_lazyLibs.jspdf=true;if(cb)cb()};document.head.appendChild(s2)};document.head.appendChild(s1);
+}
+</script>
 <style>
 @font-face{font-family:'Paperlogy';src:url('Paperlogy-4Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Paperlogy';src:url('Paperlogy-5Medium.ttf') format('truetype');font-weight:500;font-style:normal;font-display:swap}
@@ -97,6 +108,12 @@ tr:hover td{background:#f8fafc}
 </style>
 </head>
 <body>
+<div id="loadingScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f0f2f5;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:99999">
+<div style="font-size:20px;font-weight:700;color:#1a365d;margin-bottom:16px">세무법인엑스퍼트 강남</div>
+<div style="width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#2b6cb0;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+<div style="margin-top:12px;color:#718096;font-size:13px">로딩 중...</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
 
 <div class="header">
   <h1>세무법인엑스퍼트 강남 고객관리 시스템</h1>
@@ -1339,6 +1356,7 @@ function doLogout(){
 
 // Auth State Observer
 auth.onAuthStateChanged(function(user){
+  var ls=document.getElementById('loadingScreen');if(ls)ls.remove();
   var loginScreen = document.getElementById('loginScreen');
   if(user){
     loginScreen.style.display='none';
@@ -1346,6 +1364,9 @@ auth.onAuthStateChanged(function(user){
     var adminBadge=isAdmin()?'<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:#c6f6d5;color:#276749;margin-right:4px">관리자</span>':'';
     if(logoutArea) logoutArea.innerHTML=adminBadge+'<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
     loadFromFirestore();
+    // 로그인 후 무거운 라이브러리 백그라운드 로딩
+    setTimeout(function(){loadXLSX()},500);
+    setTimeout(function(){loadJsPDF()},2000);
     // 로그인 후 자동 백업 알림 체크 (3초 후)
     setTimeout(function(){checkAutoBackupReminder()},3000);
   } else {
@@ -3494,6 +3515,7 @@ function exportCSV(){
 
 // ===== 엑셀 일괄 등록 =====
 function downloadTemplate(){
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');loadXLSX(function(){downloadTemplate()});return}
   const headers=[
     '업체명','대표자명','생년월일(6자리)',
     '유형(1부/2부/3부)','구분(개인/법인/간이/성실개인/성실법인)',
@@ -3534,7 +3556,7 @@ function downloadTemplate(){
 
 function handleExcelUpload(input){
   const file=input.files[0];if(!file)return;
-  if(typeof XLSX==='undefined'){toast('SheetJS 라이브러리 로딩 중...');return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');loadXLSX(function(){handleExcelUpload(input)});return}
   const reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -3671,7 +3693,7 @@ function handleExcelUpload(input){
 
 function handleMgrExcelUpload(input){
   var file=input.files[0];if(!file)return;
-  if(typeof XLSX==='undefined'){toast('SheetJS 라이브러리 로딩 중...');return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');loadXLSX(function(){handleMgrExcelUpload(input)});return}
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -3711,7 +3733,7 @@ function handleMgrExcelUpload(input){
   input.value='';
 }
 function downloadMgrTemplate(){
-  if(typeof XLSX==='undefined'){toast('SheetJS 로딩 중...');return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');loadXLSX(function(){downloadMgrTemplate()});return}
   var header=['업체번호','업체명','현재담당자','변경담당자'];
   var rows=data.clients.filter(function(c){return c.status==='활성'}).map(function(c){
     return [c.id,c.name,c.manager||'',''];
@@ -6187,7 +6209,7 @@ function previewBonusReport(year,month){
 function closeBonusReport(){document.getElementById('bonusReportModal').classList.remove('show');}
 
 function downloadBonusPDF(year,month){
-  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){toast('jsPDF 로딩 중...');return;}
+  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){toast('PDF 라이브러리 로딩 중...');loadJsPDF(function(){downloadBonusPDF(year,month)});return;}
   var jsPDF=window.jspdf.jsPDF;
   var doc=new jsPDF('p','mm','a4');
   var ym=year+'-'+(month<10?'0'+month:month);
