@@ -1359,6 +1359,7 @@ auth.onAuthStateChanged(function(user){
     var adminBadge=isAdmin()?'<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:#c6f6d5;color:#276749;margin-right:4px">관리자</span>':'';
     if(logoutArea) logoutArea.innerHTML=adminBadge+'<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
     loadFromFirestore();
+    // 로그인 후 무거운 라이브러리 백그라운드 로딩
     // 로그인 후 자동 백업 알림 체크 (3초 후)
     setTimeout(function(){checkAutoBackupReminder()},3000);
   } else {
@@ -3507,7 +3508,7 @@ function exportCSV(){
 
 // ===== 엑셀 일괄 등록 =====
 function downloadTemplate(){
-  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');(function(){downloadTemplate()});return}
   const headers=[
     '업체명','대표자명','생년월일(6자리)',
     '유형(1부/2부/3부)','구분(개인/법인/간이/성실개인/성실법인)',
@@ -3549,6 +3550,7 @@ function downloadTemplate(){
 function handleExcelUpload(input){
   if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
   const file=input.files[0];if(!file)return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');(function(){handleExcelUpload(input)});return}
   const reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -3687,6 +3689,7 @@ function handleExcelUpload(input){
 function handleMgrExcelUpload(input){
   if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
   var file=input.files[0];if(!file)return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');(function(){handleMgrExcelUpload(input)});return}
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -3726,7 +3729,7 @@ function handleMgrExcelUpload(input){
   input.value='';
 }
 function downloadMgrTemplate(){
-  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');(function(){downloadMgrTemplate()});return}
   var header=['업체번호','업체명','현재담당자','변경담당자'];
   var rows=data.clients.filter(function(c){return c.status==='활성'}).map(function(c){
     return [c.id,c.name,c.manager||'',''];
@@ -6203,7 +6206,7 @@ function previewBonusReport(year,month){
 function closeBonusReport(){document.getElementById('bonusReportModal').classList.remove('show');}
 
 function downloadBonusPDF(year,month){
-  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){toast('jsPDF 로딩 중...');return;}
+  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){toast('PDF 라이브러리 로딩 중...');(function(){downloadBonusPDF(year,month)});return;}
   var jsPDF=window.jspdf.jsPDF;
   var doc=new jsPDF('p','mm','a4');
   var ym=year+'-'+(month<10?'0'+month:month);
@@ -6548,7 +6551,13 @@ function saveEdiForm(ym){
   closeEdiForm();renderBonus();toast('EDI지원금 저장됨');
 }
 
-function refreshAll(){popDropdowns();renderStats();renderClients();renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList();renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices();renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus();renderAdminLog();renderAllowedEmails();renderPendingApprovals()}
+function refreshAll(){
+  popDropdowns();renderStats();renderClients();
+  setTimeout(function(){renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList()},50);
+  setTimeout(function(){renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices()},100);
+  setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
+  setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
+}
 
 // Init
 document.getElementById('invoiceMonth').value=nowMonth();
@@ -6557,7 +6566,6 @@ document.getElementById('retroInvoiceMonth').value=nowMonth();
 document.getElementById('bu2InvoiceMonth').value=nowMonth();
 document.getElementById('vatMonth').value=nowMonth();
 document.getElementById('closingMonth').value=nowMonth();
-refreshAll();
 </script>
 </body>
 </html>
