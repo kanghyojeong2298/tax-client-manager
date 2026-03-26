@@ -124,6 +124,8 @@ tr:hover td{background:#f8fafc}
 
 <nav class="tab-nav">
   <button class="tab-btn active" data-tab="clients">업체관리</button>
+  <button class="tab-btn" data-tab="onboarding">신규수임</button>
+  <button class="tab-btn" data-tab="consult">상담관리</button>
   <button class="tab-btn" data-tab="vat">부가세신고</button>
   <button class="tab-btn" data-tab="exempt">면세신고</button>
   <button class="tab-btn" data-tab="corp">법인세신고</button>
@@ -141,6 +143,7 @@ tr:hover td{background:#f8fafc}
 <!-- ===== 업체관리 ===== -->
 <div id="tab-clients" class="TC active">
   <div class="SR" id="statsRow"></div>
+  <div style="text-align:right;margin:-8px 0 8px 0"><button class="btn btn-sm" style="background:#edf2f7;color:#4a5568;font-size:11px;padding:4px 12px;border-radius:6px" onclick="toggleExtraStats()" id="extraStatsToggleBtn">📊 매출·업종·유입경로 보기</button></div>
   <div id="tempClientAlert" style="display:none"></div>
   <div id="ganiAlertBox" style="display:none"></div>
   <div id="clientStatsDetail" style="display:none">
@@ -187,13 +190,117 @@ tr:hover td{background:#f8fafc}
       <select id="bulkManager" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"></select>
       <button class="btn btn-sm" style="background:#38a169;color:#fff" onclick="bulkChangeManager()">변경</button>
       <button class="btn btn-sm" style="background:#e53e3e;color:#fff;margin-left:8px" onclick="bulkDeleteClients()">선택 삭제</button>
+      <button class="btn btn-sm" style="background:#d69e2e;color:#fff;margin-left:8px" onclick="bulkLinkClients()">관련업체 묶기</button>
+      <button class="btn btn-sm" style="background:#805ad5;color:#fff" onclick="bulkUnlinkClients()">묶기 해제</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
       <th style="width:30px"><input type="checkbox" id="selectAllCb" onchange="toggleSelectAll()"></th>
-      <th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>신고</th><th>주기</th><th>담당</th><th>기장료</th><th>조정료</th><th>출금</th><th>상태</th><th>결산</th><th>유입경로</th><th>관리</th>
+      <th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>신고</th><th>주기</th><th>담당</th><th>기장료</th><th>조정료</th><th>기타수수료</th><th>출금</th><th>상태</th><th>결산</th><th>유입경로</th><th>관리</th>
     </tr></thead><tbody id="clientTable"></tbody></table></div>
   </div>
+</div>
+
+<!-- ===== 신규수임 ===== -->
+<div id="tab-onboarding" class="TC">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="card-title" style="margin-bottom:0">📦 신규수임 관리</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="obMonth" onchange="renderOnboarding()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"></select>
+        <select id="obMgrFilter" onchange="renderOnboarding()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"><option value="">전체 담당자</option></select>
+      </div>
+    </div>
+    <div id="obPipeline" style="display:flex;gap:0;margin-bottom:14px"></div>
+    <div id="obDocWaiting"></div>
+    <div id="obInfoEntering"></div>
+    <div id="obConverted"></div>
+    <div id="obDeferredBilling"></div>
+  </div>
+</div>
+
+<!-- ===== 상담관리 ===== -->
+<div id="tab-consult" class="TC">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin-bottom:0">📞 상담 관리</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="openConsultModal()">+ 상담등록</button>
+      </div>
+    </div>
+    <!-- 통계 -->
+    <div id="consultStats" style="margin-bottom:14px"></div>
+    <!-- 필터 -->
+    <div class="FB" style="gap:8px;margin-bottom:10px">
+      <select id="csYear" onchange="renderConsultList();renderConsultStats()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"></select>
+      <select id="csMonth" onchange="renderConsultList();renderConsultStats()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px">
+        <option value="">전체월</option>
+        <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option><option value="04">4월</option>
+        <option value="05">5월</option><option value="06">6월</option><option value="07">7월</option><option value="08">8월</option>
+        <option value="09">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+      </select>
+      <input type="text" id="csSearch" placeholder="성함/연락처 검색..." oninput="renderConsultList()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;min-width:140px">
+      <select id="csContractFilter" onchange="renderConsultList()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px">
+        <option value="">전체</option><option value="Y">계약완료</option><option value="N">미계약</option><option value="P">진행중</option>
+      </select>
+    </div>
+    <!-- 목록 -->
+    <div class="TC2" style="max-height:500px;overflow-y:auto">
+      <table><thead><tr>
+        <th>번호</th><th>상담일</th><th>성함</th><th>연락처</th><th>개인/법인</th><th>업종</th><th>매출</th><th>예상기장료</th><th>특이사항</th><th>1차상담자</th><th>2차상담자</th><th>계약여부</th><th>계약일</th><th>유입경로</th><th>상담내역</th><th>관리</th>
+      </tr></thead><tbody id="consultTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- 상담 등록/수정 모달 -->
+<div id="consultModal" class="MO">
+<div class="MD" style="max-width:700px">
+<div class="MH"><h2 id="consultModalTitle">상담 등록</h2><button class="MC" onclick="closeConsultModal()">&times;</button></div>
+<div class="MB">
+  <input type="hidden" id="cs_editId">
+  <div class="FG">
+    <div class="FGI"><label>상담일 *</label><input id="cs_date" type="date"></div>
+    <div class="FGI"><label>성함 *</label><input id="cs_name" type="text" placeholder="성함"></div>
+    <div class="FGI"><label>연락처</label><input id="cs_phone" type="tel" placeholder="010-0000-0000"></div>
+    <div class="FGI"><label>개인/법인</label><select id="cs_entity"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option></select></div>
+    <div class="FGI"><label>업종</label><input id="cs_biz" type="text" placeholder="업종"></div>
+    <div class="FGI"><label>매출 (원)</label><input id="cs_revenue" type="number" placeholder="연매출"></div>
+    <div class="FGI"><label>예상 기장료 (원)</label><input id="cs_expectedFee" type="number" placeholder="월 기장료"></div>
+    <div class="FGI"><label>유입경로</label><select id="cs_source"><option value="">선택</option><option value="홈페이지">홈페이지</option><option value="블로그">블로그</option><option value="지인소개">지인소개</option><option value="세무사소개">세무사소개</option><option value="SNS">SNS</option><option value="플랫폼">플랫폼</option><option value="기타">기타</option></select></div>
+    <div class="FGI"><label>특이사항</label><input id="cs_notes" type="text" placeholder="특이사항"></div>
+    <div class="FGI"><label>1차 상담자</label><select id="cs_counselor1"></select></div>
+    <div class="FGI"><label>2차 상담자</label><select id="cs_counselor2"><option value="">없음</option></select></div>
+    <div class="FGI"><label>계약여부</label><select id="cs_contracted"><option value="N">미계약</option><option value="P">진행중</option><option value="Y">계약완료</option></select></div>
+    <div class="FGI"><label>계약일</label><input id="cs_contractDate" type="date"></div>
+  </div>
+  <div style="margin-top:12px">
+    <label style="font-size:10px;font-weight:600;color:#4a5568;margin-bottom:2px;display:block">상담내역</label>
+    <textarea id="cs_detail" rows="5" style="width:100%" placeholder="상담 내용을 입력하세요..."></textarea>
+  </div>
+</div>
+<div class="MF">
+  <button class="btn btn-secondary" onclick="closeConsultModal()">취소</button>
+  <button class="btn btn-primary" onclick="saveConsult()">저장</button>
+</div>
+</div>
+</div>
+
+<!-- 상담내역 상세 모달 -->
+<div id="consultDetailModal" class="MO">
+<div class="MD" style="max-width:600px">
+<div class="MH"><h2 id="csDetailTitle">상담내역</h2><button class="MC" onclick="closeConsultDetailModal()">&times;</button></div>
+<div class="MB">
+  <div id="csDetailInfo" style="margin-bottom:12px"></div>
+  <div style="margin-bottom:8px"><label style="font-size:10px;font-weight:600;color:#4a5568">상담내역</label></div>
+  <textarea id="csDetailText" rows="10" style="width:100%;font-size:12px" placeholder="상담 내용을 입력하세요..."></textarea>
+  <input type="hidden" id="csDetailIdx">
+</div>
+<div class="MF">
+  <button class="btn btn-secondary" onclick="closeConsultDetailModal()">닫기</button>
+  <button class="btn btn-primary" onclick="saveConsultDetail()">저장</button>
+</div>
+</div>
 </div>
 
 <!-- ===== 부가세신고 ===== -->
@@ -341,8 +448,8 @@ tr:hover td{background:#f8fafc}
       <span id="invSecMonthlyArrow" style="font-size:10px;color:#a0aec0">▼</span>
     </div>
     <div id="invSecMonthly">
-      <div class="TC2"><table>
-        <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>담당</th><th>기장료</th><th>소급기장료</th><th>추가발행</th><th>합계</th><th>비고</th></tr></thead>
+      <div class="TC2" style="max-height:370px;overflow-y:auto"><table>
+        <thead style="position:sticky;top:0;z-index:1"><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>담당</th><th>기장료</th><th>소급기장료</th><th>추가발행</th><th>합계</th><th>비고</th></tr></thead>
         <tbody id="invoiceTable"></tbody>
       </table></div>
     </div>
@@ -402,6 +509,17 @@ tr:hover td{background:#f8fafc}
       </table></div>
     </div>
   </div>
+  <!-- 전월 대비 세금계산서 변동내역 (토글) -->
+  <div class="card" style="margin-bottom:6px">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSection('invSecDiff')">
+      <span>🔄 전월 대비 변동내역 <span id="invDiffCount" style="font-weight:400;color:#718096;font-size:11px"></span></span>
+      <span id="invSecDiffArrow" style="font-size:10px;color:#a0aec0">▶</span>
+    </div>
+    <div id="invSecDiff" style="display:none">
+      <div id="invDiffBody"></div>
+    </div>
+  </div>
+
   <!-- hidden month inputs for sub-sections (synced from main) -->
   <input type="hidden" id="extraInvoiceMonth"><input type="hidden" id="retroInvoiceMonth"><input type="hidden" id="bu2InvoiceMonth">
 </div>
@@ -705,7 +823,7 @@ tr:hover td{background:#f8fafc}
     <div class="FG">
       <div class="FGI"><label>기장료 (월/원)</label><input id="f_fee" type="number" min="0" step="10000"></div>
       <div class="FGI"><label>예상조정료 (원)</label><input id="f_adjFee" type="number" min="0" step="10000"></div>
-      <div class="FGI" id="extraFeeGroup" style="display:none"><label>기타수수료 (원)</label><input id="f_extraFee" type="number" min="0" step="10000" placeholder="2부/3부 업체 기타수수료"></div>
+      <div class="FGI"><label>기타수수료 (원) <span style="font-weight:400;font-size:10px;color:#64748b">(2부 부가세수수료 등)</span></label><input id="f_extraFee" type="number" min="0" step="10000" placeholder="기타수수료"></div>
       <div class="FGI"><label>기장계약 시작월 <span style="font-weight:400;font-size:10px;color:#64748b">(기장료가 시작되는 달)</span></label><input id="f_startMonth" type="month"></div>
       <div class="FGI"><label>기장료 출금시작월 <span style="font-weight:400;font-size:10px;color:#64748b">(기장을 계약한 달)</span></label><input id="f_billingStart" type="month"></div>
       <div class="FGI"><label>계약일 <span style="font-weight:400;font-size:10px;color:#64748b">(최종상담을 완료한 날)</span></label><input id="f_contractDate" type="date"></div>
@@ -1024,18 +1142,14 @@ function migrate(d){
     if(!c.ganiPogiMonth)c.ganiPogiMonth='';
     if(!c.ganiPogiNextMonth)c.ganiPogiNextMonth='';
     // feeHistory 마이그레이션: 기존 fee를 첫 이력으로
-    if(!c.feeHistory){
-      c.feeHistory=[];
-      if(c.fee){
-        c.feeHistory.push({fee:c.fee,startMonth:c.billingStart||c.startMonth||'',memo:'초기 기장료',date:c.createdAt||new Date().toISOString()});
-      }
+    if(!c.feeHistory)c.feeHistory=[];
+    if(c.feeHistory.length===0&&c.fee){
+      c.feeHistory.push({fee:c.fee,startMonth:c.billingStart||c.startMonth||'',memo:'초기 기장료',date:c.createdAt||new Date().toISOString()});
     }
     // managerHistory 마이그레이션: 기존 manager를 첫 이력으로
-    if(!c.managerHistory){
-      c.managerHistory=[];
-      if(c.manager){
-        c.managerHistory.push({manager:c.manager,startMonth:c.billingStart||c.startMonth||'',memo:'초기 배정',date:c.createdAt||new Date().toISOString()});
-      }
+    if(!c.managerHistory)c.managerHistory=[];
+    if(c.managerHistory.length===0&&c.manager){
+      c.managerHistory.push({manager:c.manager,startMonth:c.billingStart||c.startMonth||'',memo:'초기 배정',date:c.createdAt||new Date().toISOString()});
     }
   });
   if(!d.counters)d.counters={'1부':0,'2부':0,'3부':0};
@@ -1101,6 +1215,8 @@ function saveData(){
 }
 let data=loadData();
 if(!data.activityLog)data.activityLog=[];
+if(!data.consultations)data.consultations=[];
+if(!data.consultCounter)data.consultCounter=0;
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -1123,7 +1239,7 @@ function renderAdminLog(){
   document.getElementById('adminLogCount').textContent='('+logs.length+'건)';
   var typeColors={'등록':'#38a169','수정':'#3182ce','삭제':'#e53e3e','해임':'#d69e2e','재수임':'#805ad5','담당변경':'#dd6b20','기장료변경':'#319795'};
   var html='';
-  logs.slice(0,500).forEach(function(l){
+  logs.slice(0,500).forEach(function(l,gi){
     var d=l.date?new Date(l.date):null;
     var ds=d?(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')):'';
     var color=typeColors[l.type]||'#64748b';
@@ -1131,7 +1247,13 @@ function renderAdminLog(){
       +'<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;background:'+color+'">'+l.type+'</span></td>'
       +'<td style="font-size:12px">'+(l.clientId||'-')+'</td>'
       +'<td style="font-size:12px;font-weight:500">'+(l.clientName||'-')+'</td>'
-      +'<td style="font-size:12px">'+(l.detail||'-')+'</td>'
+      +'<td style="font-size:12px">'+(function(){
+        var d=l.detail||'-';
+        if(d.length<=30)return d;
+        var id='logDetail_'+gi;
+        return '<span id="'+id+'_short">'+d.substring(0,28)+'… <span style="color:#3182ce;cursor:pointer;font-size:10px" onclick="document.getElementById(\''+id+'_short\').style.display=\'none\';document.getElementById(\''+id+'_full\').style.display=\'\'">상세보기</span></span>'
+          +'<span id="'+id+'_full" style="display:none">'+d+' <span style="color:#718096;cursor:pointer;font-size:10px" onclick="document.getElementById(\''+id+'_full\').style.display=\'none\';document.getElementById(\''+id+'_short\').style.display=\'\'">접기</span></span>';
+      })()+'</td>'
       +'<td style="font-size:11px;color:#64748b">'+(l.user||'-')+'</td></tr>';
   });
   if(!html)html='<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px">이력이 없습니다</td></tr>';
@@ -1451,7 +1573,16 @@ document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=
 
 // Staff
 var currentStaffFilter='active';
-function openStaffModal(){document.getElementById('staffModal').classList.add('show');renderStaff()}
+var staffModalUnlocked=false;
+function openStaffModal(){
+  if(!staffModalUnlocked){
+    var pin=prompt('🔒 직원관리 비밀번호를 입력하세요:');
+    if(!pin)return;
+    if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');return}
+    staffModalUnlocked=true;
+  }
+  document.getElementById('staffModal').classList.add('show');renderStaff();
+}
 function closeStaffModal(){document.getElementById('staffModal').classList.remove('show')}
 function setStaffFilter(f){currentStaffFilter=f;renderStaff()}
 function renderStaff(){
@@ -1668,7 +1799,7 @@ function applyFeeChange(){
   document.getElementById('f_newFee').value='';document.getElementById('f_newAdjFee').value='';document.getElementById('f_feeChangeMonth').value='';document.getElementById('f_feeChangeReason').selectedIndex=0;document.getElementById('f_feeChangeCustom').value='';toggleFeeChangeCustom();
   toast('기장료 변경 적용 완료: '+W(oldFee)+' → '+W(newFee)+(reason.indexOf('결산')>-1?' (결산유형: '+c.closingType+')':''));
 }
-function onTypeChange(){var t=document.getElementById('f_type').value;document.getElementById('linkedGroup').style.display=t==='2부'?'':'none';document.getElementById('extraFeeGroup').style.display=(t==='2부'||t==='3부')?'':'none'}
+function onTypeChange(){var t=document.getElementById('f_type').value;document.getElementById('linkedGroup').style.display=t==='2부'?'':'none'}
 function onBizChange(){document.getElementById('ecomGroup').style.display=document.getElementById('f_biz').value==='전자상거래'?'':'none'}
 function onTaxChange(){document.getElementById('vatFreqGroup').style.display=document.getElementById('f_tax').value==='부가세신고대상'?'':'none'}
 function onClosingTypeChange(){
@@ -1737,7 +1868,7 @@ function saveClient(){
     vatFreq:document.getElementById('f_tax').value==='부가세신고대상'?document.getElementById('f_vatFreq').value:'auto',
     manager:document.getElementById('f_manager').value,finalConsultant:document.getElementById('f_finalConsultant').value,
     firstConsultant:document.getElementById('f_firstConsultant').value,trainer:document.getElementById('f_trainer').value,
-    fee:Number(document.getElementById('f_fee').value)||0,adjFee:Number(document.getElementById('f_adjFee').value)||0,extraFee:(type==='2부'||type==='3부')?Number(document.getElementById('f_extraFee').value)||0:0,
+    fee:Number(document.getElementById('f_fee').value)||0,adjFee:Number(document.getElementById('f_adjFee').value)||0,extraFee:Number(document.getElementById('f_extraFee').value)||0,
     startMonth:document.getElementById('f_startMonth').value,billingStart:document.getElementById('f_billingStart').value,
     contractDate:document.getElementById('f_contractDate').value,
     retroApply:document.getElementById('f_retroApply').value,
@@ -1749,7 +1880,7 @@ function saveClient(){
     closureDate:isDismissed?document.getElementById('f_closureDate').value:'',
     convertedCorp:isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'?document.getElementById('f_convertedCorp').value:'',
     transferOffice:isDismissed&&document.getElementById('f_dismissReason').value==='이관'?document.getElementById('f_transferOffice').value.trim():'',
-    linkedTo:type==='2부'?document.getElementById('f_linked').value:'',
+    linkedTo:type==='2부'?document.getElementById('f_linked').value:(editId?(data.clients.find(function(x){return x.id===editId})||{}).linkedTo||'':''),
     sourceChannel:document.getElementById('f_sourceChannel').value,
     referredBy:document.getElementById('f_referredBy').value,
     extReferral:document.getElementById('f_extReferral').value,
@@ -1826,14 +1957,26 @@ function saveClient(){
       }
       data.clients[i]={...old,...cd};
       var changes=[];
-      if(old.name!==cd.name)changes.push('업체명: '+old.name+' → '+cd.name);
-      if(old.manager!==cd.manager)changes.push('담당: '+(old.manager||'-')+' → '+cd.manager);
-      if(old.fee!==cd.fee)changes.push('기장료: '+W(old.fee)+' → '+W(cd.fee));
-      if(old.status!==cd.status)changes.push('상태: '+old.status+' → '+cd.status);
-      if(old.type!==cd.type)changes.push('유형: '+old.type+' → '+cd.type);
-      if(old.entityType!==cd.entityType)changes.push('구분: '+(old.entityType||'-')+' → '+cd.entityType);
-      if(old.taxType!==cd.taxType)changes.push('신고: '+(old.taxType||'-')+' → '+cd.taxType);
-      if(old.ownerName!==cd.ownerName)changes.push('대표자: '+(old.ownerName||'-')+' → '+cd.ownerName);
+      var df=[
+        ['업체명','name'],['대표자','ownerName'],['생년월일','ownerBirth'],['유형','type'],['구분','entityType'],
+        ['업종','businessType'],['전자상거래세부','ecommerceDetail'],['신고대상','taxType'],['부가세주기','vatFreq'],
+        ['결산유형','closingType'],['담당','manager'],['상태','status'],
+        ['기장료','fee',1],['조정료','adjFee',1],['기타수수료','extraFee',1],
+        ['기장계약시작월','startMonth'],['출금시작월','billingStart'],['계약일','contractDate'],['사업자등록일','bizRegDate'],
+        ['유입구분','clientOrigin'],['유입경로','sourceChannel'],['이관사무실','originOffice'],
+        ['소개업체','referredBy'],['외부소개유형','extReferral'],
+        ['최종상담자','finalConsultant'],['1차상담자','firstConsultant'],['1:1교육','trainer'],
+        ['자료수령','docMethod'],['수령주기','docFreq'],['자료메모','docMemo'],
+        ['소급기장료','retroFee',1],['소급개월수','retroMonths'],['세금계산서발행월','retroBillingMonth'],
+        ['2부연결','linkedTo'],['해임사유','dismissReason'],['해임월','dismissDate'],['폐업일','closureDate'],
+        ['비고','notes']
+      ];
+      df.forEach(function(f){
+        var label=f[0],key=f[1],isMoney=f[2];
+        var ov=old[key],nv=cd[key];
+        if(isMoney){ov=ov||0;nv=nv||0;if(ov!==nv)changes.push(label+': '+W(ov)+' → '+W(nv))}
+        else{ov=ov||'';nv=nv||'';if(ov!==nv)changes.push(label+': '+(ov||'-')+' → '+(nv||'-'))}
+      });
       var logType='수정';
       if(old.fee!==cd.fee&&cd.fee>0)addLog('기장료변경',editId,cd.name,'기장료 '+W(old.fee)+' → '+W(cd.fee));
       if(old.manager!==cd.manager&&cd.manager)addLog('담당변경',editId,cd.name,(old.manager||'미배정')+' → '+cd.manager);
@@ -1871,7 +2014,8 @@ function viewClient(id){
     <div><small style="color:#64748b">담당</small><br>${c.manager||'-'}</div>
     <div><small style="color:#64748b">기장료(월)</small><br>${fmt(c.fee)}</div>
     <div><small style="color:#64748b">조정료</small><br>${fmt(c.adjFee)}</div>
-    <div><small style="color:#64748b">연매출</small><br>${fmt((c.fee||0)*12+(c.adjFee||0))}</div>
+    ${c.extraFee?'<div><small style="color:#64748b">기타수수료</small><br>'+fmt(c.extraFee)+'</div>':''}
+    <div><small style="color:#64748b">연매출</small><br>${fmt((c.fee||0)*12+(c.adjFee||0)+(c.extraFee||0)*2)}</div>
     <div><small style="color:#64748b">사업자등록일</small><br>${c.bizRegDate||'-'}</div>
     <div><small style="color:#64748b">계약시작</small><br>${c.startMonth||'-'}</div>
     <div><small style="color:#64748b">출금시작</small><br>${c.billingStart||'-'}</div>
@@ -2021,9 +2165,28 @@ function confirmRecontract(){
 }
 
 // Stats
+var extraStatsVisible=false;
+function toggleExtraStats(){
+  extraStatsVisible=!extraStatsVisible;
+  var detail=document.getElementById('clientStatsDetail');
+  var btn=document.getElementById('extraStatsToggleBtn');
+  // 예상 연매출 박스 (RB class inside statsRow)
+  var rb=document.querySelector('#statsRow .RB');
+  if(extraStatsVisible){
+    detail.style.display='';
+    if(rb)rb.style.display='';
+    btn.textContent='📊 매출·업종·유입경로 접기';
+    btn.style.background='#4a5568';btn.style.color='#fff';
+  }else{
+    detail.style.display='none';
+    if(rb)rb.style.display='none';
+    btn.textContent='📊 매출·업종·유입경로 보기';
+    btn.style.background='#edf2f7';btn.style.color='#4a5568';
+  }
+}
 function renderStats(){
   const ac=AC(),t1=ac.filter(c=>c.type==='1부'),t2=ac.filter(c=>c.type==='2부'),t3=ac.filter(c=>c.type==='3부');
-  const mf=ac.reduce((s,c)=>s+(c.fee||0),0),ta=ac.reduce((s,c)=>s+(c.adjFee||0),0),ann=mf*12+ta;
+  const mf=ac.reduce((s,c)=>s+(c.fee||0),0),ta=ac.reduce((s,c)=>s+(c.adjFee||0),0),te=ac.reduce((s,c)=>s+(c.extraFee||0),0),ann=mf*12+ta+te*2;
   const dis=data.clients.filter(c=>c.status==='해임').length;
   function entSub(arr){
     var p=arr.filter(c=>c.entityType==='개인'||c.entityType==='간이').length;
@@ -2048,7 +2211,7 @@ function renderStats(){
     <div class="SC" onclick="this.querySelector('.stat-detail').style.display=this.querySelector('.stat-detail').style.display==='none'?'':'none'" style="cursor:pointer"><div class="SV" style="color:#d69e2e">${t2.length}</div><div class="SL">2부 <span style="font-size:9px;color:#a0aec0">▼</span></div>${entSub(t2)}</div>
     <div class="SC" onclick="this.querySelector('.stat-detail').style.display=this.querySelector('.stat-detail').style.display==='none'?'':'none'" style="cursor:pointer"><div class="SV" style="color:#805ad5">${t3.length}</div><div class="SL">3부 <span style="font-size:9px;color:#a0aec0">▼</span></div>${entSub(t3)}</div>
     <div class="SC"><div class="SV" style="color:#e53e3e">${dis}</div><div class="SL">해임</div></div>
-    <div class="RB" onclick="var d=document.getElementById('clientStatsDetail');d.style.display=d.style.display==='none'?'':'none'" style="cursor:pointer;display:none"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출 <span style="font-size:9px;color:rgba(255,255,255,0.7)">▼ 상세</span></div></div>`;
+    <div class="RB" onclick="var d=document.getElementById('clientStatsDetail');d.style.display=d.style.display==='none'?'':'none'" style="cursor:pointer;display:${extraStatsVisible?'':'none'}"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출 <span style="font-size:9px;color:rgba(255,255,255,0.7)">▼ 상세</span></div></div>`;
   document.getElementById('totalRevenue').textContent='연매출: '+W(ann);
 
   // Business type stats
@@ -2076,6 +2239,10 @@ function renderStats(){
   renderGaniAlert();
   // 이번달 신고/결산 현황
   renderMonthlyFilingAlert();
+  // 토글 상태 유지
+  if(extraStatsVisible){
+    document.getElementById('clientStatsDetail').style.display='';
+  }
 }
 function renderSourceChannelChart(){
   var ac=data.clients.filter(function(c){return c.status==='활성'});
@@ -2255,41 +2422,69 @@ function renderClients(){
   // Update bulk manager dropdown
   const bm=document.getElementById('bulkManager');
   if(bm){bm.innerHTML='<option value="">선택</option>';data.staff.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;bm.appendChild(o)})}
-  if(!list.length){tb.innerHTML='<tr><td colspan="17" style="text-align:center;padding:24px;color:#a0aec0">없음</td></tr>';return}
-  // 1부-2부 연관 업체 그룹핑: 1부업체 뒤에 연결된 2부/3부 업체를 바로 붙여서 표시
+  if(!list.length){tb.innerHTML='<tr><td colspan="18" style="text-align:center;padding:24px;color:#a0aec0">없음</td></tr>';return}
+  // 1부-2부 연관 업체 그룹핑: 대표업체 뒤에 연결된 업체를 바로 붙여서 표시
   var grouped=[];var usedIds={};
   list.forEach(function(c){
     if(usedIds[c.id])return;
     grouped.push(c);usedIds[c.id]=true;
-    // 이 업체에 연결된 2부/3부 업체 찾기
-    if(c.type==='1부'){
-      list.forEach(function(sub){
-        if(!usedIds[sub.id]&&sub.linkedTo===c.id){grouped.push(sub);usedIds[sub.id]=true;}
-      });
-    }
+    // 이 업체에 연결된 하위 업체 찾기
+    list.forEach(function(sub){
+      if(!usedIds[sub.id]&&sub.linkedTo===c.id){grouped.push(sub);usedIds[sub.id]=true;}
+    });
   });
   // 아직 추가 안된 업체 추가
   list.forEach(function(c){if(!usedIds[c.id]){grouped.push(c);usedIds[c.id]=true;}});
-  tb.innerHTML=grouped.map(c=>{
-    const sb=c.status==='활성'?'badge-active':'badge-dismissed';
-    const vf=c.taxType==='부가세신고대상'?vatFreqLabel(c):'-';
-    const chk=selectedClients.has(c.id)?'checked':'';
-    const closingSpan=c.closingType==='월결산'?'<span style="color:#e53e3e;font-weight:600">월</span>':c.closingType==='분기결산'?'<span style="color:#805ad5;font-weight:600">분기</span>':'<span style="color:#a0aec0">기본</span>';
-    var linkedStyle=c.linkedTo?'background:#fefce8;border-left:3px solid #d69e2e;':'';
+  // 그룹 경계 계산: 각 행이 그룹의 첫/중간/마지막인지 판별
+  var groupInfo=grouped.map(function(c,i){
+    var parentId=c.linkedTo||c.id;
+    var hasChildren=grouped.some(function(x){return x.linkedTo===c.id});
+    var isChild=!!c.linkedTo;
+    var isGroupMember=isChild||hasChildren;
+    if(!isGroupMember)return{pos:'none'};
+    // 그룹의 첫 행인지
+    var isFirst=(i===0)||grouped[i-1].id!==c.linkedTo&&!(grouped[i-1].linkedTo&&grouped.some(function(x){return x.linkedTo===grouped[i-1].linkedTo&&x.linkedTo===c.linkedTo}));
+    // 더 정확한 판별: 같은 그룹의 이전/다음 행 체크
+    var myGroup=isChild?c.linkedTo:c.id;
+    var prevInGroup=(i>0)&&(grouped[i-1].id===myGroup||grouped[i-1].linkedTo===myGroup||(grouped[i-1].linkedTo&&grouped[i-1].linkedTo===c.linkedTo));
+    var nextInGroup=(i<grouped.length-1)&&(grouped[i+1].linkedTo===myGroup||grouped[i+1].id===myGroup||(c.linkedTo&&grouped[i+1].linkedTo===c.linkedTo));
+    var pos='mid';
+    if(!prevInGroup&&nextInGroup)pos='top';
+    else if(prevInGroup&&!nextInGroup)pos='bottom';
+    else if(!prevInGroup&&!nextInGroup)pos='single';
+    return{pos:pos,isChild:isChild,groupId:myGroup};
+  });
+  tb.innerHTML=grouped.map(function(c,i){
+    var gi=groupInfo[i];
+    var sb=c.status==='활성'?'badge-active':'badge-dismissed';
+    var vf=c.taxType==='부가세신고대상'?vatFreqLabel(c):'-';
+    var chk=selectedClients.has(c.id)?'checked':'';
+    var closingSpan=c.closingType==='월결산'?'<span style="color:#e53e3e;font-weight:600">월</span>':c.closingType==='분기결산'?'<span style="color:#805ad5;font-weight:600">분기</span>':'<span style="color:#a0aec0">기본</span>';
+    // 굵은 테두리 그룹 스타일 (안A)
+    var rowStyle='';var tdFirstExtra='';var tdLastExtra='';
+    if(gi.pos!=='none'){
+      var bdr='2.5px solid #334155';
+      var topB=(gi.pos==='top'||gi.pos==='single')?'border-top:'+bdr+';':'';
+      var botB=(gi.pos==='bottom'||gi.pos==='single')?'border-bottom:'+bdr+';':'';
+      var bg=gi.isChild?'background:#fffbeb;':'';
+      rowStyle=topB+botB+bg;
+      tdFirstExtra='border-left:'+bdr+';';
+      tdLastExtra='border-right:'+bdr+';';
+    }
     var linkedBadge=c.linkedTo?'<br><span style="font-size:9px;color:#b45309;font-weight:600">↳ '+c.linkedTo+'</span>':'';
-    // 1부업체가 연결된 2부가 있으면 표시
-    var hasLinked=c.type==='1부'&&data.clients.some(function(x){return x.linkedTo===c.id&&x.status==='활성'});
+    var hasLinked=data.clients.some(function(x){return x.linkedTo===c.id});
     var groupBadge=hasLinked?'<br><span style="font-size:9px;color:#2b6cb0">📎 그룹</span>':'';
-    return`<tr style="${linkedStyle}"><td><input type="checkbox" class="client-cb" data-id="${c.id}" ${chk} onchange="toggleSelectClient('${c.id}',this.checked)"></td>
-    <td><strong>${c.id}</strong>${linkedBadge}${groupBadge}</td>
-    <td>${c.name}</td><td>${c.ownerName||'-'}</td><td><span class="badge ${typeBadge(c.type)}">${c.type}</span></td>
-    <td>${c.entityType}</td><td>${bizLabel(c)}</td><td>${taxBadge(c)}</td><td>${vf}</td>
-    <td>${c.manager||'-'}</td><td style="text-align:right">${fmt(c.fee)}</td><td style="text-align:right">${fmt(c.adjFee)}</td>
-    <td>${c.billingStart||c.startMonth||'-'}</td>
-    <td>${c.dismissReason==='법인전환'?'<span class="badge" style="background:#f0fff4;color:#38a169">법인전환</span>':'<span class="badge '+sb+'">'+c.status+(c.dismissReason?'('+c.dismissReason+')':'')+'</span>'}</td>
-    <td>${closingSpan}</td>
-    <td>${(function(){var sc=c.sourceChannel||'-';if(sc==='소개'){var refC=data.clients.find(x=>x.id===c.referredBy);return '소개('+(refC?refC.name:'알수없음')+')';}else if(sc==='외부소개'){return '외부소개('+c.extReferral+')';}else{return sc;}})()}</td>
-    <td><button class="btn btn-secondary btn-xs" onclick="viewClient('${c.id}')">상세</button> <button class="btn btn-primary btn-xs" onclick="editClient('${c.id}')">수정</button></td></tr>`;
+    return'<tr style="'+rowStyle+'"><td style="'+tdFirstExtra+'"><input type="checkbox" class="client-cb" data-id="'+c.id+'" '+chk+' onchange="toggleSelectClient(\''+c.id+'\',this.checked)"></td>'
+    +'<td><strong>'+c.id+'</strong>'+linkedBadge+groupBadge+'</td>'
+    +'<td>'+c.name+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
+    +'<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td><td>'+taxBadge(c)+'</td><td>'+vf+'</td>'
+    +'<td>'+(c.manager||'-')+'</td><td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:right">'+fmt(c.adjFee)+'</td>'
+    +'<td style="text-align:right">'+(c.extraFee?fmt(c.extraFee):'-')+'</td>'
+    +'<td>'+(c.billingStart||c.startMonth||'-')+'</td>'
+    +'<td>'+(c.dismissReason==='법인전환'?'<span class="badge" style="background:#f0fff4;color:#38a169">법인전환</span>':'<span class="badge '+(c.status==='활성'?'badge-active':'badge-dismissed')+'">'+c.status+(c.dismissReason?'('+c.dismissReason+')':'')+'</span>')+'</td>'
+    +'<td>'+closingSpan+'</td>'
+    +'<td>'+(function(){var sc=c.sourceChannel||'-';if(sc==='소개'){var refC=data.clients.find(function(x){return x.id===c.referredBy});return '소개('+(refC?refC.name:'알수없음')+')';}else if(sc==='외부소개'){return '외부소개('+c.extReferral+')';}else{return sc;}})()+'</td>'
+    +'<td style="'+tdLastExtra+'"><button class="btn btn-secondary btn-xs" onclick="viewClient(\''+c.id+'\')">상세</button> <button class="btn btn-primary btn-xs" onclick="editClient(\''+c.id+'\')">수정</button></td></tr>';
   }).join('');
   updateBulkBar();
 }
@@ -2758,38 +2953,38 @@ function renderIncomeList(){
     +'<div style="font-size:10px;color:#94a3b8;margin-top:2px">담당자: '+mgrCountStr+'</div>';
   const el=document.getElementById('incomeGroups');
   if(!keys.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#a0aec0">없음</div>';return}
-  // 단일 테이블로 인별 묶기 (셀병합) - 스크롤 컨테이너
-  var h='<div style="max-height:600px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px"><table><thead><tr><th style="width:30px"></th><th>대표자</th><th>번호</th><th>업체명</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th>기장료</th><th>조정료</th><th>상태</th></tr></thead><tbody>';
+  // 안A: 컴팩트 가로형 카드
+  var h='<div style="max-height:600px;overflow-y:auto">';
   keys.forEach(function(k,gi){
     var cs=groups[k];
     var parts=k.split('|');
     var displayName=parts[0];
     var birth=parts[1]||'';
-    var birthLabel=birth?'<br><span style="color:#718096;font-size:10px">'+birth+'</span>':'';
-    var totalFee=cs.reduce(function(s,c){return s+(c.fee||0)},0);
-    var rowspan=cs.length;
-    if(gi>0)h+='<tr style="height:3px;background:#e2e8f0"><td colspan="11"></td></tr>';
-    cs.forEach(function(c,ci){
+    h+='<div style="display:grid;grid-template-columns:70px 1fr;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:5px">';
+    // 왼쪽: 대표자
+    h+='<div style="background:#f8fafc;padding:8px 6px;display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:2px solid #e2e8f0;text-align:center">';
+    h+='<div style="font-weight:700;font-size:13px">'+displayName+'</div>';
+    if(birth)h+='<div style="font-size:9px;color:#718096;margin-top:1px">'+birth+'</div>';
+    h+='</div>';
+    // 오른쪽: 사업장 목록
+    h+='<div style="padding:4px 10px;display:flex;flex-direction:column;gap:1px">';
+    cs.forEach(function(c){
       var isGani=c.entityType==='간이';
       var chk=selectedIncClients.has(c.id)?'checked':'';
-      var pogiLabel=c.ganiPogiMonth?'<span style="background:#e53e3e;color:#fff;padding:1px 6px;border-radius:4px;font-size:9px;margin-left:4px">포기('+c.ganiPogiMonth+')</span>':'';
-      h+='<tr>';
-      h+='<td>'+(isGani?'<input type="checkbox" data-id="'+c.id+'" '+chk+' onchange="toggleIncClient(this.checked,\''+c.id+'\')">':'')+'</td>';
-      if(ci===0){
-        h+='<td rowspan="'+rowspan+'" style="vertical-align:middle;font-weight:600;background:#f8fafc;border-right:2px solid #e2e8f0;min-width:80px">'+displayName+birthLabel;
-        h+='<div style="font-size:10px;color:#2b6cb0;margin-top:4px">사업장 '+cs.length+'개</div>';
-        h+='<div style="font-size:10px;color:#64748b">합계 '+W(totalFee)+'/월</div></td>';
-      }
-      h+='<td>'+c.id+'</td><td>'+c.name+pogiLabel+'</td>';
-      h+='<td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>';
-      h+='<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td>';
-      h+='<td>'+(c.manager||'-')+'</td>';
-      h+='<td style="text-align:right">'+fmt(c.fee)+'</td>';
-      h+='<td style="text-align:right">'+fmt(c.adjFee)+'</td>';
-      h+='<td>'+getStatusBadge(c)+'</td></tr>';
+      var pogiLabel=c.ganiPogiMonth?'<span style="background:#e53e3e;color:#fff;padding:1px 5px;border-radius:3px;font-size:8px;margin-left:3px">포기('+c.ganiPogiMonth+')</span>':'';
+      var ganiCb=isGani?'<input type="checkbox" data-id="'+c.id+'" '+chk+' onchange="toggleIncClient(this.checked,\''+c.id+'\')" style="margin-right:4px">':'';
+      h+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0;border-bottom:1px solid #f7fafc">';
+      h+=ganiCb;
+      h+='<span style="color:#718096;min-width:30px;font-size:10px">'+c.id+'</span>';
+      h+='<span class="badge '+typeBadge(c.type)+'" style="font-size:9px;padding:1px 5px">'+c.type+'</span>';
+      h+='<span style="font-weight:500;flex:1">'+c.name+pogiLabel+'</span>';
+      h+='<span style="color:#64748b;font-size:10px">'+( c.manager||'-')+'</span>';
+      h+='<span style="text-align:right;font-weight:600;min-width:55px">'+fmt(c.fee)+'</span>';
+      h+='</div>';
     });
+    h+='</div></div>';
   });
-  h+='</tbody></table></div>';
+  h+='</div>';
   el.innerHTML=h;
   updateIncBulkBar();
 }
@@ -3153,6 +3348,93 @@ function renderInvoice(){
   renderExtraInvoices(month);
   renderRetroInvoices(month);
   renderBu2Fee();
+
+  // 전월 대비 변동내역 섹션
+  renderInvDiff(month,prev,newClients,lostClients,feeChanges,rows,prevRows);
+}
+
+function renderInvDiff(month,prev,newClients,lostClients,feeChanges,curRows,prevRows){
+  var body=document.getElementById('invDiffBody');
+  var countEl=document.getElementById('invDiffCount');
+  if(!body)return;
+  if(!month||!prev){body.innerHTML='';if(countEl)countEl.textContent='';return}
+
+  var curIds={};curRows.forEach(function(r){curIds[r.id]={name:r.name,ownerName:r.ownerName||'',type:r.type,manager:r.manager||'',fee:r.mFee}});
+  var prevIds={};prevRows.forEach(function(r){prevIds[r.id]={name:r.name,ownerName:r.ownerName||'',type:r.type||'',manager:r.manager||'',fee:r.fee}});
+
+  // 추가된 업체 (당월 있고 전월 없음)
+  var added=[];
+  curRows.forEach(function(r){if(!prevIds[r.id])added.push(r)});
+  // 사라진 업체 (전월 있고 당월 없음)
+  var removed=[];
+  prevRows.forEach(function(r){if(!curIds[r.id])removed.push(r)});
+  // 기장료 변경
+  var changed=feeChanges||[];
+
+  var totalChanges=added.length+removed.length+changed.length;
+  if(countEl)countEl.textContent='(변동 '+totalChanges+'건)';
+
+  if(!totalChanges){
+    body.innerHTML='<div style="padding:20px;text-align:center;color:#a0aec0;font-size:12px">전월 대비 변동사항 없음</div>';
+    return;
+  }
+
+  var html='';
+  // 추가된 업체
+  if(added.length){
+    html+='<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#38a169;margin-bottom:6px;display:flex;align-items:center;gap:6px"><span style="background:#f0fff4;border:1px solid #c6f6d5;padding:2px 8px;border-radius:4px">+ 추가 '+added.length+'건</span><span style="font-size:11px;color:#718096;font-weight:400">전월에 없던 업체</span></div>'
+      +'<div class="TC2" style="max-height:200px;overflow-y:auto"><table><thead><tr style="background:#f0fff4"><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>담당</th><th style="text-align:right">기장료</th><th>사유</th></tr></thead><tbody>'
+      +added.map(function(r){
+        var reason='신규 수임';
+        var bs=r.billingStart||r.startMonth||'';
+        if(bs===month)reason='신규 (당월 시작)';
+        else if(bs&&bs<month)reason='복귀/재수임';
+        return '<tr><td>'+r.id+'</td><td>'+r.name+'</td><td>'+(r.ownerName||'-')+'</td><td>'+r.type+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right;font-weight:600;color:#38a169">+'+W(r.mFee)+'</td><td style="font-size:10px;color:#718096">'+reason+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }
+
+  // 사라진 업체
+  if(removed.length){
+    html+='<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#e53e3e;margin-bottom:6px;display:flex;align-items:center;gap:6px"><span style="background:#fff5f5;border:1px solid #fed7d7;padding:2px 8px;border-radius:4px">- 제외 '+removed.length+'건</span><span style="font-size:11px;color:#718096;font-weight:400">전월에 있었으나 당월 제외</span></div>'
+      +'<div class="TC2" style="max-height:200px;overflow-y:auto"><table><thead><tr style="background:#fff5f5"><th>번호</th><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:right">전월 기장료</th><th>사유</th></tr></thead><tbody>'
+      +removed.map(function(r){
+        var reason=r.dismissReason||'해임';
+        var c=data.clients.find(function(x){return x.id===r.id});
+        if(c){
+          if(c.status==='해임')reason=c.dismissReason||'해임';
+          var nm=c.name||'';
+          if(nm.indexOf('미정')!==-1||nm.indexOf('임시')!==-1)reason='자료 미수령(미정)';
+        }
+        return '<tr><td>'+r.id+'</td><td>'+r.name+'</td><td>'+(r.ownerName||'-')+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right;font-weight:600;color:#e53e3e">-'+W(r.fee)+'</td><td style="font-size:10px;color:#718096">'+reason+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }
+
+  // 기장료 변경
+  if(changed.length){
+    html+='<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#d69e2e;margin-bottom:6px;display:flex;align-items:center;gap:6px"><span style="background:#fffff0;border:1px solid #fefcbf;padding:2px 8px;border-radius:4px">↕ 기장료 변경 '+changed.length+'건</span></div>'
+      +'<div class="TC2" style="max-height:200px;overflow-y:auto"><table><thead><tr style="background:#fffff0"><th>번호</th><th>업체명</th><th>담당</th><th style="text-align:right">전월</th><th style="text-align:right">당월</th><th style="text-align:right">증감</th></tr></thead><tbody>'
+      +changed.map(function(r){
+        var dc=r.diff>0?'#38a169':'#e53e3e';var ds=r.diff>0?'+':'';
+        return '<tr><td>'+r.id+'</td><td>'+r.name+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right">'+W(r.prevFee)+'</td><td style="text-align:right;font-weight:600">'+W(r.mFee)+'</td><td style="text-align:right;font-weight:600;color:'+dc+'">'+ds+W(r.diff)+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }
+
+  // 요약
+  var addedSum=added.reduce(function(s,r){return s+r.mFee},0);
+  var removedSum=removed.reduce(function(s,r){return s+r.fee},0);
+  var changedSum=changed.reduce(function(s,r){return s+r.diff},0);
+  var net=addedSum-removedSum+changedSum;
+  html+='<div style="display:flex;gap:12px;padding:10px;background:#f7fafc;border-radius:6px;font-size:11px;align-items:center;justify-content:center;flex-wrap:wrap">'
+    +'<span>추가 <strong style="color:#38a169">+'+W(addedSum)+'</strong></span>'
+    +'<span>제외 <strong style="color:#e53e3e">-'+W(removedSum)+'</strong></span>'
+    +'<span>변경 <strong style="color:#d69e2e">'+(changedSum>=0?'+':'')+W(changedSum)+'</strong></span>'
+    +'<span style="font-weight:700;font-size:13px;color:'+(net>=0?'#38a169':'#e53e3e')+'">순변동 '+(net>=0?'+':'')+W(net)+'</span>'
+    +'</div>';
+
+  body.innerHTML=html;
 }
 
 // ===== 월/분기결산 =====
@@ -3644,6 +3926,28 @@ function handleExcelUpload(input){
       var idx=0;
       var nowStr=new Date().toISOString();
 
+      // 엑셀 날짜 변환 (시리얼넘버/Date객체/문자열 모두 처리 → YYYY-MM-DD)
+      function parseExcelDate(v){
+        if(!v&&v!==0)return '';
+        if(typeof v==='number'){
+          // Excel serial number → Date (1900-01-01 기준, 1900 윤년 버그 보정)
+          var d=new Date((v-25569)*86400000);
+          var yy=d.getUTCFullYear(),mm=d.getUTCMonth()+1,dd=d.getUTCDate();
+          return yy+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd);
+        }
+        if(v instanceof Date){
+          var yy=v.getFullYear(),mm=v.getMonth()+1,dd=v.getDate();
+          return yy+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd);
+        }
+        var s=String(v).trim();
+        // YYYY-MM-DD 형식이면 그대로
+        if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+        // YYYY.MM.DD 또는 YYYY/MM/DD
+        var m=s.match(/^(\d{4})[\.\/](\d{1,2})[\.\/](\d{1,2})$/);
+        if(m)return m[1]+'-'+(m[2].length<2?'0'+m[2]:m[2])+'-'+(m[3].length<2?'0'+m[3]:m[3]);
+        return s;
+      }
+
       function processBatch(){
         var end=Math.min(idx+batchSize,rows.length);
         for(var bi=idx;bi<end;bi++){
@@ -3678,7 +3982,7 @@ function handleExcelUpload(input){
           var cd={
             id:genId(type), name:name, ownerName:String(r['대표자명']||'').trim(),
             ownerBirth:String(r['생년월일(6자리)']||'').trim().replace(/[^0-9]/g,'').slice(0,6),
-            bizRegDate:String(r['사업자등록일(YYYY-MM-DD)']||'').trim(),
+            bizRegDate:parseExcelDate(r['사업자등록일(YYYY-MM-DD)']),
             type:type, entityType:entity,
             businessType:biz,
             ecommerceDetail:biz==='전자상거래'?String(r['전자상거래세부(국내/해외/국내+해외/구매대행)']||r['전자상거래세부(국내/해외(큐텐,쇼피)/국내+해외/구매대행)']||'국내').trim():'',
@@ -3686,7 +3990,7 @@ function handleExcelUpload(input){
             manager:String(r['담당자']||'').trim(),
             fee:fee, adjFee:Number(r['예상조정료'])||0, extraFee:(type==='2부'||type==='3부')?Number(r['기타수수료(2부/3부)'])||0:0,
             startMonth:startMonth, billingStart:billingStart,
-            contractDate:String(r['계약일(YYYY-MM-DD)']||'').trim(),
+            contractDate:parseExcelDate(r['계약일(YYYY-MM-DD)']),
             retroApply:retroApply,
             retroFee:retroApply==='해당'?(Number(r['소급기장료(월)'])||0):0,
             retroMonths:retroApply==='해당'?(Number(r['소급개월수'])||0):0,
@@ -3704,7 +4008,7 @@ function handleExcelUpload(input){
             status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
             deferredMonths:0,
             feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:nowStr}]:[],
-            managerHistory:[],
+            managerHistory:cd.manager?[{manager:cd.manager,startMonth:billingStart||startMonth||'',memo:'초기 배정(일괄등록)',date:nowStr}]:[],
             createdAt:nowStr, updatedAt:nowStr
           };
           data.clients.push(cd);added++;
@@ -3905,6 +4209,39 @@ function bulkChangeManager(){
     }
   });
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast('담당자 변경 완료');
+}
+function bulkLinkClients(){
+  if(selectedClients.size<2){toast('관련업체 묶기는 2개 이상 선택하세요');return}
+  var ids=[];selectedClients.forEach(function(id){ids.push(id)});
+  var clients=ids.map(function(id){return data.clients.find(function(c){return c.id===id})}).filter(Boolean);
+  var names=clients.map(function(c){return c.id+' '+c.name});
+  // 1부 업체를 대표(부모)로 자동 선택, 없으면 첫 번째
+  var parent=clients.find(function(c){return c.type==='1부'})||clients[0];
+  if(!confirm('선택한 '+ids.length+'개 업체를 관련업체로 묶겠습니까?\n\n대표업체: '+parent.id+' '+parent.name+'\n하위업체: '+names.filter(function(n){return n.indexOf(parent.id)!==0}).join(', ')+'\n\n* 대표업체(1부)를 기준으로 나머지가 연결됩니다.'))return;
+  clients.forEach(function(c){
+    if(c.id!==parent.id){
+      c.linkedTo=parent.id;
+      addLog('수정',c.id,c.name,'관련업체 묶기: → '+parent.id+' '+parent.name);
+    }
+  });
+  // 대표업체의 기존 linkedTo는 유지 (이미 다른 곳에 연결되어 있을 수 있음)
+  saveData();selectedClients.clear();updateBulkBar();refreshAll();
+  toast('관련업체 묶기 완료 (대표: '+parent.id+' '+parent.name+')');
+}
+function bulkUnlinkClients(){
+  if(!selectedClients.size){toast('묶기 해제할 업체를 선택하세요');return}
+  var ids=[];selectedClients.forEach(function(id){ids.push(id)});
+  var clients=ids.map(function(id){return data.clients.find(function(c){return c.id===id})}).filter(Boolean);
+  var linked=clients.filter(function(c){return c.linkedTo});
+  if(!linked.length){toast('선택한 업체 중 묶여있는 업체가 없습니다');return}
+  var names=linked.map(function(c){return c.id+' '+c.name+' (→'+c.linkedTo+')'});
+  if(!confirm(linked.length+'개 업체의 관련업체 묶기를 해제하시겠습니까?\n\n'+names.join('\n')))return;
+  linked.forEach(function(c){
+    addLog('수정',c.id,c.name,'관련업체 해제: '+c.linkedTo+' → 해제');
+    c.linkedTo='';
+  });
+  saveData();selectedClients.clear();updateBulkBar();refreshAll();
+  toast(linked.length+'개 업체 묶기 해제 완료');
 }
 function bulkDismiss(reason){
   if(!selectedClients.size)return;
@@ -6385,7 +6722,13 @@ function getRedItemsForMonth(ym){
 function toggleRedPaid(origIdx,val){
   if(!data.bonusData.redItems||origIdx<0||origIdx>=data.bonusData.redItems.length)return;
   data.bonusData.redItems[origIdx].paid=val;
-  if(val==='Y'){data.bonusData.redItems[origIdx].paidDate=new Date().toISOString();}else{delete data.bonusData.redItems[origIdx].paidDate;}
+  if(val==='Y'){
+    // 현재 보고 있는 상여 월 기준으로 paidDate 저장 (실제 날짜가 아닌 조회 중인 월)
+    var viewYear=document.getElementById('bonusYear').value;
+    var viewMonth=parseInt(document.getElementById('bonusMonth').value)||new Date().getMonth()+1;
+    var paidYm=viewYear+'-'+(viewMonth<10?'0'+viewMonth:viewMonth);
+    data.bonusData.redItems[origIdx].paidDate=paidYm+'-15T00:00:00.000Z';
+  }else{delete data.bonusData.redItems[origIdx].paidDate;}
   saveData();renderBonus();
   // 세금계산서 추가발행 내역도 동기화
   var r=data.bonusData.redItems[origIdx];
@@ -6635,6 +6978,365 @@ function saveEdiForm(ym){
   closeEdiForm();renderBonus();toast('EDI지원금 저장됨');
 }
 
+// ============ 신규수임 탭 ============
+function initObMonth(){
+  var sel=document.getElementById('obMonth');
+  if(!sel)return;
+  var now=new Date();var opts='';
+  for(var i=5;i>=-6;i--){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    var ym=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    opts+='<option value="'+ym+'"'+(i===0?' selected':'')+'>'+d.getFullYear()+'년 '+(d.getMonth()+1)+'월</option>';
+  }
+  sel.innerHTML=opts;
+}
+function renderOnboarding(){
+  var ym=document.getElementById('obMonth').value;
+  var mgrF=document.getElementById('obMgrFilter').value;
+  // 임시/미정 업체 = 신규수임 대상
+  var pending=data.clients.filter(function(c){
+    if(c.status!=='활성')return false;
+    var nm=c.name||'';
+    var isPending=nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1;
+    // 계약월 필터: billingStart 또는 contractDate 기준
+    var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+    if(ym&&cMonth&&cMonth>ym)return false;
+    if(mgrF&&c.manager!==mgrF)return false;
+    return isPending;
+  });
+  // 이번 달 전환된 업체: 이전에 미정/임시였다가 전환 완료
+  var converted=data.clients.filter(function(c){
+    if(c.status!=='활성')return false;
+    var nm=c.name||'';
+    if(nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1)return false;
+    // contractDate 또는 billingStart가 해당 월
+    var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+    if(cMonth!==ym)return false;
+    if(mgrF&&c.manager!==mgrF)return false;
+    return true;
+  });
+  // 이연 청구 대기 (deferredMonths>0)
+  var deferred=data.clients.filter(function(c){
+    if(c.status!=='활성')return false;
+    if(!c.deferredMonths||c.deferredMonths<=0)return false;
+    var nm=c.name||'';
+    if(nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1)return false;
+    if(mgrF&&c.manager!==mgrF)return false;
+    return true;
+  });
+  // 자료 수령 여부 판단: 핵심필드가 입력되었으면 자료수령 상태
+  function hasDocInfo(c){
+    return c.bizRegNo&&c.bizRegNo.length>5;
+  }
+  var docWaiting=pending.filter(function(c){return !hasDocInfo(c)});
+  var infoEntering=pending.filter(function(c){return hasDocInfo(c)});
+  // 파이프라인
+  var pipe=document.getElementById('obPipeline');
+  pipe.innerHTML='<div style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#2b6cb0;border-radius:8px 0 0 8px;font-weight:700"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
+    +'<div style="width:2px;background:#e2e8f0"></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
+    +'<div style="width:2px;background:#e2e8f0"></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:#c6f6d5;color:#276749;font-weight:700"><div style="font-size:22px">'+infoEntering.length+'</div><div style="font-size:11px">정보입력중</div></div>'
+    +'<div style="width:2px;background:#e2e8f0"></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
+  // 자료 미수령
+  var h1='';
+  if(docWaiting.length){
+    h1+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px">📄 자료 미수령 <span style="background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px;font-size:11px">'+docWaiting.length+'건</span></div>';
+    docWaiting.forEach(function(c){
+      var days=c.contractDate?Math.floor((new Date()-new Date(c.contractDate))/(86400000)):0;
+      var dayBadge=days>=7?'background:#fed7d7;color:#c53030':'background:#fefcbf;color:#975a16';
+      h1+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px">'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="'+dayBadge+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">'+(days>0?days+'일 경과':'')+'</span></div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">'+(c.contractDate||'')+' 계약 · 담당: '+(c.manager||'-')+'</div></div>'
+        +'<div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div>'
+        +'</div>';
+    });
+  }
+  document.getElementById('obDocWaiting').innerHTML=h1;
+  // 정보 입력중
+  var h2='';
+  if(infoEntering.length){
+    h2+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">📝 자료수령/정보입력중 <span style="background:#bee3f8;color:#2b6cb0;padding:2px 8px;border-radius:10px;font-size:11px">'+infoEntering.length+'건</span></div>';
+    infoEntering.forEach(function(c){
+      var checks=[];
+      if(c.name&&c.name.indexOf('임시')===-1&&c.name.indexOf('미정')===-1)checks.push('상호');
+      if(c.bizRegNo)checks.push('사업자번호');
+      if(c.ownerName)checks.push('대표자');
+      if(c.fee>0)checks.push('기장료');
+      if(c.businessType)checks.push('업종');
+      var missing=[];
+      if(!c.ownerName)missing.push('대표자');
+      if(!c.fee||c.fee<=0)missing.push('기장료');
+      if(!c.businessType)missing.push('업종');
+      h2+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #bee3f8;border-radius:8px;margin-bottom:6px">'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#bee3f8;color:#2b6cb0;padding:2px 8px;border-radius:10px;font-size:10px">자료수령</span></div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+'</div>'
+        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'
+        +checks.map(function(x){return '<span style="background:#c6f6d5;color:#276749;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">'+x+' ✓</span>'}).join('')
+        +missing.map(function(x){return '<span style="background:#fed7d7;color:#c53030;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">'+x+' ✗</span>'}).join('')
+        +'</div></div>'
+        +'<div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 정보입력</button></div>'
+        +'</div>';
+    });
+  }
+  document.getElementById('obInfoEntering').innerHTML=h2;
+  // 전환완료
+  var h3='';
+  if(converted.length){
+    h3+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">✅ 이번달 전환 완료 <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:11px">'+converted.length+'건</span></div>';
+    converted.forEach(function(c){
+      h3+='<div style="display:flex;align-items:center;padding:10px 14px;border:1px solid #c6f6d5;border-radius:8px;margin-bottom:6px;background:#f0fff4">'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:10px">전환완료</span></div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+' · 기장료: '+W(c.fee||0)+(c.deferredMonths>0?' · 이연: '+c.deferredMonths+'개월':'')+'</div></div>'
+        +'</div>';
+    });
+  }
+  document.getElementById('obConverted').innerHTML=h3;
+  // 이연 청구
+  var h4='';
+  if(deferred.length){
+    h4+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">💰 이연 청구 대기 <span style="background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px;font-size:11px">'+deferred.length+'건</span></div>';
+    deferred.forEach(function(c){
+      h4+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #fed7d7;border-radius:8px;margin-bottom:6px;background:#fff5f5">'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px;font-size:10px">이연 '+c.deferredMonths+'개월</span></div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+' · '+c.deferredMonths+'개월분 청구 필요</div></div>'
+        +'<div><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">상세</button></div>'
+        +'</div>';
+    });
+  }
+  document.getElementById('obDeferredBilling').innerHTML=h4;
+}
+function editClientById(id){
+  var idx=data.clients.findIndex(function(c){return c.id===id});
+  if(idx>=0)editClient(idx);
+}
+
+// ============ 상담관리 탭 ============
+
+function initConsultYear(){
+  var sel=document.getElementById('csYear');
+  if(!sel)return;
+  var now=new Date();var y=now.getFullYear();
+  var h='';
+  for(var i=y;i>=y-3;i--)h+='<option value="'+i+'"'+(i===y?' selected':'')+'>'+i+'년</option>';
+  sel.innerHTML=h;
+}
+function initConsultCounselors(){
+  var staff=data.staff.filter(function(s){return !s.leaveDate});
+  var h1='<option value="">선택</option>',h2='<option value="">없음</option>';
+  staff.forEach(function(s){h1+='<option>'+s.name+'</option>';h2+='<option>'+s.name+'</option>'});
+  var c1=document.getElementById('cs_counselor1');
+  var c2=document.getElementById('cs_counselor2');
+  if(c1)c1.innerHTML=h1;
+  if(c2)c2.innerHTML=h2;
+}
+function openConsultModal(idx){
+  initConsultCounselors();
+  document.getElementById('consultModalTitle').textContent=idx!==undefined?'상담 수정':'상담 등록';
+  if(idx!==undefined){
+    var c=data.consultations[idx];
+    document.getElementById('cs_editId').value=idx;
+    document.getElementById('cs_date').value=c.date||'';
+    document.getElementById('cs_name').value=c.name||'';
+    document.getElementById('cs_phone').value=c.phone||'';
+    document.getElementById('cs_entity').value=c.entity||'개인';
+    document.getElementById('cs_biz').value=c.biz||'';
+    document.getElementById('cs_revenue').value=c.revenue||'';
+    document.getElementById('cs_expectedFee').value=c.expectedFee||'';
+    document.getElementById('cs_source').value=c.source||'';
+    document.getElementById('cs_notes').value=c.notes||'';
+    document.getElementById('cs_counselor1').value=c.counselor1||'';
+    document.getElementById('cs_counselor2').value=c.counselor2||'';
+    document.getElementById('cs_contracted').value=c.contracted||'N';
+    document.getElementById('cs_contractDate').value=c.contractDate||'';
+    document.getElementById('cs_detail').value=c.detail||'';
+  }else{
+    document.getElementById('cs_editId').value='';
+    ['cs_date','cs_name','cs_phone','cs_biz','cs_revenue','cs_expectedFee','cs_notes','cs_contractDate','cs_detail'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('cs_entity').value='개인';
+    document.getElementById('cs_source').value='';
+    document.getElementById('cs_counselor1').value='';
+    document.getElementById('cs_counselor2').value='';
+    document.getElementById('cs_contracted').value='N';
+    document.getElementById('cs_date').value=new Date().toISOString().slice(0,10);
+  }
+  document.getElementById('consultModal').classList.add('show');
+}
+function closeConsultModal(){document.getElementById('consultModal').classList.remove('show')}
+function saveConsult(){
+  var name=document.getElementById('cs_name').value.trim();
+  var date=document.getElementById('cs_date').value;
+  if(!name){toast('성함을 입력하세요');return}
+  if(!date){toast('상담일을 입력하세요');return}
+  var obj={
+    date:date,name:name,
+    phone:document.getElementById('cs_phone').value.trim(),
+    entity:document.getElementById('cs_entity').value,
+    biz:document.getElementById('cs_biz').value.trim(),
+    revenue:parseInt(document.getElementById('cs_revenue').value)||0,
+    expectedFee:parseInt(document.getElementById('cs_expectedFee').value)||0,
+    source:document.getElementById('cs_source').value,
+    notes:document.getElementById('cs_notes').value.trim(),
+    counselor1:document.getElementById('cs_counselor1').value,
+    counselor2:document.getElementById('cs_counselor2').value,
+    contracted:document.getElementById('cs_contracted').value,
+    contractDate:document.getElementById('cs_contractDate').value,
+    detail:document.getElementById('cs_detail').value
+  };
+  var editIdx=document.getElementById('cs_editId').value;
+  if(editIdx!==''){
+    data.consultations[parseInt(editIdx)]=Object.assign(data.consultations[parseInt(editIdx)],obj);
+    toast('상담 수정됨');
+  }else{
+    data.consultCounter=(data.consultCounter||0)+1;
+    obj.no=data.consultCounter;
+    obj.createdAt=new Date().toISOString();
+    data.consultations.push(obj);
+    toast('상담 등록됨');
+  }
+  saveData();closeConsultModal();renderConsultList();renderConsultStats();
+}
+function deleteConsult(idx){
+  if(!confirm('삭제하시겠습니까?'))return;
+  data.consultations.splice(idx,1);saveData();renderConsultList();renderConsultStats();toast('삭제됨');
+}
+function renderConsultList(){
+  var year=document.getElementById('csYear').value;
+  var month=document.getElementById('csMonth').value;
+  var search=(document.getElementById('csSearch').value||'').trim().toLowerCase();
+  var cFilter=document.getElementById('csContractFilter').value;
+  var filtered=data.consultations.filter(function(c,i){c._idx=i;return true}).filter(function(c){
+    if(year&&c.date&&c.date.slice(0,4)!==year)return false;
+    if(month&&c.date&&c.date.slice(5,7)!==month)return false;
+    if(search&&(c.name||'').toLowerCase().indexOf(search)===-1&&(c.phone||'').indexOf(search)===-1)return false;
+    if(cFilter&&c.contracted!==cFilter)return false;
+    return true;
+  });
+  filtered.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+  var tbody=document.getElementById('consultTable');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="16" style="text-align:center;color:#a0aec0;padding:30px">등록된 상담이 없습니다</td></tr>';return}
+  var h='';
+  filtered.forEach(function(c){
+    var cBadge=c.contracted==='Y'?'background:#c6f6d5;color:#276749':(c.contracted==='P'?'background:#fefcbf;color:#975a16':'background:#edf2f7;color:#4a5568');
+    var cText=c.contracted==='Y'?'계약완료':(c.contracted==='P'?'진행중':'미계약');
+    h+='<tr>'
+      +'<td>'+(c.no||'-')+'</td>'
+      +'<td>'+(c.date||'-')+'</td>'
+      +'<td style="font-weight:600">'+(c.name||'-')+'</td>'
+      +'<td>'+(c.phone||'-')+'</td>'
+      +'<td>'+(c.entity||'-')+'</td>'
+      +'<td>'+(c.biz||'-')+'</td>'
+      +'<td style="text-align:right">'+(c.revenue?W(c.revenue):'-')+'</td>'
+      +'<td style="text-align:right">'+(c.expectedFee?W(c.expectedFee):'-')+'</td>'
+      +'<td>'+(c.notes||'-')+'</td>'
+      +'<td>'+(c.counselor1||'-')+'</td>'
+      +'<td>'+(c.counselor2||'-')+'</td>'
+      +'<td><span style="'+cBadge+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">'+cText+'</span></td>'
+      +'<td>'+(c.contractDate||'-')+'</td>'
+      +'<td>'+(c.source||'-')+'</td>'
+      +'<td><button class="btn btn-xs btn-secondary" onclick="openConsultDetailModal('+c._idx+')">상세</button></td>'
+      +'<td><button class="btn btn-xs btn-primary" onclick="openConsultModal('+c._idx+')">수정</button> <button class="btn btn-xs btn-danger" onclick="deleteConsult('+c._idx+')">삭제</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=h;
+}
+function openConsultDetailModal(idx){
+  var c=data.consultations[idx];
+  if(!c)return;
+  document.getElementById('csDetailTitle').textContent=c.name+' 상담내역';
+  document.getElementById('csDetailInfo').innerHTML='<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#4a5568">'
+    +'<span>📅 '+c.date+'</span>'
+    +'<span>📞 '+(c.phone||'-')+'</span>'
+    +'<span>🏢 '+(c.entity||'-')+' / '+(c.biz||'-')+'</span>'
+    +'<span>👤 1차: '+(c.counselor1||'-')+' / 2차: '+(c.counselor2||'-')+'</span>'
+    +'</div>';
+  document.getElementById('csDetailText').value=c.detail||'';
+  document.getElementById('csDetailIdx').value=idx;
+  document.getElementById('consultDetailModal').classList.add('show');
+}
+function closeConsultDetailModal(){document.getElementById('consultDetailModal').classList.remove('show')}
+function saveConsultDetail(){
+  var idx=parseInt(document.getElementById('csDetailIdx').value);
+  if(isNaN(idx)||!data.consultations[idx])return;
+  data.consultations[idx].detail=document.getElementById('csDetailText').value;
+  saveData();toast('상담내역 저장됨');closeConsultDetailModal();renderConsultList();
+}
+function renderConsultStats(){
+  var year=document.getElementById('csYear').value;
+  var month=document.getElementById('csMonth').value;
+  var filtered=data.consultations.filter(function(c){
+    if(year&&c.date&&c.date.slice(0,4)!==year)return false;
+    if(month&&c.date&&c.date.slice(5,7)!==month)return false;
+    return true;
+  });
+  var total=filtered.length;
+  var contracted=filtered.filter(function(c){return c.contracted==='Y'}).length;
+  var rate=total>0?Math.round(contracted/total*100):0;
+  var totalExpFee=filtered.reduce(function(s,c){return s+(c.expectedFee||0)},0);
+  var contractedExpFee=filtered.filter(function(c){return c.contracted==='Y'}).reduce(function(s,c){return s+(c.expectedFee||0)},0);
+  // 유입경로별
+  var srcMap={};
+  filtered.forEach(function(c){var s=c.source||'미분류';if(!srcMap[s])srcMap[s]={total:0,contracted:0};srcMap[s].total++;if(c.contracted==='Y')srcMap[s].contracted++});
+  // 상담자별 계약률
+  var cslrMap={};
+  filtered.forEach(function(c){
+    [c.counselor1,c.counselor2].forEach(function(name){
+      if(!name)return;
+      if(!cslrMap[name])cslrMap[name]={total:0,contracted:0};
+      cslrMap[name].total++;
+      if(c.contracted==='Y')cslrMap[name].contracted++;
+    });
+  });
+  // 월별 추이 (해당 연도)
+  var monthlyData={};
+  data.consultations.filter(function(c){return c.date&&c.date.slice(0,4)===year}).forEach(function(c){
+    var m=c.date.slice(5,7);
+    if(!monthlyData[m])monthlyData[m]={total:0,contracted:0,fee:0};
+    monthlyData[m].total++;
+    if(c.contracted==='Y'){monthlyData[m].contracted++;monthlyData[m].fee+=(c.expectedFee||0)}
+  });
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#2b6cb0">'+total+'</div><div style="font-size:10px;color:#64748b">총 상담</div></div>'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#38a169">'+contracted+'</div><div style="font-size:10px;color:#64748b">계약완료</div></div>'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#805ad5">'+rate+'%</div><div style="font-size:10px;color:#64748b">계약률</div></div>'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#dd6b20">'+W(totalExpFee)+'</div><div style="font-size:10px;color:#64748b">예상기장료합계</div></div>'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#e53e3e">'+W(contractedExpFee)+'</div><div style="font-size:10px;color:#64748b">계약 기장료</div></div>'
+    +'</div>';
+  // 유입경로 + 상담자별 테이블
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  // 유입경로
+  h+='<div style="background:#f7fafc;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">📊 유입경로별</div><table style="font-size:11px"><thead><tr><th>유입경로</th><th>상담수</th><th>계약</th><th>계약률</th></tr></thead><tbody>';
+  Object.keys(srcMap).sort(function(a,b){return srcMap[b].total-srcMap[a].total}).forEach(function(k){
+    var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    h+='<tr><td>'+k+'</td><td style="text-align:center">'+d.total+'</td><td style="text-align:center">'+d.contracted+'</td><td style="text-align:center;font-weight:600">'+r+'%</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  // 상담자별
+  h+='<div style="background:#f7fafc;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">👤 상담자별 계약률</div><table style="font-size:11px"><thead><tr><th>상담자</th><th>상담수</th><th>계약</th><th>계약률</th></tr></thead><tbody>';
+  Object.keys(cslrMap).sort(function(a,b){return cslrMap[b].total-cslrMap[a].total}).forEach(function(k){
+    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    h+='<tr><td>'+k+'</td><td style="text-align:center">'+d.total+'</td><td style="text-align:center">'+d.contracted+'</td><td style="text-align:center;font-weight:600;color:'+(r>=50?'#276749':'#c53030')+'">'+r+'%</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='</div>';
+  // 월별 추이
+  if(!month){
+    h+='<div style="background:#f7fafc;border-radius:8px;padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">📅 '+year+'년 월별 추이</div>'
+      +'<table style="font-size:11px"><thead><tr><th>월</th><th>상담수</th><th>계약</th><th>계약률</th><th>계약 기장료</th></tr></thead><tbody>';
+    for(var m=1;m<=12;m++){
+      var mk=m<10?'0'+m:''+m;
+      var md=monthlyData[mk]||{total:0,contracted:0,fee:0};
+      var mr=md.total>0?Math.round(md.contracted/md.total*100):0;
+      if(md.total>0){
+        h+='<tr><td style="text-align:center">'+m+'월</td><td style="text-align:center">'+md.total+'</td><td style="text-align:center">'+md.contracted+'</td><td style="text-align:center;font-weight:600">'+mr+'%</td><td style="text-align:right">'+W(md.fee)+'</td></tr>';
+      }
+    }
+    h+='</tbody></table></div>';
+  }
+  document.getElementById('consultStats').innerHTML=h;
+}
+
 function refreshAll(){
   popDropdowns();renderStats();renderClients();
   // 나머지 탭은 지연 렌더링 (UI 블로킹 방지)
@@ -6642,6 +7344,7 @@ function refreshAll(){
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices()},100);
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
+  setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats()},250);
 }
 
 // Init
@@ -6651,6 +7354,9 @@ document.getElementById('retroInvoiceMonth').value=nowMonth();
 document.getElementById('bu2InvoiceMonth').value=nowMonth();
 document.getElementById('vatMonth').value=nowMonth();
 document.getElementById('closingMonth').value=nowMonth();
+initObMonth();initConsultYear();initConsultCounselors();
+// 신규수임 담당자 필터 초기화
+(function(){var sel=document.getElementById('obMgrFilter');if(sel){var h='<option value="">전체 담당자</option>';data.staff.forEach(function(s){if(!s.leaveDate)h+='<option>'+s.name+'</option>'});sel.innerHTML=h}})();
 </script>
 </body>
 </html>
