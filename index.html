@@ -1266,8 +1266,8 @@ if(!data.consultations)data.consultations=[];
 if(!data.consultCounter)data.consultCounter=0;
 // 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회)
 if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;saveData()}
-// 기존 업체 체크리스트 일괄 완료 마이그레이션 (1회) — 이번달(2026-03) 수임 제외
-if(!data._checklistMigrated2){var _ckKeys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var _curYm=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)})();data.clients.forEach(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');if(cm&&cm>=_curYm)return;if(!c.onboardChecklist)c.onboardChecklist={};_ckKeys.forEach(function(k){c.onboardChecklist[k]=true})});data._checklistMigrated2=true;saveData()}
+// 기존 업체 체크리스트 완료 마이그레이션 — 이번달 수임 제외
+(function(){if(data._ckMig3)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var curYm=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)})();data.clients.forEach(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');if(cm&&cm>=curYm)return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=true})});data._ckMig3=true;saveData()})()
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -2876,9 +2876,11 @@ function renderVatList(){
 
   const rows=[];
 
-  // 1) Active clients with 부가세
+  // 1) Active clients with 부가세 (수임시작월이 신고월 이전이면 포함)
+  var vatDeadlineYm=selYear+'-'+(selMonth<10?'0'+selMonth:selMonth);
   AC().filter(c=>c.taxType==='부가세신고대상').forEach(c=>{
     if(mgr&&c.manager!==mgr)return;
+    if(!wasOnboardedByDeadline(c, vatDeadlineYm))return;
     const freq=getVatFreq(c);
     const filingMonths=getVatFilingMonths(freq);
     if(filingMonths.includes(selMonth)){
@@ -2945,13 +2947,20 @@ function renderVatList(){
 // - 활성인 경우: 항상 포함
 function wasActiveInYear(c, year) {
   const startYear = c.startMonth ? parseInt(c.startMonth.split('-')[0]) : (c.contractDate ? parseInt(c.contractDate.split('-')[0]) : 0);
-  if (startYear > year) return false; // 해당 연도 이후에 계약 시작
+  if (startYear > year) return false;
   if (c.status === '활성') return true;
-  // 해임된 경우: 해임월/폐업일이 해당연도 이상이면 해당연도에는 존재했음
   const endDate = c.closureDate || c.dismissDate || '';
-  if (!endDate) return true; // 날짜 없으면 일단 포함
+  if (!endDate) return true;
   const endYear = parseInt(endDate.split('-')[0]);
   return endYear >= year;
+}
+// 수임일이 신고마감월 이전인지 판별 (마감월: YYYY-MM 형식)
+function wasOnboardedByDeadline(c, deadlineYm) {
+  var sm=c.startMonth||c.billingStart||'';
+  var cd=c.contractDate?(c.contractDate.slice(0,7)):'';
+  var startYm=sm||cd;
+  if(!startYm)return true;
+  return startYm<=deadlineYm;
 }
 
 // 법인세 귀속연도 판정: 귀속연도+1년 3월까지 계약한 법인 포함
@@ -3204,11 +3213,20 @@ function renderSincereList(){
   populateYearSelect('sincereYear');
   const year = parseInt(document.getElementById('sincereYear').value) || new Date().getFullYear();
   const s=(document.getElementById('sincereSearch').value||'').toLowerCase(),m=document.getElementById('sincereFilterManager').value;
-  const list=data.clients.filter(c=>(c.entityType==='성실개인'||c.entityType==='성실법인')
-    && wasActiveInYear(c, year)
+  var sincereDeadline=(year+1)+'-06';
+  const list=data.clients.filter(c=>{
+    if(c.entityType!=='성실개인'&&c.entityType!=='성실법인')return false;
+    var bizYear=c.bizRegDate?parseInt(c.bizRegDate.split('-')[0]):0;
+    if(bizYear&&bizYear>year)return false;
+    if(!wasOnboardedByDeadline(c,sincereDeadline))return false;
+    if(c.status==='활성')return true;
+    var endDate=c.closureDate||c.dismissDate||'';
+    if(!endDate)return true;
+    return parseInt(endDate.split('-')[0])>=year;
+  }).filter(c=>true
     &&(!s||c.name.toLowerCase().includes(s)||c.id.toLowerCase().includes(s)||(c.ownerName||'').toLowerCase().includes(s))
     &&(!m||c.manager===m));
-  document.getElementById('sincereCount').textContent='('+year+'년 '+list.length+'건)';
+  document.getElementById('sincereCount').textContent='('+year+'년 귀속 '+list.length+'건 / 신고기한 '+(year+1)+'.06)';
   const tb=document.getElementById('sincereTable');
   if(!list.length){tb.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:#a0aec0">해당 연도 성실신고대상 없음</td></tr>';return}
   tb.innerHTML=list.map(c=>{
