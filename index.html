@@ -3997,7 +3997,7 @@ function handleExcelUpload(input){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
-      const wb=XLSX.read(e.target.result,{type:'array'});
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!rows.length){toast('데이터가 없습니다');return}
@@ -4021,21 +4021,22 @@ function handleExcelUpload(input){
       function parseExcelDate(v){
         if(!v&&v!==0)return '';
         if(typeof v==='number'){
-          // Excel serial number → Date (1900-01-01 기준, 1900 윤년 버그 보정)
           var d=new Date((v-25569)*86400000);
           var yy=d.getUTCFullYear(),mm=d.getUTCMonth()+1,dd=d.getUTCDate();
           return yy+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd);
         }
         if(v instanceof Date){
-          var yy=v.getFullYear(),mm=v.getMonth()+1,dd=v.getDate();
+          var yy=v.getUTCFullYear(),mm=v.getUTCMonth()+1,dd=v.getUTCDate();
+          if(isNaN(yy)){yy=v.getFullYear();mm=v.getMonth()+1;dd=v.getDate();}
           return yy+'-'+(mm<10?'0'+mm:mm)+'-'+(dd<10?'0'+dd:dd);
         }
         var s=String(v).trim();
-        // YYYY-MM-DD 형식이면 그대로
-        if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
-        // YYYY.MM.DD 또는 YYYY/MM/DD
+        if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
         var m=s.match(/^(\d{4})[\.\/](\d{1,2})[\.\/](\d{1,2})$/);
         if(m)return m[1]+'-'+(m[2].length<2?'0'+m[2]:m[2])+'-'+(m[3].length<2?'0'+m[3]:m[3]);
+        var m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if(m2){var yr=m2[3].length===2?(parseInt(m2[3])>50?'19':'20')+m2[3]:m2[3];return yr+'-'+(m2[1].length<2?'0'+m2[1]:m2[1])+'-'+(m2[2].length<2?'0'+m2[2]:m2[2]);}
+        if(/^\d{8}$/.test(s))return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
         return s;
       }
 
@@ -4158,7 +4159,7 @@ function handleMgrExcelUpload(input){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!rows.length){toast('데이터가 없습니다');return}
