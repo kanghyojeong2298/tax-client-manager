@@ -1636,9 +1636,9 @@ function submitPinModal(){
   var pin=document.getElementById('pinModalInput').value;
   if(!pin){toast('비밀번호를 입력하세요');return}
   if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');document.getElementById('pinModalInput').value='';document.getElementById('pinModalInput').focus();return}
+  var cb=_pinCallback;
   closePinModal();
-  if(_pinCallback)_pinCallback();
-  _pinCallback=null;
+  if(cb)cb();
 }
 document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{
   var tabName=b.dataset.tab;
