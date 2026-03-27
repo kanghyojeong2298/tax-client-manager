@@ -163,6 +163,7 @@ tr:hover td{background:#f8fafc}
         <select id="filterManager" onchange="renderClients()"><option value="">전체담당</option></select>
         <select id="filterEntity" onchange="renderClients()"><option value="">전체구분</option><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select>
         <select id="filterDocStatus" onchange="renderClients()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"><option value="">자료상태</option><option value="미수령">🔴 미수령</option><option value="받는중">🟡 받는중</option><option value="수령완료">✅ 수령완료</option></select>
+        <input type="checkbox" id="filterMissingInfo" style="display:none" onchange="renderClients()">
         <button id="btnSortOrder" class="btn btn-sm" style="min-width:50px" onclick="toggleClientSort()">▼ 정순</button>
       </div>
       <div style="display:flex;gap:5px;align-items:center">
@@ -2282,14 +2283,16 @@ function toggleExtraStats(){
     btn.style.background='#edf2f7';btn.style.color='#4a5568';
   }
 }
-function filterByDocStatus(val){document.getElementById('filterDocStatus').value=val;renderClients()}
+function filterByDocStatus(val){document.getElementById('filterDocStatus').value=val;document.getElementById('filterMissingInfo').checked=false;renderClients()}
+function filterMissingInfo(){document.getElementById('filterDocStatus').value='';document.getElementById('filterMissingInfo').checked=true;renderClients()}
 function renderDocStatusBanner(){
   var el=document.getElementById('docStatusBanner');if(!el)return;
   var ac=AC();
   var notReceived=ac.filter(function(c){var ds=c.docStatus||'';return !ds||ds==='미수령'});
   var receiving=ac.filter(function(c){return c.docStatus==='받는중'});
   var completed=ac.filter(function(c){return c.docStatus==='수령완료'});
-  if(!notReceived.length&&!receiving.length){el.style.display='none';return}
+  var missingInfo=ac.filter(function(c){var m=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))m=true;if(c.type==='2부'&&!c.extraFee)m=true;return m}).length;
+  if(!notReceived.length&&!receiving.length&&!missingInfo){el.style.display='none';return}
   el.style.display='block';
   var longOverdue=notReceived.filter(function(c){if(!c.createdAt)return false;return Math.floor((new Date()-new Date(c.createdAt))/(1000*60*60*24))>=7}).length;
   var h='<div style="background:linear-gradient(90deg,#fff5f5,#fed7d7);border:1px solid #fc8181;border-radius:10px;padding:12px 20px;margin-bottom:10px">';
@@ -2300,6 +2303,7 @@ function renderDocStatusBanner(){
   h+='<span style="color:#cbd5e0">|</span>';
   h+='<span style="font-size:13px;font-weight:600;color:#38a169;cursor:pointer" onclick="filterByDocStatus(\'수령완료\')">✅ 완료 '+completed.length+'건</span>';
   if(longOverdue){h+='<span style="margin-left:8px;font-size:11px;color:#c53030;font-weight:600">⚠️ 7일 이상 미수령: '+longOverdue+'건</span>';}
+  if(missingInfo){h+='<span style="margin-left:8px;font-size:11px;color:#805ad5;font-weight:600;cursor:pointer" onclick="filterMissingInfo()">📋 정보 미입력 '+missingInfo+'건</span>';}
   h+='</div></div>';
   el.innerHTML=h;
 }
@@ -2541,10 +2545,12 @@ function renderClients(){
   const ft=document.getElementById('filterType').value,fs=document.getElementById('filterStatus').value;
   const fm=document.getElementById('filterManager').value,fe=document.getElementById('filterEntity').value;
   const fd=(document.getElementById('filterDocStatus')||{}).value||'';
+  const fmi=(document.getElementById('filterMissingInfo')||{}).checked||false;
   const list=data.clients.filter(c=>{
     if(s&&!c.name.toLowerCase().includes(s)&&!c.id.toLowerCase().includes(s)&&!(c.ownerName||'').toLowerCase().includes(s))return false;
     if(ft&&c.type!==ft)return false;if(fs&&c.status!==fs)return false;if(fm&&c.manager!==fm)return false;if(fe&&c.entityType!==fe)return false;
     if(fd){var ds=c.docStatus||'';if(fd==='미수령'&&ds!==''&&ds!=='미수령')return false;if(fd==='받는중'&&ds!=='받는중')return false;if(fd==='수령완료'&&ds!=='수령완료')return false;}
+    if(fmi&&c.status==='활성'){var hasMissing=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))hasMissing=true;if(c.type==='2부'&&!c.extraFee)hasMissing=true;if(!hasMissing)return false;}
     return true;
   });
   const tb=document.getElementById('clientTable');
@@ -2609,7 +2615,7 @@ function renderClients(){
     var groupBadge=hasLinked?'<br><span style="font-size:9px;color:#2b6cb0">📎 그룹</span>':'';
     return'<tr style="'+rowStyle+'"><td style="'+tdFirstExtra+'"><input type="checkbox" class="client-cb" data-id="'+c.id+'" '+chk+' onchange="toggleSelectClient(\''+c.id+'\',this.checked)"></td>'
     +'<td><strong>'+c.id+'</strong>'+linkedBadge+groupBadge+'</td>'
-    +'<td>'+c.name+(function(){if(c.status!=='활성')return '';var warns=[];if(!c.ownerName)warns.push('대표자명');if(!c.ownerBirth)warns.push('생년월일');if(!c.bizRegDate)warns.push('사업자등록일');return warns.length?'<br><span style="font-size:9px;color:#e53e3e;font-weight:600">⚠ '+warns.join(', ')+' 미입력</span>':''})()+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
+    +'<td>'+c.name+(function(){if(c.status!=='활성')return '';var warns=[];if(!c.ownerName)warns.push('대표자명');if(!c.ownerBirth)warns.push('생년월일');if(!c.bizRegDate)warns.push('사업자등록일');if(!c.manager)warns.push('담당자');if(c.type==='1부'){if(!c.fee)warns.push('기장료');if(!c.adjFee)warns.push('조정료')}if(c.type==='2부'&&!c.extraFee)warns.push('기타수수료');return warns.length?'<br><span style="font-size:9px;color:#e53e3e;font-weight:600">⚠ '+warns.join(', ')+' 미입력</span>':''})()+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
     +'<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td><td>'+taxBadge(c)+'</td><td>'+vf+'</td>'
     +'<td>'+(c.manager||'-')+'</td><td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:right">'+fmt(c.adjFee)+'</td>'
     +'<td style="text-align:right">'+(c.extraFee?fmt(c.extraFee):'-')+'</td>'
@@ -3031,14 +3037,14 @@ function renderCorpList(){
         alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#f0fff4;color:#38a169;font-weight:600">법인전환 ('+v.fromName+')</span>');
       });
     }
-    // 신설 알림 (해당 귀속연도에 생성된 법인)
-    var startY=c.startMonth?parseInt(c.startMonth.split('-')[0]):0;
-    if(startY===year){
-      alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#ebf8ff;color:#2b6cb0;font-weight:600">🆕 신설</span>');
-    }
-    // 이관 알림
-    if(c.clientOrigin==='이관'){
-      alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#faf5ff;color:#805ad5;font-weight:600">📥 이관'+(c.originOffice?' ('+c.originOffice+')':'')+'</span>');
+    // 신설 알림 (사업자등록일 연도 = 귀속연도일 때만)
+    var bizY=c.bizRegDate?parseInt(c.bizRegDate.split('-')[0]):0;
+    if(bizY===year){
+      if(c.clientOrigin==='이관'){
+        alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#faf5ff;color:#805ad5;font-weight:600">📥 이관'+(c.originOffice?' ('+c.originOffice+')':'')+'</span>');
+      }else{
+        alerts.push('<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#ebf8ff;color:#2b6cb0;font-weight:600">🆕 신설</span>');
+      }
     }
     // 세금계산서 미발행 알림 (활성 법인 중 이번달 세금계산서가 없는 경우)
     if(c.status==='활성'&&c.fee>0){
