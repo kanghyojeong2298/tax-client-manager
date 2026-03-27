@@ -7333,6 +7333,7 @@ function openConsultModal(idx){
 }
 function closeConsultModal(){document.getElementById('consultModal').classList.remove('show')}
 function saveConsult(){
+  if(!data.consultations)data.consultations=[];
   var date=document.getElementById('cs_date').value;
   if(!date)date=new Date().toISOString().slice(0,10);
   var obj={
@@ -7371,6 +7372,7 @@ function deleteConsult(idx){
   data.consultations.splice(idx,1);saveData();renderConsultList();renderConsultStats();toast('삭제됨');
 }
 function renderConsultList(){
+  if(!data.consultations)data.consultations=[];
   var year=document.getElementById('csYear').value;
   var month=document.getElementById('csMonth').value;
   var search=(document.getElementById('csSearch').value||'').trim().toLowerCase();
@@ -7432,6 +7434,7 @@ function saveConsultDetail(){
   saveData();toast('상담내역 저장됨');closeConsultDetailModal();renderConsultList();
 }
 function renderConsultStats(){
+  if(!data.consultations)data.consultations=[];
   var year=document.getElementById('csYear').value;
   var month=document.getElementById('csMonth').value;
   var filtered=data.consultations.filter(function(c){
