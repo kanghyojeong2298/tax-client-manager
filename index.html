@@ -166,7 +166,7 @@ tr:hover td{background:#f8fafc}
         <select id="filterEntity" onchange="renderClients()"><option value="">전체구분</option><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select>
         <select id="filterDocStatus" onchange="renderClients()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"><option value="">자료상태</option><option value="미수령">🔴 미수령</option><option value="받는중">🟡 받는중</option><option value="수령완료">✅ 수령완료</option></select>
         <input type="checkbox" id="filterMissingInfo" style="display:none" onchange="renderClients()">
-        <button id="btnSortOrder" class="btn btn-sm" style="min-width:50px" onclick="toggleClientSort()">▼ 정순</button>
+        <button id="btnSortOrder" class="btn btn-sm" style="min-width:50px" onclick="toggleClientSort()">▲ 역순</button>
       </div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="btn btn-export btn-sm" onclick="exportCSV()">CSV내보내기</button>
@@ -1266,6 +1266,8 @@ if(!data.consultations)data.consultations=[];
 if(!data.consultCounter)data.consultCounter=0;
 // 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회)
 if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;saveData()}
+// 기존 업체 체크리스트 일괄 완료 마이그레이션 (1회) — 이번달(2026-03) 수임 제외
+if(!data._checklistMigrated){var _ckKeys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var _curYm=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)})();data.clients.forEach(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');if(cm&&cm>=_curYm)return;if(!c.onboardChecklist)c.onboardChecklist={};_ckKeys.forEach(function(k){c.onboardChecklist[k]=true})});data._checklistMigrated=true;saveData()}
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -2571,6 +2573,14 @@ function renderMonthlyFilingAlert(){
   var closingUndone=closingTotal-closingDone;
   if(closingTotal>0)items.push({label:'월/분기결산 미완료',count:closingUndone,total:closingTotal,color:'#dd6b20',tab:'closing'});
 
+  // 7) 이번달 신규수임
+  var newCount=data.clients.filter(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');return cm===ym&&c.status==='활성'}).length;
+  if(newCount>0)items.push({label:'신규수임',count:newCount,color:'#38a169',tab:'onboarding'});
+
+  // 8) 이번달 해임
+  var dismissCount=data.clients.filter(function(c){if(c.status!=='해임')return false;var dd=c.dismissDate||'';return dd.slice(0,7)===ym}).length;
+  if(dismissCount>0)items.push({label:'해임',count:dismissCount,color:'#718096',tab:'dismissed'});
+
   if(!items.length){el.innerHTML='';updateAlertRowVisibility();return;}
   var badges=items.map(function(it){
     var countText=it.total?it.count+'/'+it.total+'건':it.count+'건';
@@ -2587,7 +2597,7 @@ function renderMonthlyFilingAlert(){
   updateAlertRowVisibility();
 }
 
-var clientSortReverse=false;
+var clientSortReverse=true;
 function toggleClientSort(){
   clientSortReverse=!clientSortReverse;
   var btn=document.getElementById('btnSortOrder');
