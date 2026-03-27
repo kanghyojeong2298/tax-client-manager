@@ -146,6 +146,7 @@ tr:hover td{background:#f8fafc}
   <div style="text-align:right;margin:-8px 0 8px 0"><button class="btn btn-sm" style="background:#edf2f7;color:#4a5568;font-size:11px;padding:4px 12px;border-radius:6px" onclick="toggleExtraStats()" id="extraStatsToggleBtn">📊 매출·업종·유입경로 보기</button></div>
   <div id="tempClientAlert" style="display:none"></div>
   <div id="ganiAlertBox" style="display:none"></div>
+  <div id="docStatusBanner" style="display:none"></div>
   <div id="clientStatsDetail" style="display:none">
   <div id="monthlyFilingAlert" style="display:none"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -161,6 +162,7 @@ tr:hover td{background:#f8fafc}
         <select id="filterStatus" onchange="renderClients()"><option value="">전체상태</option><option value="활성">활성</option><option value="해임">해임</option></select>
         <select id="filterManager" onchange="renderClients()"><option value="">전체담당</option></select>
         <select id="filterEntity" onchange="renderClients()"><option value="">전체구분</option><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select>
+        <select id="filterDocStatus" onchange="renderClients()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"><option value="">자료상태</option><option value="미수령">🔴 미수령</option><option value="받는중">🟡 받는중</option><option value="수령완료">✅ 수령완료</option></select>
         <button id="btnSortOrder" class="btn btn-sm" style="min-width:50px" onclick="toggleClientSort()">▼ 정순</button>
       </div>
       <div style="display:flex;gap:5px;align-items:center">
@@ -2274,6 +2276,66 @@ function toggleExtraStats(){
     btn.style.background='#edf2f7';btn.style.color='#4a5568';
   }
 }
+var docBannerExpanded=false;
+function toggleDocBanner(){docBannerExpanded=!docBannerExpanded;renderDocStatusBanner()}
+function filterByDocStatus(val){document.getElementById('filterDocStatus').value=val;renderClients()}
+function renderDocStatusBanner(){
+  var el=document.getElementById('docStatusBanner');if(!el)return;
+  var ac=AC();
+  var notReceived=ac.filter(function(c){var ds=c.docStatus||'';return !ds||ds==='미수령'});
+  var receiving=ac.filter(function(c){return c.docStatus==='받는중'});
+  var completed=ac.filter(function(c){return c.docStatus==='수령완료'});
+  if(!notReceived.length&&!receiving.length){el.style.display='none';return}
+  el.style.display='block';
+  var h='<div style="background:linear-gradient(90deg,#fff5f5,#fed7d7);border:1px solid #fc8181;border-radius:10px;padding:14px 20px;margin-bottom:10px">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+  h+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">';
+  h+='<span style="font-size:14px;font-weight:700;color:#c53030;cursor:pointer" onclick="filterByDocStatus(\'미수령\')">🔴 미수령 '+notReceived.length+'건</span>';
+  h+='<span style="color:#cbd5e0">|</span>';
+  h+='<span style="font-size:13px;font-weight:600;color:#975a16;cursor:pointer" onclick="filterByDocStatus(\'받는중\')">🟡 받는중 '+receiving.length+'건</span>';
+  h+='<span style="color:#cbd5e0">|</span>';
+  h+='<span style="font-size:13px;font-weight:600;color:#38a169;cursor:pointer" onclick="filterByDocStatus(\'수령완료\')">✅ 완료 '+completed.length+'건</span>';
+  // 담당자별 미수령 요약
+  var mgrMap={};notReceived.forEach(function(c){var m=c.manager||'미배정';if(!mgrMap[m])mgrMap[m]=0;mgrMap[m]++});
+  var mgrKeys=Object.keys(mgrMap).sort(function(a,b){return mgrMap[b]-mgrMap[a]});
+  if(mgrKeys.length){h+='<span style="margin-left:8px;font-size:11px;color:#718096">미수령 담당: '+mgrKeys.map(function(k){return k+' '+mgrMap[k]+'건'}).join(', ')+'</span>';}
+  h+='</div>';
+  h+='<button style="background:none;border:1px solid #fc8181;color:#c53030;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer" onclick="toggleDocBanner()">'+(docBannerExpanded?'▲ 접기':'▼ 상세')+'</button>';
+  h+='</div>';
+  // 토글 상세
+  if(docBannerExpanded){
+    h+='<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+    // 담당자별 바 차트
+    var maxMgr=mgrKeys.length?mgrMap[mgrKeys[0]]:1;
+    h+='<div style="background:#fff;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">👤 담당자별 미수령</div>';
+    mgrKeys.forEach(function(k){
+      var cnt=mgrMap[k];var bw=Math.round(cnt/maxMgr*100);
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">';
+      h+='<div style="width:55px;text-align:right;font-weight:600">'+k+'</div>';
+      h+='<div style="flex:1;height:14px;background:#edf2f7;border-radius:7px;overflow:hidden"><div style="width:'+bw+'%;height:100%;background:linear-gradient(90deg,#fc8181,#e53e3e);border-radius:7px"></div></div>';
+      h+='<div style="width:30px;font-weight:600;color:#c53030">'+cnt+'건</div></div>';
+    });
+    h+='</div>';
+    // 미수령 업체 목록
+    h+='<div style="background:#fff;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">📋 미수령 업체</div>';
+    h+='<div style="max-height:140px;overflow-y:auto;font-size:11px">';
+    notReceived.forEach(function(c){
+      var days='';
+      if(c.createdAt){var diff=Math.floor((new Date()-new Date(c.createdAt))/(1000*60*60*24));days=diff;}
+      var dayBadge='';
+      if(days!==''){
+        if(days>=7)dayBadge='<span style="background:#fed7d7;color:#c53030;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">D+'+days+'</span>';
+        else if(days>=3)dayBadge='<span style="background:#fefcbf;color:#975a16;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">D+'+days+'</span>';
+        else dayBadge='<span style="background:#edf2f7;color:#718096;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">D+'+days+'</span>';
+      }
+      h+='<div style="padding:3px 0;border-bottom:1px solid #f7fafc"><strong>'+c.id+'</strong> '+c.name+' <span style="color:#718096">('+( c.manager||'-')+')</span>'+dayBadge+'</div>';
+    });
+    h+='</div></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
 function renderStats(){
   const ac=AC(),t1=ac.filter(c=>c.type==='1부'),t2=ac.filter(c=>c.type==='2부'),t3=ac.filter(c=>c.type==='3부');
   const mf=ac.reduce((s,c)=>s+(c.fee||0),0),ta=ac.reduce((s,c)=>s+(c.adjFee||0),0),te=ac.reduce((s,c)=>s+(c.extraFee||0),0),ann=mf*12+ta+te*2;
@@ -2511,9 +2573,12 @@ function renderClients(){
   const s=document.getElementById('searchInput').value.toLowerCase();
   const ft=document.getElementById('filterType').value,fs=document.getElementById('filterStatus').value;
   const fm=document.getElementById('filterManager').value,fe=document.getElementById('filterEntity').value;
+  const fd=(document.getElementById('filterDocStatus')||{}).value||'';
   const list=data.clients.filter(c=>{
     if(s&&!c.name.toLowerCase().includes(s)&&!c.id.toLowerCase().includes(s)&&!(c.ownerName||'').toLowerCase().includes(s))return false;
-    if(ft&&c.type!==ft)return false;if(fs&&c.status!==fs)return false;if(fm&&c.manager!==fm)return false;if(fe&&c.entityType!==fe)return false;return true;
+    if(ft&&c.type!==ft)return false;if(fs&&c.status!==fs)return false;if(fm&&c.manager!==fm)return false;if(fe&&c.entityType!==fe)return false;
+    if(fd){var ds=c.docStatus||'';if(fd==='미수령'&&ds!==''&&ds!=='미수령')return false;if(fd==='받는중'&&ds!=='받는중')return false;if(fd==='수령완료'&&ds!=='수령완료')return false;}
+    return true;
   });
   const tb=document.getElementById('clientTable');
   // Update bulk manager dropdown
@@ -2558,17 +2623,20 @@ function renderClients(){
     var vf=c.taxType==='부가세신고대상'?vatFreqLabel(c):'-';
     var chk=selectedClients.has(c.id)?'checked':'';
     var closingSpan=c.closingType==='월결산'?'<span style="color:#e53e3e;font-weight:600">월</span>':c.closingType==='분기결산'?'<span style="color:#805ad5;font-weight:600">분기</span>':'<span style="color:#a0aec0">기본</span>';
+    // 자료상태 배경색
+    var docBg='';
+    if(c.status==='활성'){var ds=c.docStatus||'';if(!ds||ds==='미수령')docBg='background:#fff5f5;';else if(ds==='받는중')docBg='background:#fffff0;';}
     // 굵은 테두리 그룹 스타일 (안A)
     var rowStyle='';var tdFirstExtra='';var tdLastExtra='';
     if(gi.pos!=='none'){
       var bdr='2.5px solid #334155';
       var topB=(gi.pos==='top'||gi.pos==='single')?'border-top:'+bdr+';':'';
       var botB=(gi.pos==='bottom'||gi.pos==='single')?'border-bottom:'+bdr+';':'';
-      var bg=gi.isChild?'background:#fffbeb;':'';
+      var bg=gi.isChild?'background:#fffbeb;':docBg;
       rowStyle=topB+botB+bg;
       tdFirstExtra='border-left:'+bdr+';';
       tdLastExtra='border-right:'+bdr+';';
-    }
+    }else{rowStyle=docBg;}
     var linkedBadge=c.linkedTo?'<br><span style="font-size:9px;color:#b45309;font-weight:600">↳ '+c.linkedTo+'</span>':'';
     var hasLinked=data.clients.some(function(x){return x.linkedTo===c.id});
     var groupBadge=hasLinked?'<br><span style="font-size:9px;color:#2b6cb0">📎 그룹</span>':'';
@@ -7549,7 +7617,7 @@ function renderConsultStats(){
 }
 
 function refreshAll(){
-  popDropdowns();renderStats();renderClients();
+  popDropdowns();renderStats();renderDocStatusBanner();renderClients();
   // 나머지 탭은 지연 렌더링 (UI 블로킹 방지)
   setTimeout(function(){renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList()},50);
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
