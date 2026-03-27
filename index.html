@@ -2564,7 +2564,7 @@ function renderClients(){
     var groupBadge=hasLinked?'<br><span style="font-size:9px;color:#2b6cb0">📎 그룹</span>':'';
     return'<tr style="'+rowStyle+'"><td style="'+tdFirstExtra+'"><input type="checkbox" class="client-cb" data-id="'+c.id+'" '+chk+' onchange="toggleSelectClient(\''+c.id+'\',this.checked)"></td>'
     +'<td><strong>'+c.id+'</strong>'+linkedBadge+groupBadge+'</td>'
-    +'<td>'+c.name+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
+    +'<td>'+c.name+(function(){if(c.status!=='활성')return '';var warns=[];if(!c.ownerName)warns.push('대표자명');if(!c.ownerBirth)warns.push('생년월일');if(!c.bizRegDate)warns.push('사업자등록일');return warns.length?'<br><span style="font-size:9px;color:#e53e3e;font-weight:600">⚠ '+warns.join(', ')+' 미입력</span>':''})()+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
     +'<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td><td>'+taxBadge(c)+'</td><td>'+vf+'</td>'
     +'<td>'+(c.manager||'-')+'</td><td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:right">'+fmt(c.adjFee)+'</td>'
     +'<td style="text-align:right">'+(c.extraFee?fmt(c.extraFee):'-')+'</td>'
