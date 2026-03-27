@@ -146,9 +146,11 @@ tr:hover td{background:#f8fafc}
   <div style="text-align:right;margin:-8px 0 8px 0"><button class="btn btn-sm" style="background:#edf2f7;color:#4a5568;font-size:11px;padding:4px 12px;border-radius:6px" onclick="toggleExtraStats()" id="extraStatsToggleBtn">📊 매출·업종·유입경로 보기</button></div>
   <div id="tempClientAlert" style="display:none"></div>
   <div id="ganiAlertBox" style="display:none"></div>
-  <div id="docStatusBanner" style="display:none"></div>
+  <div id="alertBannerRow" style="display:none;gap:10px;margin-bottom:10px">
+    <div id="docStatusBanner" style="flex:1;min-width:0"></div>
+    <div id="monthlyFilingAlert" style="flex:1;min-width:0"></div>
+  </div>
   <div id="clientStatsDetail" style="display:none">
-  <div id="monthlyFilingAlert" style="display:none"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card" id="bizStatsCard" style="margin-bottom:0"></div>
     <div class="card" id="sourceChannelCard" style="display:none;margin-bottom:0"></div>
@@ -169,7 +171,7 @@ tr:hover td{background:#f8fafc}
       <div style="display:flex;gap:5px;align-items:center">
         <button class="btn btn-export btn-sm" onclick="exportCSV()">CSV내보내기</button>
         <div style="position:relative;display:inline-block">
-          <button class="btn btn-sm" style="background:#38a169;color:#fff" onclick="toggleDropMenu('uploadMenu')">엑셀 일괄처리 ▾</button>
+          <button class="btn btn-sm" data-role="edit" style="background:#38a169;color:#fff" onclick="toggleDropMenu('uploadMenu')">엑셀 일괄처리 ▾</button>
           <div id="uploadMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:160px;margin-top:4px">
             <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('excelUpload').click()">📋 업체 일괄등록</div>
             <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('mgrExcelUpload').click()">🔄 담당자 일괄변경</div>
@@ -184,11 +186,11 @@ tr:hover td{background:#f8fafc}
             <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="openClientModal()">+ 업체등록</button>
+        <button class="btn btn-primary" data-role="edit" onclick="openClientModal()">+ 업체등록</button>
       </div>
     </div>
     <!-- 일괄처리 바 -->
-    <div id="bulkBar" style="display:none;background:#2b6cb0;color:#fff;padding:8px 14px;border-radius:6px;margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
+    <div id="bulkBar" data-role="edit" style="display:none;background:#2b6cb0;color:#fff;padding:8px 14px;border-radius:6px;margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
       <span id="bulkCount">0개 선택</span>
       <label style="font-size:11px;margin-left:8px">담당자 일괄변경:</label>
       <select id="bulkManager" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"></select>
@@ -220,6 +222,7 @@ tr:hover td{background:#f8fafc}
       </div>
     </div>
     <div id="obPipeline" style="display:flex;gap:0;margin-bottom:14px"></div>
+    <div id="obIncomplete"></div>
     <div id="obDocWaiting"></div>
     <div id="obInfoEntering"></div>
     <div id="obConverted"></div>
@@ -233,7 +236,7 @@ tr:hover td{background:#f8fafc}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="card-title" style="margin-bottom:0">📞 상담 관리</div>
       <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-primary btn-sm" onclick="openConsultModal()">+ 상담등록</button>
+        <button class="btn btn-primary btn-sm" data-role="edit" onclick="openConsultModal()">+ 상담등록</button>
       </div>
     </div>
     <!-- 통계 -->
@@ -470,7 +473,7 @@ tr:hover td{background:#f8fafc}
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSection('invSecExtra')">
       <span>📄 추가발행내역 <span id="invExtraCount" style="font-weight:400;color:#805ad5;font-size:11px"></span></span>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="btn btn-xs btn-primary" onclick="event.stopPropagation();openExtraInvoiceModal()">등록</button>
+        <button class="btn btn-xs btn-primary" data-role="edit" onclick="event.stopPropagation();openExtraInvoiceModal()">등록</button>
         <span id="invSecExtraArrow" style="font-size:10px;color:#a0aec0">▶</span>
       </div>
     </div>
@@ -503,9 +506,9 @@ tr:hover td{background:#f8fafc}
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSection('invSecBu2')">
       <span>🏢 2부업체 수수료 <span id="invBu2Count" style="font-weight:400;color:#2b6cb0;font-size:11px"></span></span>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="btn btn-xs btn-primary" onclick="event.stopPropagation();openBu2AddModal()">건별등록</button>
-        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();download2buTemplate()">템플릿</button>
-        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();document.getElementById('bu2FileInput').click()">엑셀업로드</button>
+        <button class="btn btn-xs btn-primary" data-role="edit" onclick="event.stopPropagation();openBu2AddModal()">건별등록</button>
+        <button class="btn btn-xs btn-secondary" data-role="edit" onclick="event.stopPropagation();download2buTemplate()">템플릿</button>
+        <button class="btn btn-xs btn-secondary" data-role="edit" onclick="event.stopPropagation();document.getElementById('bu2FileInput').click()">엑셀업로드</button>
         <input type="file" id="bu2FileInput" style="display:none" accept=".xlsx,.xls" onchange="handle2buUpload(this)">
         <button class="btn btn-xs btn-warning" onclick="event.stopPropagation();checkBu2Missing()">누락확인</button>
         <span id="invSecBu2Arrow" style="font-size:10px;color:#a0aec0">▶</span>
@@ -749,7 +752,7 @@ tr:hover td{background:#f8fafc}
       <div style="margin-bottom:12px">
         <div class="FB" style="gap:8px;margin-bottom:8px">
           <input type="email" id="newAllowedEmail" placeholder="추가할 이메일 주소" style="flex:1;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
-          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="newEmailIsAdmin"> 관리자</label>
+          <select id="newEmailRole" style="padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px"><option value="edit">등록</option><option value="view">조회</option><option value="admin">관리자</option></select>
           <button class="btn btn-sm btn-primary" onclick="addAllowedEmail()">추가</button>
         </div>
       </div>
@@ -1204,6 +1207,7 @@ function migrate(d){
   if(!d.activityLog)d.activityLog=[];
   if(!d.allowedEmails)d.allowedEmails=[];
   if(!d.adminEmails)d.adminEmails=[];
+  if(!d.emailRoles)d.emailRoles={};
   if(!d.pendingClients)d.pendingClients=[];
   // staff에 type, joinDate 없으면 추가
   d.staff.forEach(function(s){if(!s.type)s.type='경력';if(!s.joinDate)s.joinDate='';if(!s.contractSalary)s.contractSalary=0;});
@@ -1353,34 +1357,65 @@ function renderAllowedEmails(){
   if(ci)ci.textContent='현재 카운터: 1부='+((data.counters&&data.counters['1부'])||0)+', 2부='+((data.counters&&data.counters['2부'])||0)+', 3부='+((data.counters&&data.counters['3부'])||0)+' | 업체 '+data.clients.length+'건';
   var list=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
   var admins=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  var roles=data.emailRoles||{};
   var h='';
   list.forEach(function(email,i){
-    var isAdm=admins.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0;
+    var el=email.toLowerCase();
+    var isAdm=admins.map(function(e){return e.toLowerCase()}).indexOf(el)>=0;
+    var role=isAdm?'admin':(roles[el]||'edit');
+    var roleLabel=role==='admin'?'관리자':role==='view'?'조회':'등록';
+    var roleBg=role==='admin'?'#c6f6d5':role==='view'?'#feebc8':'#bee3f8';
+    var roleColor=role==='admin'?'#276749':role==='view'?'#7b341e':'#2a4365';
     h+='<tr><td style="font-size:12px">'+email+'</td>';
-    h+='<td style="text-align:center"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:'+(isAdm?'#c6f6d5':'#e2e8f0')+';color:'+(isAdm?'#276749':'#4a5568')+'">'+(isAdm?'관리자':'일반')+'</span></td>';
-    h+='<td style="text-align:center">'+(email.toLowerCase()!==ADMIN_EMAIL.toLowerCase()?'<button class="btn-staff" style="color:#e53e3e;font-size:10px" onclick="removeAllowedEmail('+i+')">삭제</button>':'<span style="font-size:10px;color:#a0aec0">기본</span>')+'</td></tr>';
+    if(el===ADMIN_EMAIL.toLowerCase()){
+      h+='<td style="text-align:center"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:#c6f6d5;color:#276749">관리자</span></td>';
+    }else{
+      h+='<td style="text-align:center"><select onchange="changeEmailRole(\''+el+'\',this.value)" style="font-size:11px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;background:'+roleBg+';color:'+roleColor+'">';
+      h+='<option value="edit"'+(role==='edit'?' selected':'')+'>등록</option>';
+      h+='<option value="view"'+(role==='view'?' selected':'')+'>조회</option>';
+      h+='<option value="admin"'+(role==='admin'?' selected':'')+'>관리자</option></select></td>';
+    }
+    h+='<td style="text-align:center">'+(el!==ADMIN_EMAIL.toLowerCase()?'<button class="btn-staff" style="color:#e53e3e;font-size:10px" onclick="removeAllowedEmail('+i+')">삭제</button>':'<span style="font-size:10px;color:#a0aec0">기본</span>')+'</td></tr>';
   });
   document.getElementById('allowedEmailTable').innerHTML=h;
 }
 
 function addAllowedEmail(){
   var email=document.getElementById('newAllowedEmail').value.trim();
+  var role=document.getElementById('newEmailRole').value;
   if(!email){toast('이메일을 입력하세요');return}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('올바른 이메일 형식이 아닙니다');return}
   if(!data.allowedEmails)data.allowedEmails=[];
   if(!data.allowedEmails.length)data.allowedEmails=ALLOWED_EMAILS.slice();
   if(data.allowedEmails.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0){toast('이미 등록된 이메일입니다');return}
   data.allowedEmails.push(email);
-  if(document.getElementById('newEmailIsAdmin').checked){
+  if(role==='admin'){
     if(!data.adminEmails)data.adminEmails=[];
     if(!data.adminEmails.length)data.adminEmails=[ADMIN_EMAIL];
     data.adminEmails.push(email);
   }
+  if(!data.emailRoles)data.emailRoles={};
+  data.emailRoles[email.toLowerCase()]=role==='admin'?'edit':role;
   saveData();saveSharedEmails();
   document.getElementById('newAllowedEmail').value='';
-  document.getElementById('newEmailIsAdmin').checked=false;
+  document.getElementById('newEmailRole').value='edit';
   renderAllowedEmails();
-  toast('✅ '+email+' 추가됨');
+  toast('✅ '+email+' 추가됨 ('+({edit:'등록',view:'조회',admin:'관리자'}[role])+')');
+}
+function changeEmailRole(emailLower,role){
+  if(!data.emailRoles)data.emailRoles={};
+  if(!data.adminEmails)data.adminEmails=[];
+  if(!data.adminEmails.length)data.adminEmails=[ADMIN_EMAIL];
+  var ai=data.adminEmails.map(function(e){return e.toLowerCase()}).indexOf(emailLower);
+  if(role==='admin'){
+    if(ai<0){var orig=data.allowedEmails.find(function(e){return e.toLowerCase()===emailLower})||emailLower;data.adminEmails.push(orig)}
+    data.emailRoles[emailLower]='edit';
+  }else{
+    if(ai>=0)data.adminEmails.splice(ai,1);
+    data.emailRoles[emailLower]=role;
+  }
+  saveData();saveSharedEmails();renderAllowedEmails();
+  toast('권한 변경 완료');
 }
 
 function removeAllowedEmail(idx){
@@ -1508,6 +1543,7 @@ var ADMIN_EMAIL='m1018@taxexpert.kr';
 // Firestore 공용 허용 이메일 (로그인 전에도 읽기 가능)
 var sharedAllowedEmails=null;
 var sharedAdminEmails=null;
+var sharedEmailRoles=null;
 
 // 페이지 로드 시 공용 허용 이메일 목록 불러오기
 function loadSharedEmails(){
@@ -1516,6 +1552,7 @@ function loadSharedEmails(){
       var d=doc.data();
       if(d.emails&&d.emails.length)sharedAllowedEmails=d.emails;
       if(d.admins&&d.admins.length)sharedAdminEmails=d.admins;
+      if(d.roles)sharedEmailRoles=d.roles;
     }
   }).catch(function(e){console.log('공용 이메일 목록 로드 실패 (초기 세팅 필요):',e.message)});
 }
@@ -1523,11 +1560,13 @@ function loadSharedEmails(){
 function saveSharedEmails(){
   var emails=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
   var admins=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  var roles=data.emailRoles||{};
   db.collection('config').doc('allowedEmails').set({
-    emails:emails,admins:admins,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    emails:emails,admins:admins,roles:roles,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     sharedAllowedEmails=emails.slice();
     sharedAdminEmails=admins.slice();
+    sharedEmailRoles=JSON.parse(JSON.stringify(roles));
     console.log('공용 이메일 목록 저장 완료');
   }).catch(function(e){console.error('공용 이메일 저장 실패:',e)});
 }
@@ -1544,6 +1583,14 @@ function isAdmin(){
   return adminList.map(function(e){return e.toLowerCase()}).indexOf(auth.currentUser.email.toLowerCase())>=0;
 }
 
+function canEdit(){
+  if(!auth.currentUser)return false;
+  if(isAdmin())return true;
+  var el=auth.currentUser.email.toLowerCase();
+  var roles=sharedEmailRoles||(data.emailRoles||{});
+  var role=roles[el];
+  return role!=='view';
+}
 function doLogin(){
   var email = document.getElementById('loginEmail').value.trim();
   var pw = document.getElementById('loginPw').value;
@@ -1790,6 +1837,7 @@ function toggleSourceChannel(){
 
 // Client Modal
 function openClientModal(ec){
+  if(!ec&&!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   document.getElementById('clientModal').classList.add('show');popDropdowns();popLinked();popReferredBy();
   if(ec){
     document.getElementById('clientModalTitle').textContent='업체 수정';
@@ -1925,6 +1973,7 @@ function popConvertedCorp(){
 }
 
 function saveClient(){
+  if(!canEdit()){toast('🔒 등록/수정 권한이 없습니다');return}
   const name=document.getElementById('f_name').value.trim();if(!name){toast('업체명 입력');return}
   var warnings=[];
   if(!document.getElementById('f_owner').value.trim())warnings.push('대표자명');
@@ -2287,20 +2336,31 @@ function filterByDocStatus(val){document.getElementById('filterDocStatus').value
 function filterMissingInfo(){document.getElementById('filterDocStatus').value='';document.getElementById('filterMissingInfo').checked=true;renderClients()}
 function renderDocStatusBanner(){
   var el=document.getElementById('docStatusBanner');if(!el)return;
+  var row=document.getElementById('alertBannerRow');
   var ac=AC();
   var notReceived=ac.filter(function(c){var ds=c.docStatus||'';return !ds||ds==='미수령'});
-  var receiving=ac.filter(function(c){return c.docStatus==='받는중'});
   var missingInfo=ac.filter(function(c){var m=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))m=true;if(c.type==='2부'&&!c.extraFee)m=true;return m}).length;
-  if(!notReceived.length&&!missingInfo){el.style.display='none';return}
-  el.style.display='block';
+  var checklistIncomplete=ac.filter(function(c){var prog=getChecklistProgress(c);return prog.done<prog.total}).length;
+  var hasAlerts=notReceived.length||missingInfo||checklistIncomplete;
+  if(!hasAlerts){el.innerHTML='';updateAlertRowVisibility();return}
   var longOverdue=notReceived.filter(function(c){if(!c.createdAt)return false;return Math.floor((new Date()-new Date(c.createdAt))/(1000*60*60*24))>=7}).length;
-  var h='<div style="background:linear-gradient(90deg,#fff5f5,#fed7d7);border:1px solid #fc8181;border-radius:10px;padding:12px 20px;margin-bottom:10px">';
+  var h='<div style="background:linear-gradient(90deg,#fff5f5,#fed7d7);border:1px solid #fc8181;border-radius:10px;padding:12px 20px">';
   h+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">';
-  h+='<span style="font-size:14px;font-weight:700;color:#c53030;cursor:pointer" onclick="filterByDocStatus(\'미수령\')">🔴 미수령 '+notReceived.length+'건</span>';
-  if(longOverdue){h+='<span style="font-size:11px;color:#c53030;font-weight:600">⚠️ 7일 이상 미수령: '+longOverdue+'건</span>';}
-  if(missingInfo){h+='<span style="color:#cbd5e0">|</span><span style="font-size:13px;font-weight:600;color:#805ad5;cursor:pointer" onclick="filterMissingInfo()">📋 정보 미입력 '+missingInfo+'건</span>';}
+  if(notReceived.length){h+='<span style="font-size:13px;font-weight:700;color:#c53030;cursor:pointer" onclick="filterByDocStatus(\'미수령\')">🔴 미수령 '+notReceived.length+'건</span>';}
+  if(longOverdue){h+='<span style="font-size:11px;color:#c53030;font-weight:600">⚠️ 7일+: '+longOverdue+'건</span>';}
+  if(missingInfo){if(notReceived.length)h+='<span style="color:#cbd5e0">|</span>';h+='<span style="font-size:13px;font-weight:600;color:#805ad5;cursor:pointer" onclick="filterMissingInfo()">📋 정보미입력 '+missingInfo+'건</span>';}
+  if(checklistIncomplete){h+='<span style="color:#cbd5e0">|</span><span style="font-size:13px;font-weight:600;color:#d69e2e;cursor:pointer" onclick="document.querySelector(\'[data-tab=\\\'onboarding\\\']\').click()">☑️ 체크리스트 미완료 '+checklistIncomplete+'건</span>';}
   h+='</div></div>';
   el.innerHTML=h;
+  updateAlertRowVisibility();
+}
+function updateAlertRowVisibility(){
+  var row=document.getElementById('alertBannerRow');if(!row)return;
+  var d=document.getElementById('docStatusBanner');
+  var m=document.getElementById('monthlyFilingAlert');
+  var hasDoc=d&&d.innerHTML.trim().length>0;
+  var hasFiling=m&&m.innerHTML.trim().length>0;
+  row.style.display=(hasDoc||hasFiling)?'flex':'none';
 }
 function renderStats(){
   const ac=AC(),t1=ac.filter(c=>c.type==='1부'),t2=ac.filter(c=>c.type==='2부'),t3=ac.filter(c=>c.type==='3부');
@@ -2511,8 +2571,7 @@ function renderMonthlyFilingAlert(){
   var closingUndone=closingTotal-closingDone;
   if(closingTotal>0)items.push({label:'월/분기결산 미완료',count:closingUndone,total:closingTotal,color:'#dd6b20',tab:'closing'});
 
-  if(!items.length){el.style.display='none';return;}
-  el.style.display='block';
+  if(!items.length){el.innerHTML='';updateAlertRowVisibility();return;}
   var badges=items.map(function(it){
     var countText=it.total?it.count+'/'+it.total+'건':it.count+'건';
     return '<span onclick="document.querySelector(\'[data-tab=\\\''+it.tab+'\\\']\').click()" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '+it.color+';border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:'+it.color+';transition:all .2s"'
@@ -2520,11 +2579,12 @@ function renderMonthlyFilingAlert(){
       +it.label+' <strong style="font-size:14px">'+countText+'</strong></span>';
   }).join('');
 
-  el.innerHTML='<div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px">'
+  el.innerHTML='<div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:16px">&#x1F4C5;</span>'
-    +'<strong style="color:#1a365d;font-size:13px">'+curYear+'년 '+curMonth+'월 신고/결산 현황</strong></div>'
+    +'<strong style="color:#1a365d;font-size:13px">'+curMonth+'월 신고/결산</strong></div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:8px">'+badges+'</div>'
     +'</div>';
+  updateAlertRowVisibility();
 }
 
 var clientSortReverse=false;
@@ -2624,6 +2684,7 @@ function renderClients(){
 }
 var _editActionClientId=null;
 function editClient(id){
+  if(!canEdit()){toast('🔒 수정 권한이 없습니다');return}
   var c=data.clients.find(function(x){return x.id===id});if(!c)return;
   _editActionClientId=id;
   document.getElementById('editActionTitle').textContent=c.id+' '+c.name+' 수정';
@@ -4040,6 +4101,7 @@ function downloadTemplate(){
 }
 
 function handleExcelUpload(input){
+  if(!canEdit()){toast('🔒 등록 권한이 없습니다');input.value='';return}
   if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
@@ -4321,6 +4383,7 @@ function confirmGaniPogi(){
 }
 
 function bulkDeleteClients(){
+  if(!canEdit()){toast('🔒 권한이 없습니다');return}
   if(!selectedClients.size)return;
   var names=[];selectedClients.forEach(function(id){var c=data.clients.find(function(x){return x.id===id});if(c)names.push(c.name)});
   if(!confirm(selectedClients.size+'개 업체를 삭제하시겠습니까?\n\n'+names.join(', ')))return;
@@ -4333,6 +4396,7 @@ function bulkDeleteClients(){
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast(names.length+'개 업체 삭제 완료');
 }
 function bulkChangeManager(){
+  if(!canEdit()){toast('🔒 권한이 없습니다');return}
   const mgr=document.getElementById('bulkManager').value;
   if(!mgr){toast('담당자를 선택하세요');return}
   if(!selectedClients.size)return;
@@ -4351,6 +4415,7 @@ function bulkChangeManager(){
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast('담당자 변경 완료');
 }
 function bulkChangeDocStatus(){
+  if(!canEdit()){toast('🔒 권한이 없습니다');return}
   var val=document.getElementById('bulkDocStatus').value;
   if(!val){toast('자료상태를 선택하세요');return}
   if(!selectedClients.size)return;
@@ -5531,6 +5596,7 @@ function bu2aSearchClient(keyword,dropId,inputId){
   }).join('');
 }
 function saveBu2Add(){
+  if(!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   var staff=document.getElementById('bu2a_staff').value;
   var bu2Client=document.getElementById('bu2a_bu2client').value.trim();
   var amount=Number(document.getElementById('bu2a_amount').value)||0;
@@ -5565,6 +5631,7 @@ function closeExtraInvoiceModal(){
   document.getElementById('extraInvoiceModal').classList.remove('show');
 }
 function saveExtraInvoice(){
+  if(!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   var type=document.getElementById('ei_type').value;
   var client=document.getElementById('ei_client').value;
   var staff=document.getElementById('ei_staff').value;
@@ -7219,19 +7286,57 @@ function renderOnboarding(){
     if(mgrF&&c.manager!==mgrF)return false;
     return true;
   });
+  // 전환미완료: 이전달 업체 중 체크리스트 미완료 (17/17 아닌 것)
+  var incomplete=data.clients.filter(function(c){
+    if(c.status!=='활성')return false;
+    if(mgrF&&c.manager!==mgrF)return false;
+    var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+    if(!cMonth||cMonth>=ym)return false;
+    var prog=getChecklistProgress(c);
+    return prog.done<prog.total;
+  });
   // 분류: 자료미수령 vs 자료받는중
   function hasDocInfo(c){return c.bizRegNo&&c.bizRegNo.length>5}
   var docWaiting=pending.filter(function(c){return c.docStatus!=='받는중'&&!hasDocInfo(c)});
   var receiving=pending.filter(function(c){return c.docStatus==='받는중'||hasDocInfo(c)});
   // 파이프라인
   var pipe=document.getElementById('obPipeline');
-  pipe.innerHTML='<div style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#2b6cb0;border-radius:8px 0 0 8px;font-weight:700"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
+  pipe.innerHTML=(incomplete.length?'<div style="flex:1;text-align:center;padding:10px;background:#fed7e2;color:#97266d;border-radius:8px 0 0 0;font-weight:700"><div style="font-size:22px">'+incomplete.length+'</div><div style="font-size:11px">전환미완료</div></div><div style="width:2px;background:#e2e8f0"></div>':'')
+    +'<div style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#2b6cb0;'+(incomplete.length?'':'border-radius:8px 0 0 8px;')+'font-weight:700"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
     +'<div style="flex:1;text-align:center;padding:10px;background:#fed7d7;color:#c53030;font-weight:700"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
     +'<div style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700"><div style="font-size:22px">'+receiving.length+'</div><div style="font-size:11px">자료받는중</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
     +'<div style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
+  // 전환미완료
+  var h0='';
+  if(incomplete.length){
+    h0+='<div style="font-size:13px;font-weight:700;color:#97266d;padding:8px 0;border-bottom:2px solid #fed7e2;margin-bottom:8px">⚠️ 전환미완료 (이전달) <span style="background:#fed7e2;color:#97266d;padding:2px 8px;border-radius:10px;font-size:11px">'+incomplete.length+'건</span></div>';
+    incomplete.forEach(function(c){
+      var prog=getChecklistProgress(c);
+      var pct=prog.total?Math.round(prog.done/prog.total*100):0;
+      var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
+      var cl=c.onboardChecklist||{};
+      var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+      h0+='<div style="padding:10px 14px;border:1px solid #fed7e2;border-radius:8px;margin-bottom:8px;background:#fff5f7">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#fed7e2;color:#97266d;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">'+cMonth+' 계약</span></div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+prog.done+'/'+prog.total+'</span>'
+        +'<button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div></div>'
+        +'<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:4px;transition:width .3s"></div></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      OB_CHECKLIST_ITEMS.forEach(function(it){
+        var checked=!!cl[it.key];
+        h0+='<label onclick="toggleObChecklist(\''+c.id+'\',\''+it.key+'\')" style="display:flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;user-select:none;border:1px solid '+(checked?'#c6f6d5':'#e2e8f0')+';background:'+(checked?'#f0fff4':'#fff')+';color:'+(checked?'#276749':'#718096')+';font-weight:'+(checked?'600':'400')+'">'
+          +'<span style="font-size:11px">'+(checked?'✓':'○')+'</span> '+it.label+'</label>';
+      });
+      h0+='</div></div>';
+    });
+  }
+  document.getElementById('obIncomplete').innerHTML=h0;
   // 자료 미수령
   var h1='';
   if(docWaiting.length){
@@ -7239,12 +7344,25 @@ function renderOnboarding(){
     docWaiting.forEach(function(c){
       var days=c.contractDate?Math.floor((new Date()-new Date(c.contractDate))/(86400000)):0;
       var dayBadge=days>=7?'background:#fed7d7;color:#c53030':'background:#fefcbf;color:#975a16';
+      var prog=getChecklistProgress(c);
+      var pct=prog.total?Math.round(prog.done/prog.total*100):0;
+      var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
+      var cl=c.onboardChecklist||{};
       h1+='<div style="padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
         +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="'+dayBadge+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">'+(days>0?days+'일 경과':'')+'</span></div>'
         +'<div style="font-size:11px;color:#718096;margin-top:2px">'+(c.contractDate||'')+' 계약 · 담당: '+(c.manager||'-')+'</div></div>'
-        +'<div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div>'
-        +'</div></div>';
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+prog.done+'/'+prog.total+'</span>'
+        +'<button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div></div>'
+        +'<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:4px;transition:width .3s"></div></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      OB_CHECKLIST_ITEMS.forEach(function(it){
+        var checked=!!cl[it.key];
+        h1+='<label onclick="toggleObChecklist(\''+c.id+'\',\''+it.key+'\')" style="display:flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;user-select:none;border:1px solid '+(checked?'#c6f6d5':'#e2e8f0')+';background:'+(checked?'#f0fff4':'#fff')+';color:'+(checked?'#276749':'#718096')+';font-weight:'+(checked?'600':'400')+'">'
+          +'<span style="font-size:11px">'+(checked?'✓':'○')+'</span> '+it.label+'</label>';
+      });
+      h1+='</div></div>';
     });
   }
   document.getElementById('obDocWaiting').innerHTML=h1;
@@ -7393,6 +7511,7 @@ function openConsultModal(idx){
 }
 function closeConsultModal(){document.getElementById('consultModal').classList.remove('show')}
 function saveConsult(){
+  if(!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   if(!data.consultations)data.consultations=[];
   var date=document.getElementById('cs_date').value;
   if(!date)date=new Date().toISOString().slice(0,10);
@@ -7595,6 +7714,15 @@ function renderConsultStats(){
   document.getElementById('consultStats').innerHTML=h;
 }
 
+function applyRoleUI(){
+  var editable=canEdit();
+  var els=document.querySelectorAll('[data-role="edit"]');
+  for(var i=0;i<els.length;i++){els[i].style.display=editable?'':'none'}
+  var viewLabel=document.getElementById('viewOnlyBanner');
+  if(!editable){
+    if(!viewLabel){var b=document.createElement('div');b.id='viewOnlyBanner';b.style.cssText='background:#fefcbf;color:#744210;text-align:center;padding:6px;font-size:12px;font-weight:600;border-bottom:1px solid #f6e05e';b.textContent='🔒 조회 전용 모드 — 등록/수정 권한이 없습니다';document.body.insertBefore(b,document.body.firstChild)}
+  }else{if(viewLabel)viewLabel.remove()}
+}
 function refreshAll(){
   popDropdowns();renderStats();renderDocStatusBanner();renderClients();
   // 나머지 탭은 지연 렌더링 (UI 블로킹 방지)
@@ -7602,7 +7730,7 @@ function refreshAll(){
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
-  setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats()},250);
+  setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();applyRoleUI()},250);
 }
 
 // Init
