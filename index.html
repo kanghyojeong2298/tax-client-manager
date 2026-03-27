@@ -3954,7 +3954,7 @@ function exportCSV(){
 function downloadTemplate(){
   if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
   const headers=[
-    '업체명','대표자명','생년월일(6자리)','사업자등록일(YYYY-MM-DD)',
+    '업체명','대표자명','생년월일(6자리)','사업자등록일',
     '유형(1부/2부/3부)','구분(개인/법인/간이/성실개인/성실법인)',
     '업종(일반/스타트업/전자상거래)','전자상거래세부(국내/해외/국내+해외/구매대행)',
     '신고대상(부가세신고대상/면세신고대상/해당없음)','부가세주기(auto/2/4/12)',
@@ -4074,7 +4074,7 @@ function handleExcelUpload(input){
           var cd={
             id:genId(type), name:name, ownerName:String(r['대표자명']||'').trim(),
             ownerBirth:String(r['생년월일(6자리)']||'').trim().replace(/[^0-9]/g,'').slice(0,6),
-            bizRegDate:parseExcelDate(r['사업자등록일(YYYY-MM-DD)']),
+            bizRegDate:parseExcelDate(r['사업자등록일(YYYY-MM-DD)']||r['사업자등록일']),
             type:type, entityType:entity,
             businessType:biz,
             ecommerceDetail:biz==='전자상거래'?String(r['전자상거래세부(국내/해외/국내+해외/구매대행)']||r['전자상거래세부(국내/해외(큐텐,쇼피)/국내+해외/구매대행)']||'국내').trim():'',
