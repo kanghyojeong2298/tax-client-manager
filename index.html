@@ -236,7 +236,11 @@ tr:hover td{background:#f8fafc}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="card-title" style="margin-bottom:0">📞 상담 관리</div>
       <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-sm" style="background:#38a169;color:#fff" data-role="edit" onclick="downloadConsultTemplate()">📥 양식 다운로드</button>
+        <button class="btn btn-sm" style="background:#2b6cb0;color:#fff" data-role="edit" onclick="document.getElementById('consultExcelUpload').click()">📤 엑셀 업로드</button>
+        <input type="file" id="consultExcelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleConsultExcelUpload(this)">
         <button class="btn btn-primary btn-sm" data-role="edit" onclick="openConsultModal()">+ 상담등록</button>
+        <button class="btn btn-sm" style="background:#4a5568;color:#fff" id="csSortBtn" onclick="toggleConsultSort()">▲ 역순</button>
       </div>
     </div>
     <!-- 통계 -->
@@ -7462,6 +7466,98 @@ function editClientById(id){
 }
 
 // ============ 상담관리 탭 ============
+var csSortReverse=true;
+function toggleConsultSort(){csSortReverse=!csSortReverse;document.getElementById('csSortBtn').textContent=csSortReverse?'▲ 역순':'▼ 정순';renderConsultList()}
+
+function downloadConsultTemplate(){
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도하세요.');return}
+  var headers=['상담일','성함','연락처','개인/법인','업종','매출','예상기장료','특이사항','1차상담자','2차상담자','계약여부','계약일','유입경로','상담내역'];
+  var example=['2025-01-15','홍길동','010-1234-5678','개인','전자상거래(통합)','100000000','200000','신규문의','김세무','','미계약','','블로그','블로그 통해 문의. 부가세 관련 상담.'];
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet([headers,example]);
+  ws['!cols']=[{wch:12},{wch:10},{wch:14},{wch:10},{wch:18},{wch:12},{wch:12},{wch:16},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'상담내역양식');
+  XLSX.writeFile(wb,'상담내역_업로드양식.xlsx');
+  toast('양식 다운로드 완료');
+}
+
+function handleConsultExcelUpload(input){
+  if(!canEdit()){toast('🔒 권한이 없습니다');input.value='';return}
+  if(!input.files||!input.files[0])return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중...');input.value='';return}
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('데이터가 없습니다');input.value='';return}
+      var hdr=rows[0].map(function(h){return(h+'').trim()});
+      var colMap={};
+      var expected=['상담일','성함','연락처','개인/법인','업종','매출','예상기장료','특이사항','1차상담자','2차상담자','계약여부','계약일','유입경로','상담내역'];
+      var keys=['date','name','phone','entity','biz','revenue','expectedFee','notes','counselor1','counselor2','contracted','contractDate','source','detail'];
+      expected.forEach(function(name,i){
+        var idx=hdr.indexOf(name);
+        if(idx>=0)colMap[keys[i]]=idx;
+      });
+      if(colMap.date===undefined&&colMap.name===undefined){toast('양식이 올바르지 않습니다. 양식을 다운로드 후 사용해주세요.');input.value='';return}
+      if(!data.consultations)data.consultations=[];
+      if(!data.consultCounter)data.consultCounter=0;
+      var added=0;
+      for(var r=1;r<rows.length;r++){
+        var row=rows[r];
+        if(!row||!row.length)continue;
+        var name=colMap.name!==undefined?(row[colMap.name]+'').trim():'';
+        if(!name)continue;
+        var dateVal='';
+        if(colMap.date!==undefined){
+          var dv=row[colMap.date];
+          if(dv instanceof Date){dateVal=dv.toISOString().slice(0,10)}
+          else{var ds=(dv+'').trim();if(/^\d{4}-\d{2}-\d{2}/.test(ds))dateVal=ds.slice(0,10);else if(/^\d{4}\/\d{2}\/\d{2}/.test(ds))dateVal=ds.replace(/\//g,'-').slice(0,10)}
+        }
+        var contractedVal='N';
+        if(colMap.contracted!==undefined){
+          var cv=(row[colMap.contracted]+'').trim();
+          if(cv==='Y'||cv==='계약완료'||cv==='완료')contractedVal='Y';
+          else if(cv==='P'||cv==='진행중')contractedVal='P';
+        }
+        var contractDateVal='';
+        if(colMap.contractDate!==undefined){
+          var cdv=row[colMap.contractDate];
+          if(cdv instanceof Date){contractDateVal=cdv.toISOString().slice(0,10)}
+          else{var cds=(cdv+'').trim();if(/^\d{4}-\d{2}-\d{2}/.test(cds))contractDateVal=cds.slice(0,10);else if(/^\d{4}\/\d{2}\/\d{2}/.test(cds))contractDateVal=cds.replace(/\//g,'-').slice(0,10)}
+        }
+        data.consultCounter++;
+        var obj={
+          no:data.consultCounter,
+          createdAt:new Date().toISOString(),
+          date:dateVal,
+          name:name,
+          phone:colMap.phone!==undefined?(row[colMap.phone]+'').trim():'',
+          entity:colMap.entity!==undefined?(row[colMap.entity]+'').trim():'개인',
+          biz:colMap.biz!==undefined?(row[colMap.biz]+'').trim():'',
+          revenue:colMap.revenue!==undefined?(parseInt(row[colMap.revenue])||0):0,
+          expectedFee:colMap.expectedFee!==undefined?(parseInt(row[colMap.expectedFee])||0):0,
+          notes:colMap.notes!==undefined?(row[colMap.notes]+'').trim():'',
+          counselor1:colMap.counselor1!==undefined?(row[colMap.counselor1]+'').trim():'',
+          counselor2:colMap.counselor2!==undefined?(row[colMap.counselor2]+'').trim():'',
+          contracted:contractedVal,
+          contractDate:contractDateVal,
+          source:colMap.source!==undefined?(row[colMap.source]+'').trim():'',
+          detail:colMap.detail!==undefined?(row[colMap.detail]+'').trim():'',
+          referralId:'',referralName:''
+        };
+        data.consultations.push(obj);
+        added++;
+      }
+      saveData();renderConsultList();renderConsultStats();
+      toast(added+'건 상담내역 업로드 완료');
+    }catch(ex){toast('파일 읽기 오류: '+ex.message)}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function initConsultYear(){
   var sel=document.getElementById('csYear');
@@ -7595,7 +7691,11 @@ function renderConsultList(){
     if(cFilter&&c.contracted!==cFilter)return false;
     return true;
   });
-  filtered.sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+  // 상담일 순서로 정렬 후 번호 매기기
+  filtered.sort(function(a,b){return(a.date||'').localeCompare(b.date||'')||((a.createdAt||'').localeCompare(b.createdAt||''))});
+  for(var ni=0;ni<filtered.length;ni++)filtered[ni]._dateNo=ni+1;
+  // 역순/정순 토글 적용
+  if(csSortReverse)filtered.reverse();
   var tbody=document.getElementById('consultTable');
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="16" style="text-align:center;color:#a0aec0;padding:30px">등록된 상담이 없습니다</td></tr>';return}
   var h='';
@@ -7603,7 +7703,7 @@ function renderConsultList(){
     var cBadge=c.contracted==='Y'?'background:#c6f6d5;color:#276749':(c.contracted==='P'?'background:#fefcbf;color:#975a16':'background:#edf2f7;color:#4a5568');
     var cText=c.contracted==='Y'?'계약완료':(c.contracted==='P'?'진행중':'미계약');
     h+='<tr>'
-      +'<td>'+(c.no||'-')+'</td>'
+      +'<td>'+c._dateNo+'</td>'
       +'<td>'+(c.date||'-')+'</td>'
       +'<td style="font-weight:600">'+(c.name||'-')+'</td>'
       +'<td>'+(c.phone||'-')+'</td>'
@@ -7682,14 +7782,7 @@ function renderConsultStats(){
     if(monthlyData[m].total>maxMonthTotal)maxMonthTotal=monthlyData[m].total;
     if(c.contracted==='Y'){monthlyData[m].contracted++;monthlyData[m].fee+=(c.expectedFee||0)}
   });
-  // === 숫자 카드 ===
-  var h='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#2b6cb0">'+total+'</div><div style="font-size:10px;color:#64748b">총 상담</div></div>'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#38a169">'+contracted+'</div><div style="font-size:10px;color:#64748b">계약완료</div></div>'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#d69e2e">'+progressing+'</div><div style="font-size:10px;color:#64748b">진행중</div></div>'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#805ad5">'+rate+'%</div><div style="font-size:10px;color:#64748b">계약률</div></div>'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#e53e3e">'+W(contractedExpFee)+'</div><div style="font-size:10px;color:#64748b">계약 기장료</div></div>'
-    +'</div>';
+  var h='';
   // === 월별 상담건수 바 차트 ===
   h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:12px">📊 '+year+'년 월별 상담건수 / 계약률</div>'
@@ -7715,34 +7808,158 @@ function renderConsultStats(){
     +'<span><span style="display:inline-block;width:10px;height:10px;background:#bee3f8;border-radius:2px;margin-right:3px"></span>상담건수</span>'
     +'<span><span style="display:inline-block;width:10px;height:10px;background:#2b6cb0;border-radius:2px;margin-right:3px"></span>계약건수</span>'
     +'<span>숫자 = 계약률</span></div></div>';
-  // === 유입경로 + 상담자별 (바 차트 포함) ===
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
-  // 유입경로 바 차트
-  var srcKeys=Object.keys(srcMap).sort(function(a,b){return srcMap[b].total-srcMap[a].total});
-  var maxSrc=srcKeys.length?srcMap[srcKeys[0]].total:1;
-  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px"><div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">📈 유입경로별</div>';
-  srcKeys.forEach(function(k){
-    var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-    var bw=Math.round(d.total/maxSrc*100);
-    h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">'+k+'</span><span style="color:#64748b">'+d.total+'건 (계약 '+d.contracted+' · '+r+'%)</span></div>'
-      +'<div style="background:#edf2f7;border-radius:4px;height:12px;overflow:hidden"><div style="width:'+bw+'%;height:100%;background:linear-gradient(90deg,#bee3f8,#2b6cb0);border-radius:4px;position:relative">'
-      +(d.contracted?'<div style="width:'+Math.round(d.contracted/d.total*100)+'%;height:100%;background:#38a169;border-radius:4px"></div>':'')
-      +'</div></div></div>';
+  // === 전월 대비 계산 ===
+  var prevFiltered;
+  if(month){
+    var pm=parseInt(month)-1;var py=parseInt(year);
+    if(pm<1){pm=12;py--}
+    var pmk=pm<10?'0'+pm:''+pm;
+    prevFiltered=data.consultations.filter(function(c){return c.date&&c.date.slice(0,4)===''+py&&c.date.slice(5,7)===pmk});
+  }else{
+    prevFiltered=data.consultations.filter(function(c){return c.date&&c.date.slice(0,4)===''+(parseInt(year)-1)});
+  }
+  var prevTotal=prevFiltered.length;
+  var prevContracted=prevFiltered.filter(function(c){return c.contracted==='Y'}).length;
+  var prevRate=prevTotal>0?Math.round(prevContracted/prevTotal*100):0;
+  var prevFee=prevFiltered.filter(function(c){return c.contracted==='Y'}).reduce(function(s,c){return s+(c.expectedFee||0)},0);
+  function trendBadge(cur,prev){
+    if(!prev)return '';
+    var diff=Math.round((cur-prev)/prev*100);
+    if(diff>0)return '<div style="display:inline-flex;align-items:center;font-size:10px;font-weight:700;background:#c6f6d5;color:#276749;padding:2px 6px;border-radius:10px;margin-top:4px">▲ '+diff+'%</div>';
+    if(diff<0)return '<div style="display:inline-flex;align-items:center;font-size:10px;font-weight:700;background:#fed7d7;color:#c53030;padding:2px 6px;border-radius:10px;margin-top:4px">▼ '+Math.abs(diff)+'%</div>';
+    return '<div style="display:inline-flex;align-items:center;font-size:10px;font-weight:700;background:#edf2f7;color:#718096;padding:2px 6px;border-radius:10px;margin-top:4px">— 0%</div>';
+  }
+  // === 상담자별 기장료 집계 ===
+  var cslrFee={};
+  filtered.forEach(function(c){
+    [c.counselor1,c.counselor2].forEach(function(name){
+      if(!name)return;if(!cslrFee[name])cslrFee[name]=0;
+      if(c.contracted==='Y')cslrFee[name]+=(c.expectedFee||0);
+    });
   });
+  // === 유입경로별 기장료 집계 ===
+  var srcFee={};
+  filtered.forEach(function(c){var s=c.source||'미분류';if(!srcFee[s])srcFee[s]=0;if(c.contracted==='Y')srcFee[s]+=(c.expectedFee||0)});
+
+  // === 경영자 대시보드 ===
+  // KPI 카드
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">';
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:3px solid #2b6cb0;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#2b6cb0">'+total+'</div><div style="font-size:10px;color:#718096">총 상담건수</div>'+trendBadge(total,prevTotal)+'</div>';
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:3px solid #38a169;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#38a169">'+contracted+'</div><div style="font-size:10px;color:#718096">계약 건수</div>'+trendBadge(contracted,prevContracted)+'</div>';
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:3px solid #805ad5;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#805ad5">'+rate+'%</div><div style="font-size:10px;color:#718096">전체 계약률</div>'+trendBadge(rate,prevRate)+'</div>';
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:3px solid #d69e2e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#d69e2e">'+W(contractedExpFee)+'</div><div style="font-size:10px;color:#718096">계약 기장료</div>'+trendBadge(contractedExpFee,prevFee)+'</div>';
   h+='</div>';
-  // 상담자별
+
+  // 상담자 성과 랭킹 + 유입경로 계약률 랭킹
   var cslrKeys=Object.keys(cslrMap).sort(function(a,b){return cslrMap[b].total-cslrMap[a].total});
   var maxCslr=cslrKeys.length?cslrMap[cslrKeys[0]].total:1;
-  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px"><div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">👤 상담자별 계약률</div>';
-  cslrKeys.forEach(function(k){
-    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-    var bw=Math.round(d.total/maxCslr*100);
-    h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">'+k+'</span><span style="color:'+(r>=50?'#276749':'#c53030')+';font-weight:700">'+r+'% <span style="color:#64748b;font-weight:400">('+d.contracted+'/'+d.total+')</span></span></div>'
-      +'<div style="background:#edf2f7;border-radius:4px;height:12px;overflow:hidden"><div style="width:'+bw+'%;height:100%;background:#e2e8f0;border-radius:4px;position:relative">'
-      +'<div style="width:'+r+'%;height:100%;background:'+(r>=50?'#38a169':'#e53e3e')+';border-radius:4px"></div>'
-      +'</div></div></div>';
+  var srcKeys=Object.keys(srcMap).sort(function(a,b){
+    var ra=srcMap[a].total>0?srcMap[a].contracted/srcMap[a].total:0;
+    var rb=srcMap[b].total>0?srcMap[b].contracted/srcMap[b].total:0;
+    return rb-ra;
   });
+  var maxSrc=srcKeys.length?srcMap[srcKeys[0]].total:1;
+  srcKeys.forEach(function(k){if(srcMap[k].total>maxSrc)maxSrc=srcMap[k].total});
+
+  var rankColors=['#d69e2e','#a0aec0','#cd7f32'];
+  var cslrColors=['#2b6cb0','#38a169','#d53f8c','#805ad5','#d69e2e','#e53e3e','#319795','#dd6b20'];
+
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">';
+
+  // 왼쪽: 상담자 성과 랭킹
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">';
+  h+='<div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">🏆 상담자 성과 랭킹</div>';
+  cslrKeys.forEach(function(k,i){
+    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    var fee=cslrFee[k]||0;
+    var rc=i<3?rankColors[i]:'#e2e8f0';var rtc=i>=3?'#4a5568':'#fff';
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7fafc;border:1px solid #edf2f7;border-radius:8px;margin-bottom:6px">';
+    h+='<div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+rtc+';background:'+rc+';flex-shrink:0">'+(i+1)+'</div>';
+    h+='<div style="flex:1"><div style="font-size:11px;font-weight:700">'+k+'</div><div style="font-size:9px;color:#718096">상담 '+d.total+'건 → 계약 '+d.contracted+'건'+(fee?' · 기장료 '+W(fee):'')+'</div></div>';
+    h+='<div style="font-size:13px;font-weight:800;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</div>';
+    h+='</div>';
+  });
+  // 상담자별 비교 바
+  if(cslrKeys.length){
+    h+='<div style="margin-top:10px"><div style="font-size:10px;color:#718096;margin-bottom:6px;font-weight:600">상담건수 대비 계약 비율</div>';
+    cslrKeys.forEach(function(k,i){
+      var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+      var bw=Math.round(d.total/maxCslr*100);
+      var clr=cslrColors[i%cslrColors.length];
+      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+      h+='<span style="font-size:10px;font-weight:600;min-width:46px">'+k+'</span>';
+      h+='<div style="flex:1;height:18px;background:#edf2f7;border-radius:4px;overflow:hidden;position:relative">';
+      h+='<div style="width:'+bw+'%;height:100%;background:'+clr+';opacity:.25;border-radius:4px"></div>';
+      h+='<div style="position:absolute;top:0;left:0;width:'+Math.round(bw*r/100)+'%;height:100%;background:'+clr+';border-radius:4px;opacity:.7"></div>';
+      h+='<span style="position:absolute;left:6px;top:2px;font-size:9px;color:#2d3748;font-weight:600">'+d.total+'건</span>';
+      h+='</div>';
+      h+='<span style="font-size:9px;font-weight:700;min-width:30px;text-align:right;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</span>';
+      h+='</div>';
+    });
+    h+='<div style="display:flex;gap:12px;font-size:9px;color:#718096;margin-top:4px"><span><span style="display:inline-block;width:8px;height:8px;background:#cbd5e0;border-radius:2px;margin-right:2px"></span>상담</span><span><span style="display:inline-block;width:8px;height:8px;background:#4a5568;border-radius:2px;margin-right:2px"></span>계약</span></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // 오른쪽: 유입경로 계약률 랭킹
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">';
+  h+='<div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">📊 유입경로 계약률 랭킹</div>';
+  srcKeys.forEach(function(k,i){
+    var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    var fee=srcFee[k]||0;
+    var rc=i<3?rankColors[i]:'#e2e8f0';var rtc=i>=3?'#4a5568':'#fff';
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7fafc;border:1px solid #edf2f7;border-radius:8px;margin-bottom:6px">';
+    h+='<div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+rtc+';background:'+rc+';flex-shrink:0">'+(i+1)+'</div>';
+    h+='<div style="flex:1"><div style="font-size:11px;font-weight:700">'+k+'</div><div style="font-size:9px;color:#718096">상담 '+d.total+'건 → 계약 '+d.contracted+'건'+(fee?' · 기장료 '+W(fee):'')+'</div></div>';
+    h+='<div style="font-size:13px;font-weight:800;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</div>';
+    h+='</div>';
+  });
+  // 유입경로별 비교 바
+  if(srcKeys.length){
+    h+='<div style="margin-top:10px"><div style="font-size:10px;color:#718096;margin-bottom:6px;font-weight:600">유입건수 대비 계약 비율</div>';
+    var srcColors=['#d69e2e','#2b6cb0','#6366f1','#d53f8c','#38a169','#e53e3e','#319795','#dd6b20'];
+    srcKeys.forEach(function(k,i){
+      var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+      var bw=Math.round(d.total/maxSrc*100);
+      var clr=srcColors[i%srcColors.length];
+      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+      h+='<span style="font-size:10px;font-weight:600;min-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k+'</span>';
+      h+='<div style="flex:1;height:18px;background:#edf2f7;border-radius:4px;overflow:hidden;position:relative">';
+      h+='<div style="width:'+bw+'%;height:100%;background:'+clr+';opacity:.25;border-radius:4px"></div>';
+      h+='<div style="position:absolute;top:0;left:0;width:'+Math.round(bw*r/100)+'%;height:100%;background:'+clr+';border-radius:4px;opacity:.7"></div>';
+      h+='<span style="position:absolute;left:6px;top:2px;font-size:9px;color:#2d3748;font-weight:600">'+d.total+'건</span>';
+      h+='</div>';
+      h+='<span style="font-size:9px;font-weight:700;min-width:30px;text-align:right;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
   h+='</div></div>';
+
+  // 핵심 인사이트
+  var bestCslr=cslrKeys.length?cslrKeys[0]:'';
+  var bestCslrRate=bestCslr&&cslrMap[bestCslr]?Math.round(cslrMap[bestCslr].contracted/cslrMap[bestCslr].total*100):0;
+  var bestSrc=srcKeys.length?srcKeys[0]:'';
+  var bestSrcRate=bestSrc&&srcMap[bestSrc]?Math.round(srcMap[bestSrc].contracted/srcMap[bestSrc].total*100):0;
+  var worstSrc=srcKeys.length?srcKeys[srcKeys.length-1]:'';
+  var worstSrcRate=worstSrc&&srcMap[worstSrc]?Math.round(srcMap[worstSrc].contracted/srcMap[worstSrc].total*100):0;
+
+  if(bestCslr||bestSrc){
+    h+='<div style="background:linear-gradient(90deg,#ebf8ff,#f0fff4);border:1px solid #bee3f8;border-radius:10px;padding:14px">';
+    h+='<div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">💡 핵심 인사이트</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11px;color:#2d3748">';
+    if(bestCslr){
+      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#2b6cb0;margin-bottom:3px">최고 성과 상담자</div><div>'+bestCslr+' — 계약률 '+bestCslrRate+'%<br><span style="font-size:10px;color:#718096">상담 '+cslrMap[bestCslr].total+'건 중 '+cslrMap[bestCslr].contracted+'건 계약</span></div></div>';
+    }
+    if(bestSrc){
+      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#d69e2e;margin-bottom:3px">최고 전환 경로</div><div>'+bestSrc+' — 계약률 '+bestSrcRate+'%<br><span style="font-size:10px;color:#718096">소개 마케팅 강화 권장</span></div></div>';
+    }
+    if(worstSrc&&worstSrc!==bestSrc){
+      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#c53030;margin-bottom:3px">개선 필요</div><div>'+worstSrc+' — 계약률 '+worstSrcRate+'%<br><span style="font-size:10px;color:#718096">상담 품질 또는 타겟 점검</span></div></div>';
+    }
+    h+='</div></div>';
+  }
+
   document.getElementById('consultStats').innerHTML=h;
 }
 
