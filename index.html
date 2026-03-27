@@ -1267,7 +1267,7 @@ if(!data.consultCounter)data.consultCounter=0;
 // 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회)
 if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;saveData()}
 // 기존 업체 체크리스트 일괄 완료 마이그레이션 (1회) — 이번달(2026-03) 수임 제외
-if(!data._checklistMigrated){var _ckKeys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var _curYm=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)})();data.clients.forEach(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');if(cm&&cm>=_curYm)return;if(!c.onboardChecklist)c.onboardChecklist={};_ckKeys.forEach(function(k){c.onboardChecklist[k]=true})});data._checklistMigrated=true;saveData()}
+if(!data._checklistMigrated2){var _ckKeys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var _curYm=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)})();data.clients.forEach(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');if(cm&&cm>=_curYm)return;if(!c.onboardChecklist)c.onboardChecklist={};_ckKeys.forEach(function(k){c.onboardChecklist[k]=true})});data._checklistMigrated2=true;saveData()}
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
