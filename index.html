@@ -2290,20 +2290,15 @@ function renderDocStatusBanner(){
   var ac=AC();
   var notReceived=ac.filter(function(c){var ds=c.docStatus||'';return !ds||ds==='미수령'});
   var receiving=ac.filter(function(c){return c.docStatus==='받는중'});
-  var completed=ac.filter(function(c){return c.docStatus==='수령완료'});
   var missingInfo=ac.filter(function(c){var m=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))m=true;if(c.type==='2부'&&!c.extraFee)m=true;return m}).length;
-  if(!notReceived.length&&!receiving.length&&!missingInfo){el.style.display='none';return}
+  if(!notReceived.length&&!missingInfo){el.style.display='none';return}
   el.style.display='block';
   var longOverdue=notReceived.filter(function(c){if(!c.createdAt)return false;return Math.floor((new Date()-new Date(c.createdAt))/(1000*60*60*24))>=7}).length;
   var h='<div style="background:linear-gradient(90deg,#fff5f5,#fed7d7);border:1px solid #fc8181;border-radius:10px;padding:12px 20px;margin-bottom:10px">';
   h+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">';
   h+='<span style="font-size:14px;font-weight:700;color:#c53030;cursor:pointer" onclick="filterByDocStatus(\'미수령\')">🔴 미수령 '+notReceived.length+'건</span>';
-  h+='<span style="color:#cbd5e0">|</span>';
-  h+='<span style="font-size:13px;font-weight:600;color:#975a16;cursor:pointer" onclick="filterByDocStatus(\'받는중\')">🟡 받는중 '+receiving.length+'건</span>';
-  h+='<span style="color:#cbd5e0">|</span>';
-  h+='<span style="font-size:13px;font-weight:600;color:#38a169;cursor:pointer" onclick="filterByDocStatus(\'수령완료\')">✅ 완료 '+completed.length+'건</span>';
-  if(longOverdue){h+='<span style="margin-left:8px;font-size:11px;color:#c53030;font-weight:600">⚠️ 7일 이상 미수령: '+longOverdue+'건</span>';}
-  if(missingInfo){h+='<span style="margin-left:8px;font-size:11px;color:#805ad5;font-weight:600;cursor:pointer" onclick="filterMissingInfo()">📋 정보 미입력 '+missingInfo+'건</span>';}
+  if(longOverdue){h+='<span style="font-size:11px;color:#c53030;font-weight:600">⚠️ 7일 이상 미수령: '+longOverdue+'건</span>';}
+  if(missingInfo){h+='<span style="color:#cbd5e0">|</span><span style="font-size:13px;font-weight:600;color:#805ad5;cursor:pointer" onclick="filterMissingInfo()">📋 정보 미입력 '+missingInfo+'건</span>';}
   h+='</div></div>';
   el.innerHTML=h;
 }
