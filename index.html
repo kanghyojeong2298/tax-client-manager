@@ -195,6 +195,10 @@ tr:hover td{background:#f8fafc}
       <button class="btn btn-sm" style="background:#e53e3e;color:#fff;margin-left:8px" onclick="bulkDeleteClients()">선택 삭제</button>
       <button class="btn btn-sm" style="background:#d69e2e;color:#fff;margin-left:8px" onclick="bulkLinkClients()">관련업체 묶기</button>
       <button class="btn btn-sm" style="background:#805ad5;color:#fff" onclick="bulkUnlinkClients()">묶기 해제</button>
+      <span style="color:rgba(255,255,255,.5);margin-left:8px">|</span>
+      <label style="font-size:11px;margin-left:4px">자료상태:</label>
+      <select id="bulkDocStatus" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">선택</option><option value="미수령">🔴 미수령</option><option value="받는중">🟡 받는중</option><option value="수령완료">✅ 수령완료</option></select>
+      <button class="btn btn-sm" style="background:#2d3748;color:#fff" onclick="bulkChangeDocStatus()">변경</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
@@ -1255,6 +1259,8 @@ let data=loadData();
 if(!data.activityLog)data.activityLog=[];
 if(!data.consultations)data.consultations=[];
 if(!data.consultCounter)data.consultCounter=0;
+// 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회)
+if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;saveData()}
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -4342,6 +4348,17 @@ function bulkChangeManager(){
     }
   });
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast('담당자 변경 완료');
+}
+function bulkChangeDocStatus(){
+  var val=document.getElementById('bulkDocStatus').value;
+  if(!val){toast('자료상태를 선택하세요');return}
+  if(!selectedClients.size)return;
+  if(!confirm(selectedClients.size+'개 업체의 자료상태를 ['+val+']로 변경하시겠습니까?'))return;
+  selectedClients.forEach(function(id){
+    var c=data.clients.find(function(x){return x.id===id});
+    if(c)c.docStatus=val;
+  });
+  saveData();selectedClients.clear();updateBulkBar();refreshAll();toast('자료상태 변경 완료');
 }
 function bulkLinkClients(){
   if(selectedClients.size<2){toast('관련업체 묶기는 2개 이상 선택하세요');return}
