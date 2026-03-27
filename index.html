@@ -260,14 +260,15 @@ tr:hover td{background:#f8fafc}
 <div class="MB">
   <input type="hidden" id="cs_editId">
   <div class="FG">
-    <div class="FGI"><label>상담일 *</label><input id="cs_date" type="date"></div>
-    <div class="FGI"><label>성함 *</label><input id="cs_name" type="text" placeholder="성함"></div>
+    <div class="FGI"><label>상담일</label><input id="cs_date" type="date"></div>
+    <div class="FGI"><label>성함</label><input id="cs_name" type="text" placeholder="성함"></div>
     <div class="FGI"><label>연락처</label><input id="cs_phone" type="tel" placeholder="010-0000-0000"></div>
     <div class="FGI"><label>개인/법인</label><select id="cs_entity"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option></select></div>
-    <div class="FGI"><label>업종</label><input id="cs_biz" type="text" placeholder="업종"></div>
+    <div class="FGI"><label>업종</label><select id="cs_biz"><option value="">선택</option><option value="전자상거래(통합)">전자상거래(통합)</option><option value="전자상거래(국내)">전자상거래(국내)</option><option value="전자상거래(해외)">전자상거래(해외)</option><option value="스타트업">스타트업</option><option value="기타">기타</option></select></div>
     <div class="FGI"><label>매출 (원)</label><input id="cs_revenue" type="number" placeholder="연매출"></div>
     <div class="FGI"><label>예상 기장료 (원)</label><input id="cs_expectedFee" type="number" placeholder="월 기장료"></div>
-    <div class="FGI"><label>유입경로</label><select id="cs_source"><option value="">선택</option><option value="홈페이지">홈페이지</option><option value="블로그">블로그</option><option value="지인소개">지인소개</option><option value="세무사소개">세무사소개</option><option value="SNS">SNS</option><option value="플랫폼">플랫폼</option><option value="기타">기타</option></select></div>
+    <div class="FGI"><label>유입경로</label><select id="cs_source" onchange="toggleCsReferral()"><option value="">선택</option><option value="홈페이지">홈페이지</option><option value="블로그">블로그</option><option value="지인소개">지인소개</option><option value="기존업체소개">기존업체소개</option><option value="세무사소개">세무사소개</option><option value="SNS">SNS</option><option value="인스타그램">인스타그램</option><option value="유튜브">유튜브</option><option value="플랫폼">플랫폼</option><option value="기타">기타</option></select></div>
+    <div class="FGI" id="csReferralGroup" style="display:none"><label>소개 관련업체</label><div style="position:relative"><input id="cs_referralSearch" type="text" placeholder="업체명 검색..." autocomplete="off" oninput="searchCsReferral(this.value)" onfocus="searchCsReferral(this.value)"><input type="hidden" id="cs_referralId"><div id="csReferralResults" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:150px;overflow-y:auto;background:#fff;border:1px solid #d1d5db;border-radius:4px;z-index:99;font-size:11px"></div></div></div>
     <div class="FGI"><label>특이사항</label><input id="cs_notes" type="text" placeholder="특이사항"></div>
     <div class="FGI"><label>1차 상담자</label><select id="cs_counselor1"></select></div>
     <div class="FGI"><label>2차 상담자</label><select id="cs_counselor2"><option value="">없음</option></select></div>
@@ -522,6 +523,20 @@ tr:hover td{background:#f8fafc}
 
   <!-- hidden month inputs for sub-sections (synced from main) -->
   <input type="hidden" id="extraInvoiceMonth"><input type="hidden" id="retroInvoiceMonth"><input type="hidden" id="bu2InvoiceMonth">
+</div>
+
+<!-- 비밀번호 입력 모달 -->
+<div class="MO" id="pinModal">
+<div class="MD" style="max-width:360px">
+  <div class="MH"><h2 id="pinModalTitle">🔒 비밀번호 입력</h2><button class="MC" onclick="closePinModal()">&times;</button></div>
+  <div class="MB">
+    <div class="FGI"><label id="pinModalLabel">비밀번호를 입력하세요</label><input type="password" id="pinModalInput" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter')submitPinModal()"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closePinModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitPinModal()">확인</button>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- 추가발행 입력 모달 -->
@@ -856,10 +871,29 @@ tr:hover td{background:#f8fafc}
     </div>
     <div class="ST">자료수령 관리</div>
     <div class="FG">
-      <div class="FGI"><label>자료수령 방법</label><select id="f_docMethod"><option value="">선택</option><option value="이메일">이메일</option><option value="카톡">카카오톡</option><option value="팩스">팩스</option><option value="방문수령">방문수령</option><option value="클라우드">클라우드(드라이브)</option><option value="기타">기타</option></select></div>
-      <div class="FGI"><label>자료수령 주기</label><select id="f_docFreq"><option value="">선택</option><option value="매월">매월</option><option value="분기">분기</option><option value="반기">반기</option><option value="수시">수시</option></select></div>
       <div class="FGI"><label>세금계산서 이월</label><select id="f_invoiceCarry"><option value="N">미해당</option><option value="Y">이월대상</option></select></div>
+      <div class="FGI"><label>자료수령 상태</label><select id="f_docStatus"><option value="">미지정</option><option value="받는중">받는중</option><option value="수령완료">수령완료</option></select></div>
       <div class="FGI"><label>자료수령 메모</label><input id="f_docMemo" placeholder="자료수령 관련 특이사항"></div>
+    </div>
+    <div class="ST">경영지원 체크리스트</div>
+    <div id="obChecklistSection" style="display:flex;flex-wrap:wrap;gap:6px 12px;padding:6px 0">
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_katalk"> 카톡채널</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometax"> 홈택스수임등록</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowTitle"> 플로우-제목</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowSample"> 플로우샘플</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_wimembers"> 위멤버스등록</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_contract"> 계약서</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_semoReport"> 세모레포트/자동발송</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_customerGuide"> 고객안내</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_wehago"> 위하고등록</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_permission"> 권한부여</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_wehagoIdPw"> 위하고-아이디,비밀번호</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_dataCollect"> 자료수집</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowBasic"> 플로우 기본정보</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_tpClient"> tp수임처</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_cashReceipt"> 현금영수증가맹점</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_bizAccount"> 사업용계좌등록</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_edi"> edi신청</label>
     </div>
     <div class="ST">업체 유입구분 / 유입경로</div>
     <div class="FG">
@@ -1331,7 +1365,7 @@ function addAllowedEmail(){
     if(!data.adminEmails.length)data.adminEmails=[ADMIN_EMAIL];
     data.adminEmails.push(email);
   }
-  saveData();
+  saveData();saveSharedEmails();
   document.getElementById('newAllowedEmail').value='';
   document.getElementById('newEmailIsAdmin').checked=false;
   renderAllowedEmails();
@@ -1348,7 +1382,7 @@ function removeAllowedEmail(idx){
     var ai=data.adminEmails.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase());
     if(ai>=0)data.adminEmails.splice(ai,1);
   }
-  saveData();renderAllowedEmails();
+  saveData();saveSharedEmails();renderAllowedEmails();
   toast(email+' 삭제됨');
 }
 
@@ -1457,19 +1491,45 @@ async function loadFromFirestore(){
   }catch(e){console.error('Firestore load error:',e)}
 }
 
-// 허용된 이메일 목록 (Firestore config에서도 관리)
-var ALLOWED_EMAILS=['m1018@taxexpert.kr','m1099@taxexpert.kr','m1028@taxexpert.kr','m1032@taxexpert.kr','m1031@taxexpert.kr','m1035@taxexpert.kr','m1040@taxexpert.kr'];
+// 허용된 이메일 목록 (Firestore 공용 컬렉션 + 로컬 기본값)
+var ALLOWED_EMAILS=['m1018@taxexpert.kr','m1099@taxexpert.kr','m1028@taxexpert.kr','m1032@taxexpert.kr','m1031@taxexpert.kr','m1035@taxexpert.kr','m1040@taxexpert.kr','help@taxexpert.kr'];
 var ADMIN_EMAIL='m1018@taxexpert.kr';
+// Firestore 공용 허용 이메일 (로그인 전에도 읽기 가능)
+var sharedAllowedEmails=null;
+var sharedAdminEmails=null;
+
+// 페이지 로드 시 공용 허용 이메일 목록 불러오기
+function loadSharedEmails(){
+  return db.collection('config').doc('allowedEmails').get().then(function(doc){
+    if(doc.exists){
+      var d=doc.data();
+      if(d.emails&&d.emails.length)sharedAllowedEmails=d.emails;
+      if(d.admins&&d.admins.length)sharedAdminEmails=d.admins;
+    }
+  }).catch(function(e){console.log('공용 이메일 목록 로드 실패 (초기 세팅 필요):',e.message)});
+}
+// 공용 허용 이메일 저장 (관리자만)
+function saveSharedEmails(){
+  var emails=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
+  var admins=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  db.collection('config').doc('allowedEmails').set({
+    emails:emails,admins:admins,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    sharedAllowedEmails=emails.slice();
+    sharedAdminEmails=admins.slice();
+    console.log('공용 이메일 목록 저장 완료');
+  }).catch(function(e){console.error('공용 이메일 저장 실패:',e)});
+}
 
 function isAllowedEmail(email){
-  // allowedEmails가 data에 있으면 그것 사용, 없으면 기본값
-  var list=(data.allowedEmails&&data.allowedEmails.length)?data.allowedEmails:ALLOWED_EMAILS;
+  // 우선순위: 공용Firestore > data.allowedEmails > 하드코딩 기본값
+  var list=sharedAllowedEmails||(data.allowedEmails&&data.allowedEmails.length?data.allowedEmails:ALLOWED_EMAILS);
   return list.map(function(e){return e.toLowerCase()}).indexOf(email.toLowerCase())>=0;
 }
 
 function isAdmin(){
   if(!auth.currentUser)return false;
-  var adminList=(data.adminEmails&&data.adminEmails.length)?data.adminEmails:[ADMIN_EMAIL];
+  var adminList=sharedAdminEmails||(data.adminEmails&&data.adminEmails.length?data.adminEmails:[ADMIN_EMAIL]);
   return adminList.map(function(e){return e.toLowerCase()}).indexOf(auth.currentUser.email.toLowerCase())>=0;
 }
 
@@ -1508,6 +1568,9 @@ function doLogout(){
   auth.signOut();
 }
 
+// 페이지 로드 시 공용 허용 이메일 먼저 불러오기 (로그인 전에도 접근 가능)
+loadSharedEmails();
+
 // Auth State Observer
 auth.onAuthStateChanged(function(user){
   var ls=document.getElementById('loadingScreen');if(ls)ls.remove();
@@ -1518,6 +1581,8 @@ auth.onAuthStateChanged(function(user){
     var adminBadge=isAdmin()?'<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:#c6f6d5;color:#276749;margin-right:4px">관리자</span>':'';
     if(logoutArea) logoutArea.innerHTML=adminBadge+'<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
     loadFromFirestore();
+    // 관리자 로그인 시 공용 이메일 목록 동기화
+    setTimeout(function(){if(isAdmin())saveSharedEmails()},4000);
     // 로그인 후 자동 백업 알림 체크 (3초 후)
     setTimeout(function(){checkAutoBackupReminder()},3000);
   } else {
@@ -1557,14 +1622,35 @@ function getVatFilingMonths(freq){
 var ADMIN_TAB_PIN='expert2026';
 var adminTabUnlocked=false;
 var protectedTabsUnlocked={admin:false,bonus:false,managers:false,performance:false};
+var _pinCallback=null;
+function openPinModal(title,callback){
+  _pinCallback=callback;
+  document.getElementById('pinModalTitle').textContent='🔒 '+title;
+  document.getElementById('pinModalLabel').textContent='비밀번호를 입력하세요';
+  document.getElementById('pinModalInput').value='';
+  document.getElementById('pinModal').classList.add('show');
+  setTimeout(function(){document.getElementById('pinModalInput').focus()},100);
+}
+function closePinModal(){document.getElementById('pinModal').classList.remove('show');_pinCallback=null}
+function submitPinModal(){
+  var pin=document.getElementById('pinModalInput').value;
+  if(!pin){toast('비밀번호를 입력하세요');return}
+  if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');document.getElementById('pinModalInput').value='';document.getElementById('pinModalInput').focus();return}
+  closePinModal();
+  if(_pinCallback)_pinCallback();
+  _pinCallback=null;
+}
 document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{
-  // 비밀번호 보호 탭: admin, bonus, managers, performance
   var tabName=b.dataset.tab;
   if(['admin','bonus','managers','performance'].indexOf(tabName)!==-1&&!protectedTabsUnlocked[tabName]){
-    var pin=prompt('🔒 '+({'admin':'관리자','bonus':'상여실적','managers':'담당자현황','performance':'성과'}[tabName])+' 탭 비밀번호를 입력하세요:');
-    if(!pin)return;
-    if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');return}
-    protectedTabsUnlocked[tabName]=true;
+    var tabLabel={'admin':'관리자','bonus':'상여실적','managers':'담당자현황','performance':'성과'}[tabName];
+    openPinModal(tabLabel+' 탭 비밀번호',function(){
+      protectedTabsUnlocked[tabName]=true;
+      document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.TC').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');refreshAll();
+    });
+    return;
   }
   document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.TC').forEach(x=>x.classList.remove('active'));
@@ -1576,10 +1662,11 @@ var currentStaffFilter='active';
 var staffModalUnlocked=false;
 function openStaffModal(){
   if(!staffModalUnlocked){
-    var pin=prompt('🔒 직원관리 비밀번호를 입력하세요:');
-    if(!pin)return;
-    if(pin!==ADMIN_TAB_PIN){toast('❌ 비밀번호가 틀렸습니다');return}
-    staffModalUnlocked=true;
+    openPinModal('직원관리 비밀번호',function(){
+      staffModalUnlocked=true;
+      document.getElementById('staffModal').classList.add('show');renderStaff();
+    });
+    return;
   }
   document.getElementById('staffModal').classList.add('show');renderStaff();
 }
@@ -1722,10 +1809,11 @@ function openClientModal(ec){
     document.getElementById('f_extReferral').value=ec.extReferral||'';
     document.getElementById('f_closingType').value=ec.closingType||'기본';
     document.getElementById('f_closingChangeDate').value=ec.closingChangeDate||'';
-    document.getElementById('f_docMethod').value=ec.docMethod||'';
-    document.getElementById('f_docFreq').value=ec.docFreq||'';
     document.getElementById('f_invoiceCarry').value=ec.invoiceCarry||'N';
+    document.getElementById('f_docStatus').value=ec.docStatus||'';
     document.getElementById('f_docMemo').value=ec.docMemo||'';
+    var cl=ec.onboardChecklist||{};
+    ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
     document.getElementById('f_clientOrigin').value=ec.clientOrigin||'신규';
     document.getElementById('f_originOffice').value=ec.originOffice||'';
     toggleOriginOffice();
@@ -1747,9 +1835,9 @@ function openClientModal(ec){
     ['f_type','f_entity','f_biz','f_tax','f_vatFreq','f_manager','f_finalConsultant','f_firstConsultant','f_trainer','f_dismissReason','f_linked','f_extReferral','f_sourceChannel'].forEach(id=>document.getElementById(id).selectedIndex=0);
     document.getElementById('f_closingType').selectedIndex=0;
     document.getElementById('f_closingChangeDate').value='';
-    document.getElementById('f_docMethod').value='';
-    document.getElementById('f_docFreq').value='';
     document.getElementById('f_invoiceCarry').value='N';
+    document.getElementById('f_docStatus').value='';
+    ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
     document.getElementById('f_docMemo').value='';
     document.getElementById('f_clientOrigin').value='신규';
     document.getElementById('f_originOffice').value='';
@@ -1888,8 +1976,8 @@ function saveClient(){
     closingChangeDate:document.getElementById('f_closingChangeDate').value,
     clientOrigin:document.getElementById('f_clientOrigin').value,
     originOffice:document.getElementById('f_clientOrigin').value==='이관'?document.getElementById('f_originOffice').value.trim():'',
-    docMethod:document.getElementById('f_docMethod').value,docFreq:document.getElementById('f_docFreq').value,
-    invoiceCarry:document.getElementById('f_invoiceCarry').value,docMemo:document.getElementById('f_docMemo').value.trim(),
+    invoiceCarry:document.getElementById('f_invoiceCarry').value,docStatus:document.getElementById('f_docStatus').value,docMemo:document.getElementById('f_docMemo').value.trim(),
+    onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
     notes:document.getElementById('f_notes').value.trim(),updatedAt:new Date().toISOString()};
   // 비관리자: 승인 대기열로 보내기
   if(!isAdmin()){
@@ -1966,7 +2054,7 @@ function saveClient(){
         ['유입구분','clientOrigin'],['유입경로','sourceChannel'],['이관사무실','originOffice'],
         ['소개업체','referredBy'],['외부소개유형','extReferral'],
         ['최종상담자','finalConsultant'],['1차상담자','firstConsultant'],['1:1교육','trainer'],
-        ['자료수령','docMethod'],['수령주기','docFreq'],['자료메모','docMemo'],
+        ['자료수령상태','docStatus'],['자료메모','docMemo'],
         ['소급기장료','retroFee',1],['소급개월수','retroMonths'],['세금계산서발행월','retroBillingMonth'],
         ['2부연결','linkedTo'],['해임사유','dismissReason'],['해임월','dismissDate'],['폐업일','closureDate'],
         ['비고','notes']
@@ -2030,7 +2118,7 @@ function viewClient(id){
     <div><small style="color:#64748b">1:1교육</small><br>${c.trainer||'-'}</div>
     <div><small style="color:#64748b">유입구분</small><br>${c.clientOrigin==='이관'?'<span style="color:#dd6b20;font-weight:600">이관</span>':'신규'}</div>
     ${c.clientOrigin==='이관'&&c.originOffice?'<div><small style="color:#64748b">이관 사무실</small><br><strong style="color:#dd6b20">'+c.originOffice+'</strong></div>':''}
-    ${c.docMethod?'<div><small style="color:#64748b">자료수령</small><br>'+c.docMethod+(c.docFreq?' ('+c.docFreq+')':'')+'</div>':''}
+    ${c.docStatus?'<div><small style="color:#64748b">자료수령</small><br><span style="color:'+(c.docStatus==='수령완료'?'#38a169':'#d69e2e')+';font-weight:600">'+c.docStatus+'</span></div>':''}
     ${c.invoiceCarry==='Y'?'<div><small style="color:#d69e2e">세금계산서 이월</small><br><strong style="color:#d69e2e">이월대상</strong></div>':''}
     ${c.docMemo?'<div><small style="color:#64748b">자료메모</small><br>'+c.docMemo+'</div>':''}
   </div>
@@ -2948,8 +3036,10 @@ function renderIncomeList(){
   var t3Income=list.filter(function(c){return c.type==='3부'}).length;
   var mgrCounts={};list.forEach(function(c){var mg=c.manager||'미배정';mgrCounts[mg]=(mgrCounts[mg]||0)+1;});
   var mgrCountStr=Object.entries(mgrCounts).sort(function(a,b){return b[1]-a[1]}).map(function(e){return e[0]+' '+e[1]+'건'}).join(' · ');
+  var totalAdjFee=list.reduce(function(s,c){return s+(c.adjFee||0)},0);
   document.getElementById('incomeCount').innerHTML='('+year+'년 귀속 <strong style="color:#2b6cb0">신고 '+filingCount+'건</strong> · <strong style="color:#d69e2e">사업장 '+bizCount+'개</strong> / 신고기한 '+(year+1)+'.05)'
-    +'<div style="font-size:11px;color:#64748b;margin-top:4px"><span style="color:#3182ce">1부 '+t1Income+'</span> · <span style="color:#805ad5">3부 '+(list.length-t1Income-list.filter(function(c){return c.type==='2부'}).length)+'</span> · <span style="color:#d69e2e">2부 '+list.filter(function(c){return c.type==='2부'}).length+'</span></div>'
+    +'<div style="font-size:11px;color:#64748b;margin-top:4px"><span style="color:#3182ce">1부 '+t1Income+'</span> · <span style="color:#805ad5">3부 '+(list.length-t1Income-list.filter(function(c){return c.type==='2부'}).length)+'</span> · <span style="color:#d69e2e">2부 '+list.filter(function(c){return c.type==='2부'}).length+'</span>'
+    +(totalAdjFee?' · <span style="color:#805ad5">예상조정료 합계 '+W(totalAdjFee)+'</span>':'')+'</div>'
     +'<div style="font-size:10px;color:#94a3b8;margin-top:2px">담당자: '+mgrCountStr+'</div>';
   const el=document.getElementById('incomeGroups');
   if(!keys.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#a0aec0">없음</div>';return}
@@ -2980,6 +3070,7 @@ function renderIncomeList(){
       h+='<span style="font-weight:500;flex:1">'+c.name+pogiLabel+'</span>';
       h+='<span style="color:#64748b;font-size:10px">'+( c.manager||'-')+'</span>';
       h+='<span style="text-align:right;font-weight:600;min-width:55px">'+fmt(c.fee)+'</span>';
+      h+=(c.adjFee?'<span style="text-align:right;color:#805ad5;font-size:10px;min-width:55px">조정 '+fmt(c.adjFee)+'</span>':'');
       h+='</div>';
     });
     h+='</div></div>';
@@ -3328,7 +3419,7 @@ function renderInvoice(){
   var mcEl=document.getElementById('invMonthlyCount');if(mcEl)mcEl.textContent='('+rows.length+'건 · '+W(gf+gr+ge)+')';
   var ecEl=document.getElementById('invExtraCount');
   var extraAll=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type!=='부가세신고수수료'});
-  if(ecEl)ecEl.textContent='('+extraAll.length+'건 · '+W(extraTotal)+')';
+  if(ecEl){var mp=month.split('-');ecEl.textContent=mp[0]+'년 '+parseInt(mp[1])+'월 ('+extraAll.length+'건 · '+W(extraTotal)+')';}
   var rcEl=document.getElementById('invRetroCount');
   if(rcEl){var retroActCnt=rows.filter(function(r){return r.retro>0}).length;rcEl.textContent='('+retroActCnt+'건 · '+W(gr)+')';}
   var bcEl=document.getElementById('invBu2Count');
@@ -3988,7 +4079,7 @@ function handleExcelUpload(input){
             ecommerceDetail:biz==='전자상거래'?String(r['전자상거래세부(국내/해외/국내+해외/구매대행)']||r['전자상거래세부(국내/해외(큐텐,쇼피)/국내+해외/구매대행)']||'국내').trim():'',
             taxType:tax, vatFreq:vatFreq, closingType:closingType, closingChangeDate:'',
             manager:String(r['담당자']||'').trim(),
-            fee:fee, adjFee:Number(r['예상조정료'])||0, extraFee:(type==='2부'||type==='3부')?Number(r['기타수수료(2부/3부)'])||0:0,
+            fee:fee, adjFee:Number(r['예상조정료'])||0, extraFee:Number(r['기타수수료(2부/3부)']||r['기타수수료'])||0,
             startMonth:startMonth, billingStart:billingStart,
             contractDate:parseExcelDate(r['계약일(YYYY-MM-DD)']),
             retroApply:retroApply,
@@ -4008,7 +4099,7 @@ function handleExcelUpload(input){
             status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
             deferredMonths:0,
             feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:nowStr}]:[],
-            managerHistory:cd.manager?[{manager:cd.manager,startMonth:billingStart||startMonth||'',memo:'초기 배정(일괄등록)',date:nowStr}]:[],
+            managerHistory:String(r['담당자']||'').trim()?[{manager:String(r['담당자']||'').trim(),startMonth:billingStart||startMonth||'',memo:'초기 배정(일괄등록)',date:nowStr}]:[],
             createdAt:nowStr, updatedAt:nowStr
           };
           data.clients.push(cd);added++;
@@ -5470,7 +5561,7 @@ function renderExtraInvoices(monthParam){
   // 부가세신고수수료 제외 (2부업체 수수료 탭으로 이동)
   var extras=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type!=='부가세신고수수료'});
   var bonusRates={경정청구:0.2,수정신고:0.2,법인전환:0.2,재산세:0.2,해명자료대응:0.1,기한후신고:0.2};
-  if(!extras.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#a0aec0">해당월 추가발행 없음</td></tr>';return}
+  if(!extras.length){var mp2=month.split('-');tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#a0aec0">'+mp2[0]+'년 '+parseInt(mp2[1])+'월 추가발행 없음</td></tr>';return}
   tb.innerHTML=extras.map(function(e,i){
     // 전체 인덱스 찾기
     var realIdx=data.extraInvoices.indexOf(e);
@@ -5966,10 +6057,16 @@ function renderBonus(){
     var redExist=getRedItemsForMonth(ym).length>0;
     inputChecks.push({id:'_red',name:'레드 항목 (건별수수료)',done:redExist,optional:true});
   }
-  // 레드항목 미구분 체크 (미구분 있으면 필수 알림)
-  var redUndecided=getRedItemsForMonth(ym).filter(function(r){return !r.paid||r.paid===''});
-  if(redUndecided.length){
-    inputChecks.push({id:'_redUndecided',name:'건별수수료 입금 미구분 '+redUndecided.length+'건',done:false,optional:false});
+  // 레드항목 미구분 체크 (미구분 있으면 필수 알림) — 이월건은 _displayPaid 기준
+  var redAllForMonth=getRedItemsForMonth(ym);
+  var redUndecided=redAllForMonth.filter(function(r){var dp=r._displayPaid!==undefined?r._displayPaid:r.paid;return !dp||dp==='';});
+  var redCarriedUndecided=redUndecided.filter(function(r){return r._carried});
+  var redOwnUndecided=redUndecided.filter(function(r){return !r._carried});
+  if(redOwnUndecided.length){
+    inputChecks.push({id:'_redUndecided',name:'건별수수료 입금 미구분 '+redOwnUndecided.length+'건',done:false,optional:false});
+  }
+  if(redCarriedUndecided.length){
+    inputChecks.push({id:'_redCarried',name:'전월 이월 건별수수료 입금여부 미입력 '+redCarriedUndecided.length+'건',done:false,optional:false});
   }
   var incomplete=inputChecks.filter(function(c){return !c.done&&!c.optional});
   var incompleteOptional=inputChecks.filter(function(c){return !c.done&&c.optional});
@@ -6193,9 +6290,9 @@ function renderBonus(){
       +'<div style="font-size:11px;color:#805ad5;background:#f5f3ff;border-radius:6px;padding:6px 12px;margin-bottom:8px">추가발행 등록 시 자동입력되니 <strong>입금여부만 체크</strong>하시오</div>';
     // 이번달 건 + 이전달 미입금 이월건
     var redExisting=getRedItemsForMonth(ym);
-    var paidCount=redExisting.filter(function(r){return r.paid==='Y'}).length;
-    var unpaidCount=redExisting.filter(function(r){return r.paid==='N'}).length;
-    var undecidedCount=redExisting.filter(function(r){return !r.paid||r.paid===''}).length;
+    var paidCount=redExisting.filter(function(r){var dp=r._displayPaid!==undefined?r._displayPaid:r.paid;return dp==='Y'}).length;
+    var unpaidCount=redExisting.filter(function(r){var dp=r._displayPaid!==undefined?r._displayPaid:r.paid;return dp==='N'}).length;
+    var undecidedCount=redExisting.filter(function(r){var dp=r._displayPaid!==undefined?r._displayPaid:r.paid;return !dp||dp===''}).length;
     var carriedCount=redExisting.filter(function(r){return r._carried}).length;
     if(redExisting.length){
       var redSummary='<div style="display:flex;gap:10px;margin-bottom:6px;font-size:11px">'
@@ -6706,7 +6803,12 @@ function getRedItemsForMonth(ym){
       if(r.month===prevYm){
         // 미입금 이월
         if(r.paid!=='Y'){
-          result.push(Object.assign({},r,{_origIdx:i,_carried:true,_origMonth:r.month}));
+          var item=Object.assign({},r,{_origIdx:i,_carried:true,_origMonth:r.month});
+          // 이월건은 해당월에서 확인(confirmedMonth)하지 않았으면 미구분으로 표시
+          if(r.confirmedMonth!==ym){
+            item._displayPaid='';
+          }
+          result.push(item);
           addedIdx[i]=true;
         }
         // 이번달에 입금완료된 건 (입금일 기준 상여 반영 + 내역 유지)
@@ -6721,14 +6823,23 @@ function getRedItemsForMonth(ym){
 }
 function toggleRedPaid(origIdx,val){
   if(!data.bonusData.redItems||origIdx<0||origIdx>=data.bonusData.redItems.length)return;
+  var viewYear=document.getElementById('bonusYear').value;
+  var viewMonth=parseInt(document.getElementById('bonusMonth').value)||new Date().getMonth()+1;
+  var paidYm=viewYear+'-'+(viewMonth<10?'0'+viewMonth:viewMonth);
   data.bonusData.redItems[origIdx].paid=val;
   if(val==='Y'){
     // 현재 보고 있는 상여 월 기준으로 paidDate 저장 (실제 날짜가 아닌 조회 중인 월)
-    var viewYear=document.getElementById('bonusYear').value;
-    var viewMonth=parseInt(document.getElementById('bonusMonth').value)||new Date().getMonth()+1;
-    var paidYm=viewYear+'-'+(viewMonth<10?'0'+viewMonth:viewMonth);
     data.bonusData.redItems[origIdx].paidDate=paidYm+'-15T00:00:00.000Z';
-  }else{delete data.bonusData.redItems[origIdx].paidDate;}
+    delete data.bonusData.redItems[origIdx].confirmedMonth;
+  }else if(val==='N'){
+    delete data.bonusData.redItems[origIdx].paidDate;
+    // 이월건에서 미입금 선택 시 해당월 확인 완료 표시 (미구분 알림 해제)
+    var origMonth=data.bonusData.redItems[origIdx].month;
+    if(origMonth!==paidYm){data.bonusData.redItems[origIdx].confirmedMonth=paidYm;}
+  }else{
+    delete data.bonusData.redItems[origIdx].paidDate;
+    delete data.bonusData.redItems[origIdx].confirmedMonth;
+  }
   saveData();renderBonus();
   // 세금계산서 추가발행 내역도 동기화
   var r=data.bonusData.redItems[origIdx];
@@ -6990,32 +7101,56 @@ function initObMonth(){
   }
   sel.innerHTML=opts;
 }
+var OB_CHECKLIST_ITEMS=[
+  {key:'katalk',label:'카톡채널'},{key:'hometax',label:'홈택스수임등록'},
+  {key:'flowTitle',label:'플로우-제목'},{key:'flowSample',label:'플로우샘플'},
+  {key:'wimembers',label:'위멤버스등록'},{key:'contract',label:'계약서'},
+  {key:'semoReport',label:'세모레포트/자동발송'},{key:'customerGuide',label:'고객안내'},
+  {key:'wehago',label:'위하고등록'},{key:'permission',label:'권한부여'},
+  {key:'wehagoIdPw',label:'위하고ID/PW'},{key:'dataCollect',label:'자료수집'},
+  {key:'flowBasic',label:'플로우 기본정보'},{key:'tpClient',label:'tp수임처'},
+  {key:'cashReceipt',label:'현금영수증가맹점'},{key:'bizAccount',label:'사업용계좌등록'},
+  {key:'edi',label:'edi신청'}
+];
+function getChecklistProgress(c){
+  var cl=c.onboardChecklist||{};
+  var done=0;OB_CHECKLIST_ITEMS.forEach(function(it){if(cl[it.key])done++});
+  return {done:done,total:OB_CHECKLIST_ITEMS.length};
+}
+function toggleObChecklist(clientId,key){
+  var c=data.clients.find(function(x){return x.id===clientId});
+  if(!c)return;
+  if(!c.onboardChecklist)c.onboardChecklist={};
+  c.onboardChecklist[key]=!c.onboardChecklist[key];
+  saveData();renderOnboarding();
+}
 function renderOnboarding(){
   var ym=document.getElementById('obMonth').value;
   var mgrF=document.getElementById('obMgrFilter').value;
-  // 임시/미정 업체 = 신규수임 대상
+  // 신규수임 대상: 임시/미정 업체 + 자료받는중 업체
   var pending=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
     var nm=c.name||'';
     var isPending=nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1;
-    // 계약월 필터: billingStart 또는 contractDate 기준
+    var isReceiving=c.docStatus==='받는중';
+    if(!isPending&&!isReceiving)return false;
     var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
     if(ym&&cMonth&&cMonth>ym)return false;
     if(mgrF&&c.manager!==mgrF)return false;
-    return isPending;
+    return true;
   });
-  // 이번 달 전환된 업체: 이전에 미정/임시였다가 전환 완료
+  // 이번 달 전환된 업체
   var converted=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
     var nm=c.name||'';
     if(nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1)return false;
-    // contractDate 또는 billingStart가 해당 월
+    if(c.docStatus==='받는중')return false;
     var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
     if(cMonth!==ym)return false;
     if(mgrF&&c.manager!==mgrF)return false;
     return true;
   });
-  // 이연 청구 대기 (deferredMonths>0)
+  // 이연 청구 대기
   var deferred=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
     if(!c.deferredMonths||c.deferredMonths<=0)return false;
@@ -7024,19 +7159,17 @@ function renderOnboarding(){
     if(mgrF&&c.manager!==mgrF)return false;
     return true;
   });
-  // 자료 수령 여부 판단: 핵심필드가 입력되었으면 자료수령 상태
-  function hasDocInfo(c){
-    return c.bizRegNo&&c.bizRegNo.length>5;
-  }
-  var docWaiting=pending.filter(function(c){return !hasDocInfo(c)});
-  var infoEntering=pending.filter(function(c){return hasDocInfo(c)});
+  // 분류: 자료미수령 vs 자료받는중
+  function hasDocInfo(c){return c.bizRegNo&&c.bizRegNo.length>5}
+  var docWaiting=pending.filter(function(c){return c.docStatus!=='받는중'&&!hasDocInfo(c)});
+  var receiving=pending.filter(function(c){return c.docStatus==='받는중'||hasDocInfo(c)});
   // 파이프라인
   var pipe=document.getElementById('obPipeline');
   pipe.innerHTML='<div style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#2b6cb0;border-radius:8px 0 0 8px;font-weight:700"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
-    +'<div style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:#fed7d7;color:#c53030;font-weight:700"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
-    +'<div style="flex:1;text-align:center;padding:10px;background:#c6f6d5;color:#276749;font-weight:700"><div style="font-size:22px">'+infoEntering.length+'</div><div style="font-size:11px">정보입력중</div></div>'
+    +'<div style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700"><div style="font-size:22px">'+receiving.length+'</div><div style="font-size:11px">자료받는중</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
     +'<div style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
   // 자료 미수령
@@ -7046,38 +7179,41 @@ function renderOnboarding(){
     docWaiting.forEach(function(c){
       var days=c.contractDate?Math.floor((new Date()-new Date(c.contractDate))/(86400000)):0;
       var dayBadge=days>=7?'background:#fed7d7;color:#c53030':'background:#fefcbf;color:#975a16';
-      h1+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px">'
+      h1+='<div style="padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between">'
         +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="'+dayBadge+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">'+(days>0?days+'일 경과':'')+'</span></div>'
         +'<div style="font-size:11px;color:#718096;margin-top:2px">'+(c.contractDate||'')+' 계약 · 담당: '+(c.manager||'-')+'</div></div>'
         +'<div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div>'
-        +'</div>';
+        +'</div></div>';
     });
   }
   document.getElementById('obDocWaiting').innerHTML=h1;
-  // 정보 입력중
+  // 자료 받는중 (경영지원 체크리스트 포함)
   var h2='';
-  if(infoEntering.length){
-    h2+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">📝 자료수령/정보입력중 <span style="background:#bee3f8;color:#2b6cb0;padding:2px 8px;border-radius:10px;font-size:11px">'+infoEntering.length+'건</span></div>';
-    infoEntering.forEach(function(c){
-      var checks=[];
-      if(c.name&&c.name.indexOf('임시')===-1&&c.name.indexOf('미정')===-1)checks.push('상호');
-      if(c.bizRegNo)checks.push('사업자번호');
-      if(c.ownerName)checks.push('대표자');
-      if(c.fee>0)checks.push('기장료');
-      if(c.businessType)checks.push('업종');
-      var missing=[];
-      if(!c.ownerName)missing.push('대표자');
-      if(!c.fee||c.fee<=0)missing.push('기장료');
-      if(!c.businessType)missing.push('업종');
-      h2+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #bee3f8;border-radius:8px;margin-bottom:6px">'
-        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#bee3f8;color:#2b6cb0;padding:2px 8px;border-radius:10px;font-size:10px">자료수령</span></div>'
-        +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+'</div>'
-        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'
-        +checks.map(function(x){return '<span style="background:#c6f6d5;color:#276749;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">'+x+' ✓</span>'}).join('')
-        +missing.map(function(x){return '<span style="background:#fed7d7;color:#c53030;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">'+x+' ✗</span>'}).join('')
-        +'</div></div>'
-        +'<div style="display:flex;gap:4px"><button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 정보입력</button></div>'
-        +'</div>';
+  if(receiving.length){
+    h2+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">📝 자료받는중 / 진행중 <span style="background:#fefcbf;color:#975a16;padding:2px 8px;border-radius:10px;font-size:11px">'+receiving.length+'건</span></div>';
+    receiving.forEach(function(c){
+      var prog=getChecklistProgress(c);
+      var pct=prog.total?Math.round(prog.done/prog.total*100):0;
+      var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
+      var cl=c.onboardChecklist||{};
+      h2+='<div style="padding:10px 14px;border:1px solid #fefcbf;border-radius:8px;margin-bottom:8px;background:#fffdf7">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div><div style="font-weight:700;font-size:13px">'+c.name+'</div>'
+        +'<div style="font-size:11px;color:#718096;margin-top:2px">'+(c.contractDate||'')+' 계약 · 담당: '+(c.manager||'-')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+prog.done+'/'+prog.total+'</span>'
+        +'<button class="btn btn-sm btn-primary" onclick="editClientById(\''+c.id+'\')">✏️ 상세</button></div></div>'
+        // 프로그레스 바
+        +'<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:4px;transition:width .3s"></div></div>'
+        // 체크리스트 인라인
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      OB_CHECKLIST_ITEMS.forEach(function(it){
+        var checked=!!cl[it.key];
+        h2+='<label onclick="toggleObChecklist(\''+c.id+'\',\''+it.key+'\')" style="display:flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;user-select:none;border:1px solid '+(checked?'#c6f6d5':'#e2e8f0')+';background:'+(checked?'#f0fff4':'#fff')+';color:'+(checked?'#276749':'#718096')+';font-weight:'+(checked?'600':'400')+'">'
+          +'<span style="font-size:11px">'+(checked?'✓':'○')+'</span> '+it.label+'</label>';
+      });
+      h2+='</div></div>';
     });
   }
   document.getElementById('obInfoEntering').innerHTML=h2;
@@ -7086,8 +7222,11 @@ function renderOnboarding(){
   if(converted.length){
     h3+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">✅ 이번달 전환 완료 <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:11px">'+converted.length+'건</span></div>';
     converted.forEach(function(c){
+      var prog=getChecklistProgress(c);
+      var pct=prog.total?Math.round(prog.done/prog.total*100):0;
       h3+='<div style="display:flex;align-items:center;padding:10px 14px;border:1px solid #c6f6d5;border-radius:8px;margin-bottom:6px;background:#f0fff4">'
-        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:10px">전환완료</span></div>'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:10px">전환완료</span>'
+        +(pct<100?' <span style="background:#fed7d7;color:#c53030;padding:2px 6px;border-radius:10px;font-size:9px">체크 '+prog.done+'/'+prog.total+'</span>':'')+'</div>'
         +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+' · 기장료: '+W(c.fee||0)+(c.deferredMonths>0?' · 이연: '+c.deferredMonths+'개월':'')+'</div></div>'
         +'</div>';
     });
@@ -7125,11 +7264,35 @@ function initConsultYear(){
 function initConsultCounselors(){
   var staff=data.staff.filter(function(s){return !s.leaveDate});
   var h1='<option value="">선택</option>',h2='<option value="">없음</option>';
-  staff.forEach(function(s){h1+='<option>'+s.name+'</option>';h2+='<option>'+s.name+'</option>'});
+  staff.forEach(function(s){
+    var teamTag=s.team?'('+s.team+')':'(세무팀)';
+    h1+='<option value="'+s.name+'">'+s.name+' '+teamTag+'</option>';
+    h2+='<option value="'+s.name+'">'+s.name+' '+teamTag+'</option>';
+  });
   var c1=document.getElementById('cs_counselor1');
   var c2=document.getElementById('cs_counselor2');
   if(c1)c1.innerHTML=h1;
   if(c2)c2.innerHTML=h2;
+}
+function toggleCsReferral(){
+  var src=document.getElementById('cs_source').value;
+  var show=src==='지인소개'||src==='기존업체소개';
+  document.getElementById('csReferralGroup').style.display=show?'block':'none';
+  if(!show){document.getElementById('cs_referralSearch').value='';document.getElementById('cs_referralId').value='';}
+}
+function searchCsReferral(q){
+  var res=document.getElementById('csReferralResults');
+  if(!q||q.length<1){res.style.display='none';return}
+  var ql=q.toLowerCase();
+  var matches=data.clients.filter(function(c){return (c.name||'').toLowerCase().indexOf(ql)!==-1||(c.id||'').toLowerCase().indexOf(ql)!==-1}).slice(0,10);
+  if(!matches.length){res.style.display='none';return}
+  res.innerHTML=matches.map(function(c){return '<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background=\'#edf2f7\'" onmouseout="this.style.background=\'#fff\'" onclick="selectCsReferral(\''+c.id+'\',\''+c.name.replace(/'/g,"\\'")+'\')">'+c.id+' <strong>'+c.name+'</strong> <span style="color:#718096;font-size:10px">'+(c.manager||'')+'</span></div>'}).join('');
+  res.style.display='block';
+}
+function selectCsReferral(id,name){
+  document.getElementById('cs_referralId').value=id;
+  document.getElementById('cs_referralSearch').value=id+' '+name;
+  document.getElementById('csReferralResults').style.display='none';
 }
 function openConsultModal(idx){
   initConsultCounselors();
@@ -7151,29 +7314,33 @@ function openConsultModal(idx){
     document.getElementById('cs_contracted').value=c.contracted||'N';
     document.getElementById('cs_contractDate').value=c.contractDate||'';
     document.getElementById('cs_detail').value=c.detail||'';
+    document.getElementById('cs_referralId').value=c.referralId||'';
+    document.getElementById('cs_referralSearch').value=c.referralName||'';
+    toggleCsReferral();
   }else{
     document.getElementById('cs_editId').value='';
-    ['cs_date','cs_name','cs_phone','cs_biz','cs_revenue','cs_expectedFee','cs_notes','cs_contractDate','cs_detail'].forEach(function(id){document.getElementById(id).value=''});
+    ['cs_date','cs_name','cs_phone','cs_revenue','cs_expectedFee','cs_notes','cs_contractDate','cs_detail','cs_referralSearch','cs_referralId'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('cs_entity').value='개인';
+    document.getElementById('cs_biz').value='';
     document.getElementById('cs_source').value='';
     document.getElementById('cs_counselor1').value='';
     document.getElementById('cs_counselor2').value='';
     document.getElementById('cs_contracted').value='N';
     document.getElementById('cs_date').value=new Date().toISOString().slice(0,10);
+    toggleCsReferral();
   }
   document.getElementById('consultModal').classList.add('show');
 }
 function closeConsultModal(){document.getElementById('consultModal').classList.remove('show')}
 function saveConsult(){
-  var name=document.getElementById('cs_name').value.trim();
   var date=document.getElementById('cs_date').value;
-  if(!name){toast('성함을 입력하세요');return}
-  if(!date){toast('상담일을 입력하세요');return}
+  if(!date)date=new Date().toISOString().slice(0,10);
   var obj={
-    date:date,name:name,
+    date:date,
+    name:document.getElementById('cs_name').value.trim(),
     phone:document.getElementById('cs_phone').value.trim(),
     entity:document.getElementById('cs_entity').value,
-    biz:document.getElementById('cs_biz').value.trim(),
+    biz:document.getElementById('cs_biz').value,
     revenue:parseInt(document.getElementById('cs_revenue').value)||0,
     expectedFee:parseInt(document.getElementById('cs_expectedFee').value)||0,
     source:document.getElementById('cs_source').value,
@@ -7182,7 +7349,9 @@ function saveConsult(){
     counselor2:document.getElementById('cs_counselor2').value,
     contracted:document.getElementById('cs_contracted').value,
     contractDate:document.getElementById('cs_contractDate').value,
-    detail:document.getElementById('cs_detail').value
+    detail:document.getElementById('cs_detail').value,
+    referralId:document.getElementById('cs_referralId').value,
+    referralName:document.getElementById('cs_referralSearch').value.trim()
   };
   var editIdx=document.getElementById('cs_editId').value;
   if(editIdx!==''){
@@ -7272,13 +7441,14 @@ function renderConsultStats(){
   });
   var total=filtered.length;
   var contracted=filtered.filter(function(c){return c.contracted==='Y'}).length;
+  var progressing=filtered.filter(function(c){return c.contracted==='P'}).length;
   var rate=total>0?Math.round(contracted/total*100):0;
   var totalExpFee=filtered.reduce(function(s,c){return s+(c.expectedFee||0)},0);
   var contractedExpFee=filtered.filter(function(c){return c.contracted==='Y'}).reduce(function(s,c){return s+(c.expectedFee||0)},0);
   // 유입경로별
   var srcMap={};
   filtered.forEach(function(c){var s=c.source||'미분류';if(!srcMap[s])srcMap[s]={total:0,contracted:0};srcMap[s].total++;if(c.contracted==='Y')srcMap[s].contracted++});
-  // 상담자별 계약률
+  // 상담자별
   var cslrMap={};
   filtered.forEach(function(c){
     [c.counselor1,c.counselor2].forEach(function(name){
@@ -7288,52 +7458,77 @@ function renderConsultStats(){
       if(c.contracted==='Y')cslrMap[name].contracted++;
     });
   });
-  // 월별 추이 (해당 연도)
+  // 월별 (해당 연도)
   var monthlyData={};
+  var maxMonthTotal=0;
   data.consultations.filter(function(c){return c.date&&c.date.slice(0,4)===year}).forEach(function(c){
     var m=c.date.slice(5,7);
     if(!monthlyData[m])monthlyData[m]={total:0,contracted:0,fee:0};
     monthlyData[m].total++;
+    if(monthlyData[m].total>maxMonthTotal)maxMonthTotal=monthlyData[m].total;
     if(c.contracted==='Y'){monthlyData[m].contracted++;monthlyData[m].fee+=(c.expectedFee||0)}
   });
-  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">'
+  // === 숫자 카드 ===
+  var h='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
     +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#2b6cb0">'+total+'</div><div style="font-size:10px;color:#64748b">총 상담</div></div>'
     +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#38a169">'+contracted+'</div><div style="font-size:10px;color:#64748b">계약완료</div></div>'
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#d69e2e">'+progressing+'</div><div style="font-size:10px;color:#64748b">진행중</div></div>'
     +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#805ad5">'+rate+'%</div><div style="font-size:10px;color:#64748b">계약률</div></div>'
-    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#dd6b20">'+W(totalExpFee)+'</div><div style="font-size:10px;color:#64748b">예상기장료합계</div></div>'
     +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#e53e3e">'+W(contractedExpFee)+'</div><div style="font-size:10px;color:#64748b">계약 기장료</div></div>'
     +'</div>';
-  // 유입경로 + 상담자별 테이블
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
-  // 유입경로
-  h+='<div style="background:#f7fafc;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">📊 유입경로별</div><table style="font-size:11px"><thead><tr><th>유입경로</th><th>상담수</th><th>계약</th><th>계약률</th></tr></thead><tbody>';
-  Object.keys(srcMap).sort(function(a,b){return srcMap[b].total-srcMap[a].total}).forEach(function(k){
-    var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-    h+='<tr><td>'+k+'</td><td style="text-align:center">'+d.total+'</td><td style="text-align:center">'+d.contracted+'</td><td style="text-align:center;font-weight:600">'+r+'%</td></tr>';
-  });
-  h+='</tbody></table></div>';
-  // 상담자별
-  h+='<div style="background:#f7fafc;border-radius:8px;padding:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">👤 상담자별 계약률</div><table style="font-size:11px"><thead><tr><th>상담자</th><th>상담수</th><th>계약</th><th>계약률</th></tr></thead><tbody>';
-  Object.keys(cslrMap).sort(function(a,b){return cslrMap[b].total-cslrMap[a].total}).forEach(function(k){
-    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-    h+='<tr><td>'+k+'</td><td style="text-align:center">'+d.total+'</td><td style="text-align:center">'+d.contracted+'</td><td style="text-align:center;font-weight:600;color:'+(r>=50?'#276749':'#c53030')+'">'+r+'%</td></tr>';
-  });
-  h+='</tbody></table></div>';
-  h+='</div>';
-  // 월별 추이
-  if(!month){
-    h+='<div style="background:#f7fafc;border-radius:8px;padding:12px;margin-top:12px"><div style="font-size:12px;font-weight:700;color:#1a365d;margin-bottom:8px">📅 '+year+'년 월별 추이</div>'
-      +'<table style="font-size:11px"><thead><tr><th>월</th><th>상담수</th><th>계약</th><th>계약률</th><th>계약 기장료</th></tr></thead><tbody>';
-    for(var m=1;m<=12;m++){
-      var mk=m<10?'0'+m:''+m;
-      var md=monthlyData[mk]||{total:0,contracted:0,fee:0};
-      var mr=md.total>0?Math.round(md.contracted/md.total*100):0;
-      if(md.total>0){
-        h+='<tr><td style="text-align:center">'+m+'월</td><td style="text-align:center">'+md.total+'</td><td style="text-align:center">'+md.contracted+'</td><td style="text-align:center;font-weight:600">'+mr+'%</td><td style="text-align:right">'+W(md.fee)+'</td></tr>';
-      }
-    }
-    h+='</tbody></table></div>';
+  // === 월별 상담건수 바 차트 ===
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">'
+    +'<div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:12px">📊 '+year+'년 월별 상담건수 / 계약률</div>'
+    +'<div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:24px;position:relative">';
+  for(var bm=1;bm<=12;bm++){
+    var bmk=bm<10?'0'+bm:''+bm;
+    var bmd=monthlyData[bmk]||{total:0,contracted:0,fee:0};
+    var bh=maxMonthTotal>0?Math.round(bmd.total/maxMonthTotal*100):0;
+    var ch=maxMonthTotal>0?Math.round(bmd.contracted/maxMonthTotal*100):0;
+    var bmr=bmd.total>0?Math.round(bmd.contracted/bmd.total*100):0;
+    h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
+      +'<div style="font-size:9px;font-weight:700;color:#2b6cb0">'+(bmd.total||'')+'</div>'
+      +'<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:100px;position:relative">'
+      +'<div style="width:100%;height:'+bh+'px;background:#bee3f8;border-radius:3px 3px 0 0;position:relative">'
+      +'<div style="width:100%;height:'+ch+'px;background:#2b6cb0;border-radius:3px 3px 0 0;position:absolute;bottom:0"></div>'
+      +'</div></div>'
+      +'<div style="font-size:9px;color:#718096;font-weight:600;border-top:1px solid #e2e8f0;padding-top:2px;width:100%;text-align:center">'+bm+'월</div>'
+      +(bmd.total>0?'<div style="font-size:8px;color:'+(bmr>=50?'#276749':'#c53030')+';font-weight:700">'+bmr+'%</div>':'')
+      +'</div>';
   }
+  h+='</div>'
+    +'<div style="display:flex;gap:16px;font-size:10px;color:#64748b;margin-top:4px">'
+    +'<span><span style="display:inline-block;width:10px;height:10px;background:#bee3f8;border-radius:2px;margin-right:3px"></span>상담건수</span>'
+    +'<span><span style="display:inline-block;width:10px;height:10px;background:#2b6cb0;border-radius:2px;margin-right:3px"></span>계약건수</span>'
+    +'<span>숫자 = 계약률</span></div></div>';
+  // === 유입경로 + 상담자별 (바 차트 포함) ===
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  // 유입경로 바 차트
+  var srcKeys=Object.keys(srcMap).sort(function(a,b){return srcMap[b].total-srcMap[a].total});
+  var maxSrc=srcKeys.length?srcMap[srcKeys[0]].total:1;
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px"><div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">📈 유입경로별</div>';
+  srcKeys.forEach(function(k){
+    var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    var bw=Math.round(d.total/maxSrc*100);
+    h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">'+k+'</span><span style="color:#64748b">'+d.total+'건 (계약 '+d.contracted+' · '+r+'%)</span></div>'
+      +'<div style="background:#edf2f7;border-radius:4px;height:12px;overflow:hidden"><div style="width:'+bw+'%;height:100%;background:linear-gradient(90deg,#bee3f8,#2b6cb0);border-radius:4px;position:relative">'
+      +(d.contracted?'<div style="width:'+Math.round(d.contracted/d.total*100)+'%;height:100%;background:#38a169;border-radius:4px"></div>':'')
+      +'</div></div></div>';
+  });
+  h+='</div>';
+  // 상담자별
+  var cslrKeys=Object.keys(cslrMap).sort(function(a,b){return cslrMap[b].total-cslrMap[a].total});
+  var maxCslr=cslrKeys.length?cslrMap[cslrKeys[0]].total:1;
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px"><div style="font-size:13px;font-weight:700;color:#1a365d;margin-bottom:10px">👤 상담자별 계약률</div>';
+  cslrKeys.forEach(function(k){
+    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+    var bw=Math.round(d.total/maxCslr*100);
+    h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">'+k+'</span><span style="color:'+(r>=50?'#276749':'#c53030')+';font-weight:700">'+r+'% <span style="color:#64748b;font-weight:400">('+d.contracted+'/'+d.total+')</span></span></div>'
+      +'<div style="background:#edf2f7;border-radius:4px;height:12px;overflow:hidden"><div style="width:'+bw+'%;height:100%;background:#e2e8f0;border-radius:4px;position:relative">'
+      +'<div style="width:'+r+'%;height:100%;background:'+(r>=50?'#38a169':'#e53e3e')+';border-radius:4px"></div>'
+      +'</div></div></div>';
+  });
+  h+='</div></div>';
   document.getElementById('consultStats').innerHTML=h;
 }
 
@@ -7341,7 +7536,7 @@ function refreshAll(){
   popDropdowns();renderStats();renderClients();
   // 나머지 탭은 지연 렌더링 (UI 블로킹 방지)
   setTimeout(function(){renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList()},50);
-  setTimeout(function(){renderClosingList();renderDismissed();renderInvoice();renderExtraInvoices();renderRetroInvoices()},100);
+  setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
   setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats()},250);
