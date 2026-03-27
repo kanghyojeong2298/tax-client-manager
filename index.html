@@ -161,6 +161,7 @@ tr:hover td{background:#f8fafc}
         <select id="filterStatus" onchange="renderClients()"><option value="">전체상태</option><option value="활성">활성</option><option value="해임">해임</option></select>
         <select id="filterManager" onchange="renderClients()"><option value="">전체담당</option></select>
         <select id="filterEntity" onchange="renderClients()"><option value="">전체구분</option><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select>
+        <button id="btnSortOrder" class="btn btn-sm" style="min-width:50px" onclick="toggleClientSort()">▼ 정순</button>
       </div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="btn btn-export btn-sm" onclick="exportCSV()">CSV내보내기</button>
@@ -2497,6 +2498,13 @@ function renderMonthlyFilingAlert(){
     +'</div>';
 }
 
+var clientSortReverse=false;
+function toggleClientSort(){
+  clientSortReverse=!clientSortReverse;
+  var btn=document.getElementById('btnSortOrder');
+  if(btn)btn.innerHTML=clientSortReverse?'▲ 역순':'▼ 정순';
+  renderClients();
+}
 // Render Clients table
 function renderClients(){
   const s=document.getElementById('searchInput').value.toLowerCase();
@@ -2511,6 +2519,7 @@ function renderClients(){
   const bm=document.getElementById('bulkManager');
   if(bm){bm.innerHTML='<option value="">선택</option>';data.staff.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;bm.appendChild(o)})}
   if(!list.length){tb.innerHTML='<tr><td colspan="18" style="text-align:center;padding:24px;color:#a0aec0">없음</td></tr>';return}
+  if(clientSortReverse)list.reverse();
   // 1부-2부 연관 업체 그룹핑: 대표업체 뒤에 연결된 업체를 바로 붙여서 표시
   var grouped=[];var usedIds={};
   list.forEach(function(c){
