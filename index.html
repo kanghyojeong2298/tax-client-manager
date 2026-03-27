@@ -315,6 +315,7 @@ tr:hover td{background:#f8fafc}
       <input type="month" id="vatMonth" onchange="renderVatList()">
       <button class="btn btn-xs btn-secondary" onclick="shiftMonth('vatMonth',1)" style="padding:4px 8px">▶</button>
       <select id="vatFilterManager" onchange="renderVatList()"><option value="">전체담당</option></select>
+      <select id="vatFilterEntity" onchange="renderVatList()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"><option value="">전체구분</option><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select>
       <span id="vatDeadline" style="font-weight:600;color:#e53e3e;font-size:12px;margin-left:8px"></span>
     </div>
     <div class="TC2"><table>
@@ -2753,6 +2754,7 @@ function confirmMgrMini(){
 function renderVatList(){
   const month=document.getElementById('vatMonth').value;
   const mgr=document.getElementById('vatFilterManager').value;
+  const ventity=(document.getElementById('vatFilterEntity')||{}).value||'';
   const tb=document.getElementById('vatTable');
   if(!month){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#a0aec0">조회월을 선택하세요</td></tr>';
     document.getElementById('vatCount').textContent='';document.getElementById('vatDeadline').textContent='';return}
@@ -2817,11 +2819,12 @@ function renderVatList(){
     }
   });
 
+  var filtered=ventity?rows.filter(function(r){return r.entityType===ventity}):rows;
   var vatCorpCnt=rows.filter(function(r){return r.entityType==='법인'||r.entityType==='성실법인'}).length;
   var vatIndivCnt=rows.filter(function(r){return r.entityType==='개인'||r.entityType==='성실개인'}).length;
-  document.getElementById('vatCount').innerHTML='('+rows.length+'건 · <span style="color:#2b6cb0">법인 '+vatCorpCnt+'</span> · <span style="color:#d69e2e">개인 '+vatIndivCnt+'</span>)';
-  if(!rows.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#a0aec0">해당 월 신고대상 없음</td></tr>';return}
-  tb.innerHTML=rows.map(r=>`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.ownerName||'-'}</td>
+  document.getElementById('vatCount').innerHTML='('+filtered.length+'건'+(ventity?'':' · <span style="color:#2b6cb0">법인 '+vatCorpCnt+'</span> · <span style="color:#d69e2e">개인 '+vatIndivCnt+'</span>')+')';
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:#a0aec0">해당 월 신고대상 없음</td></tr>';return}
+  tb.innerHTML=filtered.map(r=>`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.ownerName||'-'}</td>
     <td><span class="badge ${typeBadge(r.type)}">${r.type}</span></td><td>${r.entityType}</td>
     <td>${bizLabel(r)}</td><td>${vatFreqLabel(r)}</td><td>${r.manager||'-'}</td>
     <td style="text-align:right">${fmt(r.fee)}</td>
