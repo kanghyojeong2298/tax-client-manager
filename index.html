@@ -10094,52 +10094,69 @@ function initMisooFromExcel(){
 // 거래처원장 업로드 (잔액 업데이트)
 function parseLedgerFile(input){
   if(!input.files||!input.files[0])return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도하세요.');input.value='';return}
   var file=input.files[0];
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
 
-      // 헤더 찾기
+      if(!rows||rows.length<2){toast('데이터가 없습니다');return}
+
+      // 헤더 찾기 (상위 10행 내 '거래처' 또는 '업체' 포함 셀)
       var headerIdx=-1;
-      for(var i=0;i<Math.min(5,rows.length);i++){
+      for(var i=0;i<Math.min(10,rows.length);i++){
+        if(!rows[i])continue;
         for(var j=0;j<rows[i].length;j++){
-          if(String(rows[i][j]).indexOf('거래처')!==-1||String(rows[i][j]).indexOf('업체')!==-1){headerIdx=i;break}
+          var cv=String(rows[i][j]||'').trim();
+          if(cv.indexOf('거래처')!==-1||cv.indexOf('업체')!==-1||cv==='상호'){headerIdx=i;break}
         }
         if(headerIdx>=0)break;
       }
-      if(headerIdx<0){toast('거래처 열을 찾을 수 없습니다');return}
+      if(headerIdx<0){toast('헤더를 찾을 수 없습니다. "거래처" 또는 "업체" 열이 필요합니다.');return}
 
       var hdr=rows[headerIdx];
       var nameCol=-1,balCol=-1,prevCol=-1,debitCol=-1,creditCol=-1;
       hdr.forEach(function(v,i){
-        var s=String(v).trim();
-        if((s==='거래처'||s==='업체명')&&nameCol<0)nameCol=i;
-        if(s==='잔액')balCol=i;
+        var s=String(v||'').trim();
+        if((s==='거래처'||s==='업체명'||s==='상호'||s.indexOf('거래처')!==-1)&&nameCol<0)nameCol=i;
+        if((s==='잔액'||s.indexOf('잔액')!==-1)&&balCol<0)balCol=i;
         if(s.indexOf('전기')!==-1||s.indexOf('이월')!==-1)prevCol=i;
-        if(s==='차변')debitCol=i;
-        if(s==='대변')creditCol=i;
+        if(s==='차변'||s.indexOf('차변')!==-1)debitCol=i;
+        if(s==='대변'||s.indexOf('대변')!==-1)creditCol=i;
       });
-      if(nameCol<0||balCol<0){toast('필수 열(거래처/잔액)을 찾을 수 없습니다');return}
+      if(nameCol<0){toast('거래처/업체명 열을 찾을 수 없습니다');return}
+      if(balCol<0){toast('잔액 열을 찾을 수 없습니다');return}
 
       ensureAccData();
-      var updated=0,added=0;
+      var updated=0,added=0,skipped=0;
       for(var r=headerIdx+1;r<rows.length;r++){
         var row=rows[r];
+        if(!row)continue;
         var name=String(row[nameCol]||'').trim();
-        if(!name||name==='합계')continue;
-        var bal=parseInt(String(row[balCol]||'0').toString().replace(/[^0-9-]/g,''))||0;
-        if(bal<=0)continue; // 잔액 0 이하 = 미수 아님
+        if(!name||name==='합계'||name==='소계'||name==='총합계')continue;
 
-        var prev=prevCol>=0?parseInt(String(row[prevCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
-        var debit=debitCol>=0?parseInt(String(row[debitCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
-        var credit=creditCol>=0?parseInt(String(row[creditCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
+        var rawBal=row[balCol];
+        var bal=0;
+        if(typeof rawBal==='number'){bal=Math.round(rawBal)}
+        else{bal=parseInt(String(rawBal||'0').replace(/[,\s]/g,'').replace(/[^0-9-]/g,''))||0}
+        if(bal<=0){skipped++;continue}
+
+        var parseMoney=function(v){
+          if(typeof v==='number')return Math.round(v);
+          return parseInt(String(v||'0').replace(/[,\s]/g,'').replace(/[^0-9-]/g,''))||0;
+        };
+        var prev=prevCol>=0?parseMoney(row[prevCol]):0;
+        var debit=debitCol>=0?parseMoney(row[debitCol]):0;
+        var credit=creditCol>=0?parseMoney(row[creditCol]):0;
 
         // 기존 미수 매칭 (업체명 부분일치)
         var existing=data.misooList.find(function(m){
-          return m.clientName===name||name.indexOf(m.clientName)!==-1||m.clientName.indexOf(name)!==-1;
+          if(m.status==='수금완료')return false;
+          var mn=m.clientName||'';
+          return mn===name||name.indexOf(mn)!==-1||mn.indexOf(name)!==-1;
         });
 
         if(existing){
@@ -10149,9 +10166,9 @@ function parseLedgerFile(input){
           existing.credit=credit;
           updated++;
         }else{
-          // 새 미수 자동등록
           var client=data.clients.find(function(c){
-            return c.name===name||c.companyName===name||name.indexOf(c.name)!==-1;
+            return c.name===name||c.companyName===name||
+              (name.length>2&&(name.indexOf(c.name)!==-1||c.name.indexOf(name)!==-1));
           });
           data.misooList.push({
             id:'MS'+Date.now()+Math.random().toString(36).slice(2,6),
@@ -10178,7 +10195,7 @@ function parseLedgerFile(input){
       }
 
       saveData();renderAccMisoo();
-      toast('거래처원장 반영: 잔액 업데이트 '+updated+'건, 신규등록 '+added+'건');
+      toast('거래처원장 반영 완료! 업데이트 '+updated+'건, 신규 '+added+'건'+(skipped>0?', 잔액0이하 '+skipped+'건 제외':''));
     }catch(ex){
       console.error('Ledger parse error',ex);
       toast('거래처원장 파싱 오류: '+ex.message);
