@@ -8380,11 +8380,14 @@ function renderCalDeadlines(){
   (data.calendarDeadlines||[]).forEach(function(dl,idx){
     var rd=resolveDate(dl.date);allItems.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',idx:idx,dday:dDay(rd)});
   });
-  var vacKeywords=['휴가','연차','엽차','반차','병가','경조','대휴','보상휴가','출산','육아'];
+  var vacKeywords=['휴가','연차','엽차','반차','병가','경조','대휴','보상휴가','출산','육아','공가','예비군','대체휴무'];
+  var mStartStr=curY+'-'+('0'+(curM+1)).slice(-2)+'-01';
+  var mEndD=new Date(curY,curM+1,0);
+  var mEndStr=curY+'-'+('0'+(curM+1)).slice(-2)+'-'+('0'+mEndD.getDate()).slice(-2);
   var vacItems=allItems.filter(function(i){
-    var d=new Date(i.date);if(d<mStart||d>mEnd)return false;
+    if(i.date<mStartStr||i.date>mEndStr)return false;
     if(i.cat==='휴가')return true;
-    var t=(i.title||'').toLowerCase();
+    var t=(i.title||'')+(i.memo||'')+(i.target||'');
     return vacKeywords.some(function(kw){return t.indexOf(kw)!==-1});
   }).sort(function(a,b){return a.date.localeCompare(b.date)});
   var vh='';
@@ -9119,6 +9122,32 @@ initObMonth();initConsultYear();initConsultCounselors();
 // CMS 결과: data.cmsResults = [{회원명, 회원코드, 상태, 출금일, 납부금액, 비고, 사업자번호, 상호}]
 // 솔라피 설정: data.solapiConfig = {apiKey:'', apiSecret:'', pfId:'', templateId:''}
 
+
+// ============ Generic Modal Utility ============
+var _mdCb=null;
+function openModal(title,innerHtml,callback,hideMode){
+  var m=document.getElementById('genericModal');
+  if(!m)return;
+  document.getElementById('gmTitle').textContent=title;
+  document.getElementById('gmBody').innerHTML=innerHtml;
+  _mdCb=callback;
+  window._mdCb=function(){
+    if(callback){var r=callback();if(r!==false)closeMD();}
+  };
+  var saveBtn=document.getElementById('gmSaveBtn');
+  if(hideMode==='hide'){
+    saveBtn.style.display='none';
+  }else{
+    saveBtn.style.display='';
+  }
+  m.classList.add('show');
+}
+function closeMD(){
+  var m=document.getElementById('genericModal');
+  if(m)m.classList.remove('show');
+  _mdCb=null;window._mdCb=null;
+}
+
 function ensureAccData(){
   if(!data.misooList)data.misooList=[];
   if(!data.dailyLedger)data.dailyLedger=[];
@@ -9131,6 +9160,7 @@ function ensureAccData(){
 var selectedMisooId=null;
 function renderAccMisoo(){
   ensureAccData();
+  initMisooFromExcel();
   var list=data.misooList.slice();
   var filter=document.getElementById('misooFilter');
   var fv=filter?filter.value:'all';
@@ -9298,9 +9328,9 @@ function openMisooAddModal(){
   '</div>';
   openModal('미수 등록',inner,function(){
     var sel=document.getElementById('misooAddClient');
-    var cId=sel.value;if(!cId){toast('업체를 선택하세요');return}
+    var cId=sel.value;if(!cId){toast('업체를 선택하세요');return false}
     var c=data.clients.find(function(x){return x.id===cId});
-    if(!c){toast('업체를 찾을 수 없습니다');return}
+    if(!c){toast('업체를 찾을 수 없습니다');return false}
     var item={
       id:'MS'+Date.now(),
       clientId:cId,clientName:c.name,
@@ -9966,6 +9996,198 @@ function exportFixedExcel(){
   toast('내보내기 완료');
 }
 
+// 미수관리 엑셀 초기 데이터 셋팅 (최초 1회)
+function initMisooFromExcel(){
+  if(data._misooInitialized)return;
+  if(!data.misooList)data.misooList=[];
+  if(data.misooList.length>0){data._misooInitialized=true;return}
+
+  var items=[
+    {name:'주식회사 알프스케어',prevBal:3190000,debit:4070000,credit:2930000,balance:4330000,months:'10개월',type:'기장료, 알프스 Clean 부가세 수수료',note:'',cmsNote:'매일 출금',cmsDays:{mon:'예약 완료',wed:'예약 완료',fri:'예약 완료',tue:'예약 완료',thu:'예약 완료'},extra:'등록중-추후출금'},
+    {name:'알프스유지관리',prevBal:363000,debit:0,credit:0,balance:363000,months:'기타',type:'기장료, 알프스 Clean 부가세 수수료',note:'주식회사 알프스케어',cmsNote:'매일 출금',cmsDays:{mon:'예약 완료',wed:'예약 완료',fri:'예약 완료',tue:'예약 완료',thu:'예약 완료'},extra:''},
+    {name:'골든베니',prevBal:297000,debit:902000,credit:1045000,balance:154000,months:'2개월',type:'기장료, 부가세신고수수료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'뉴로즈',prevBal:0,debit:220000,credit:0,balance:220000,months:'기타',type:'소급기장료',note:'등록중',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'델라마노',prevBal:0,debit:880000,credit:770000,balance:110000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'디바네일',prevBal:0,debit:792000,credit:594000,balance:198000,months:'2개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'라벨에이치',prevBal:0,debit:198000,credit:99000,balance:99000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'로미인터내셔널',prevBal:110000,debit:880000,credit:880000,balance:110000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'루나엠',prevBal:0,debit:198000,credit:0,balance:198000,months:'2개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'루엔틴',prevBal:506000,debit:792000,credit:1199000,balance:99000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'미터즈원오',prevBal:0,debit:1782000,credit:1672000,balance:110000,months:'1개월',type:'부가세 신고 수수료',note:'적요 내용 확인 필요',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'봉화우주농원',prevBal:0,debit:297000,credit:198000,balance:99000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'블랙스타',prevBal:0,debit:1221000,credit:935000,balance:286000,months:'2개월',type:'기장료',note:'금액 변경 전 187,000/ 2월 99,000원',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'세경상사',prevBal:0,debit:110000,credit:0,balance:110000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'송오브스킨코리아',prevBal:0,debit:165000,credit:0,balance:165000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'숍위드미',prevBal:0,debit:792000,credit:99000,balance:693000,months:'7개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'스타라이트하우스',prevBal:0,debit:704000,credit:616000,balance:88000,months:'2개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'스튜디오 무구',prevBal:110000,debit:880000,credit:660000,balance:330000,months:'3개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'시가샵코리아/델라마노',prevBal:0,debit:220000,credit:0,balance:220000,months:'2개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'2부-에스아이(디앤에이치)',prevBal:0,debit:165000,credit:0,balance:165000,months:'기타',type:'부가세 신고 수수료',note:'',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'2부-엠케이구매공방',prevBal:0,debit:165000,credit:0,balance:165000,months:'기타',type:'부가세 신고 수수료',note:'',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'올위크',prevBal:0,debit:792000,credit:594000,balance:198000,months:'2개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'올트몰',prevBal:0,debit:88000,credit:0,balance:88000,months:'1개월',type:'기장료',note:'통장사본 미제출',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'윌로우크리에이티브',prevBal:0,debit:198000,credit:0,balance:198000,months:'1개월',type:'소급기장료',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'주식회사 빌리브라더스',prevBal:0,debit:165000,credit:0,balance:165000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'주식회사 예경',prevBal:0,debit:550000,credit:0,balance:550000,months:'기타',type:'법인세 기한후 신고',note:'조정만',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'주식회사문화수',prevBal:968000,debit:1056000,credit:1364000,balance:660000,months:'5개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'㈜아이오스튜디오',prevBal:0,debit:2365000,credit:2200000,balance:165000,months:'1개월',type:'기장료',note:'확인필요',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'코마존글로벌',prevBal:0,debit:792000,credit:594000,balance:198000,months:'2개월',type:'기장료',note:'확인필요',cmsNote:'',cmsDays:{mon:'기타'},extra:''},
+    {name:'프레이커피바',prevBal:0,debit:704000,credit:616000,balance:88000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'프릭디',prevBal:0,debit:781000,credit:693000,balance:88000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'플라워진스',prevBal:0,debit:198000,credit:99000,balance:99000,months:'1개월',type:'기장료',note:'',cmsNote:'',cmsDays:{mon:'출금 실패'},extra:''},
+    {name:'네이처넥스트주식회사',prevBal:0,debit:0,credit:0,balance:110000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'(주)페드로',prevBal:0,debit:0,credit:0,balance:99000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'벨린(VELIN)',prevBal:0,debit:0,credit:0,balance:88000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'피닉쓰\'s',prevBal:0,debit:0,credit:0,balance:165000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'거북이북',prevBal:0,debit:0,credit:0,balance:110000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'스마일박스',prevBal:0,debit:0,credit:0,balance:99000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''},
+    {name:'베이커리팥샘',prevBal:0,debit:0,credit:0,balance:88000,months:'기타',type:'',note:'',cmsNote:'',cmsDays:{mon:'등록중'},extra:''}
+  ];
+
+  items.forEach(function(it){
+    // CMS 상태 결정
+    var cmsStatus='';
+    var monSt=(it.cmsDays&&it.cmsDays.mon)||'';
+    if(monSt.indexOf('출금 실패')!==-1)cmsStatus='출금실패';
+    else if(monSt.indexOf('등록중')!==-1)cmsStatus='등록중';
+    else if(monSt.indexOf('예약 완료')!==-1)cmsStatus='예약완료';
+    else if(monSt==='기타')cmsStatus='기타';
+
+    // 미수개월 -> occurDate 역산
+    var today=new Date();
+    var monthsNum=0;
+    var mm=String(it.months).match(/(\d+)/);
+    if(mm)monthsNum=parseInt(mm[1]);
+    var occurDate=new Date(today.getFullYear(),today.getMonth()-Math.max(monthsNum,1),today.getDate());
+
+    // 매칭할 고객 찾기
+    var client=data.clients.find(function(c){
+      return c.name===it.name||c.companyName===it.name;
+    });
+
+    data.misooList.push({
+      id:'MS'+Date.now()+Math.random().toString(36).slice(2,6),
+      clientId:client?client.id:'',
+      clientName:it.name,
+      manager:client?client.manager||'':'',
+      phone:client?client.phone||client.ceoPhone||'':'',
+      type:it.type||'기장료',
+      amount:it.balance||0,
+      prevBalance:it.prevBal||0,
+      debit:it.debit||0,
+      credit:it.credit||0,
+      occurDate:occurDate.toISOString().slice(0,10),
+      misooMonths:it.months||'',
+      status:'미수',
+      cmsStatus:cmsStatus,
+      lastCmsDate:'',
+      cmsNote:it.cmsNote||'',
+      cmsDays:it.cmsDays||{},
+      dunningHistory:[],
+      memo:it.note||(it.extra||'')
+    });
+  });
+  data._misooInitialized=true;
+  saveData();
+}
+
+// 거래처원장 업로드 (잔액 업데이트)
+function parseLedgerFile(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // 헤더 찾기
+      var headerIdx=-1;
+      for(var i=0;i<Math.min(5,rows.length);i++){
+        for(var j=0;j<rows[i].length;j++){
+          if(String(rows[i][j]).indexOf('거래처')!==-1||String(rows[i][j]).indexOf('업체')!==-1){headerIdx=i;break}
+        }
+        if(headerIdx>=0)break;
+      }
+      if(headerIdx<0){toast('거래처 열을 찾을 수 없습니다');return}
+
+      var hdr=rows[headerIdx];
+      var nameCol=-1,balCol=-1,prevCol=-1,debitCol=-1,creditCol=-1;
+      hdr.forEach(function(v,i){
+        var s=String(v).trim();
+        if((s==='거래처'||s==='업체명')&&nameCol<0)nameCol=i;
+        if(s==='잔액')balCol=i;
+        if(s.indexOf('전기')!==-1||s.indexOf('이월')!==-1)prevCol=i;
+        if(s==='차변')debitCol=i;
+        if(s==='대변')creditCol=i;
+      });
+      if(nameCol<0||balCol<0){toast('필수 열(거래처/잔액)을 찾을 수 없습니다');return}
+
+      ensureAccData();
+      var updated=0,added=0;
+      for(var r=headerIdx+1;r<rows.length;r++){
+        var row=rows[r];
+        var name=String(row[nameCol]||'').trim();
+        if(!name||name==='합계')continue;
+        var bal=parseInt(String(row[balCol]||'0').toString().replace(/[^0-9-]/g,''))||0;
+        if(bal<=0)continue; // 잔액 0 이하 = 미수 아님
+
+        var prev=prevCol>=0?parseInt(String(row[prevCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
+        var debit=debitCol>=0?parseInt(String(row[debitCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
+        var credit=creditCol>=0?parseInt(String(row[creditCol]||'0').toString().replace(/[^0-9-]/g,''))||0:0;
+
+        // 기존 미수 매칭 (업체명 부분일치)
+        var existing=data.misooList.find(function(m){
+          return m.clientName===name||name.indexOf(m.clientName)!==-1||m.clientName.indexOf(name)!==-1;
+        });
+
+        if(existing){
+          existing.amount=bal;
+          existing.prevBalance=prev;
+          existing.debit=debit;
+          existing.credit=credit;
+          updated++;
+        }else{
+          // 새 미수 자동등록
+          var client=data.clients.find(function(c){
+            return c.name===name||c.companyName===name||name.indexOf(c.name)!==-1;
+          });
+          data.misooList.push({
+            id:'MS'+Date.now()+Math.random().toString(36).slice(2,6),
+            clientId:client?client.id:'',
+            clientName:name,
+            manager:client?client.manager||'':'',
+            phone:client?client.phone||client.ceoPhone||'':'',
+            type:'기장료',
+            amount:bal,
+            prevBalance:prev,
+            debit:debit,
+            credit:credit,
+            occurDate:new Date().toISOString().slice(0,10),
+            misooMonths:'',
+            status:'미수',
+            cmsStatus:'',
+            lastCmsDate:'',
+            cmsNote:'',
+            dunningHistory:[],
+            memo:'거래처원장 자동등록'
+          });
+          added++;
+        }
+      }
+
+      saveData();renderAccMisoo();
+      toast('거래처원장 반영: 잔액 업데이트 '+updated+'건, 신규등록 '+added+'건');
+    }catch(ex){
+      console.error('Ledger parse error',ex);
+      toast('거래처원장 파싱 오류: '+ex.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
 // refreshAll에서 호출될 회계탭 렌더
 function renderAccounting(){
   if(activeMainTab==='accounting'){
@@ -10117,7 +10339,7 @@ function openMktAddModal(){
   openModal('콘텐츠 등록',inner,function(){
     ensureMktData();
     var kw=document.getElementById('mktAddKw').value.trim();
-    if(!kw){toast('키워드를 입력하세요');return}
+    if(!kw){toast('키워드를 입력하세요');return false}
     var maxNo=0;data.marketingPosts.forEach(function(p){if((p.no||0)>maxNo)maxNo=p.no});
     data.marketingPosts.push({
       id:'MK'+Date.now(),
@@ -10163,11 +10385,13 @@ function openMktEditModal(id){
   });
 }
 
-// 상세보기 모달 (타임라인)
+// 상세보기 - 콘텐츠 에디터 + 버전추적 + Diff
 function openMktDetailModal(id){
   ensureMktData();
   var p=data.marketingPosts.find(function(x){return x.id===id});
   if(!p)return;
+  if(!p.content)p.content='';
+  if(!p.contentVersions)p.contentVersions=[];
 
   // 워크플로우 타임라인
   var steps=[
@@ -10179,32 +10403,201 @@ function openMktDetailModal(id){
     {label:'최종확인',field:p.finalCheck,icon:'✅'}
   ];
 
-  var timeline='<div style="margin-bottom:16px">';
+  var timeline='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">';
   steps.forEach(function(s){
     var f=s.field||{};
     var done=!!f.status&&f.status!==''&&f.status!=='수정필요'&&f.status!=='수정요청';
-    var clr=done?'#059669':(f.status==='수정필요'||f.status==='수정요청')?'#DC2626':'#CBD5E1';
-    timeline+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-left:3px solid '+clr+';padding-left:12px;margin-left:8px">'+
-      '<span>'+s.icon+'</span><div><div style="font-size:12px;font-weight:600;color:#1E293B">'+s.label+'</div>'+
-      '<div style="font-size:10px;color:#718096">'+(f.status||'대기중')+''+(f.date?' · '+f.date:'')+'</div></div></div>';
+    var bgClr=done?'#ECFDF5':(f.status==='수정필요'||f.status==='수정요청')?'#FEF2F2':'#F8FAFC';
+    var bdClr=done?'#059669':(f.status==='수정필요'||f.status==='수정요청')?'#DC2626':'#CBD5E1';
+    timeline+='<div style="background:'+bgClr+';border:1px solid '+bdClr+';border-radius:8px;padding:6px 10px;font-size:11px;min-width:80px;text-align:center">'+
+      '<div>'+s.icon+' '+s.label+'</div>'+
+      '<div style="font-size:9px;color:#718096;margin-top:2px">'+(f.status||'대기중')+'</div></div>';
   });
   timeline+='</div>';
 
   // 히스토리
-  var hist='<div style="font-size:12px;font-weight:600;color:#1E293B;margin-bottom:6px">변경 이력</div>';
+  var hist='<details style="margin-top:12px"><summary style="font-size:12px;font-weight:600;color:#1E293B;cursor:pointer">📋 변경 이력 ('+(p.history?p.history.length:0)+')</summary><div style="margin-top:6px">';
   if(p.history&&p.history.length>0){
     p.history.slice().reverse().forEach(function(h){
       hist+='<div style="font-size:10px;color:#64748b;padding:3px 0">'+h.date+' · '+esc(h.action)+''+(h.by?' ('+h.by.split('@')[0]+')':'')+'</div>';
     });
   }else{hist+='<div style="font-size:10px;color:#94a3b8">이력 없음</div>'}
+  hist+='</div></details>';
 
-  var inner='<div style="margin-bottom:12px"><div style="font-size:16px;font-weight:700;color:#1E293B">'+esc(p.keyword||'')+'</div><div style="font-size:11px;color:#64748b;margin-top:2px">'+(p.category||'')+(p.googleDocUrl?' · <a href="'+esc(p.googleDocUrl)+'" target="_blank" style="color:#1A66FF">구글독스 열기</a>':'')+'</div></div>'+
-    timeline+hist+
-    '<div style="display:flex;gap:6px;margin-top:14px">'+
-      '<button class="btn btn-sm btn-primary" onclick="closeMD();openMktEditModal(\''+p.id+'\')">✏️ 수정</button>'+
-      '<button class="btn btn-sm btn-danger" onclick="deleteMktPost(\''+p.id+'\')">🗑 삭제</button>'+
-    '</div>';
+  // 버전 이력
+  var versions='';
+  if(p.contentVersions&&p.contentVersions.length>0){
+    versions='<details style="margin-top:12px"><summary style="font-size:12px;font-weight:600;color:#1E293B;cursor:pointer">📑 콘텐츠 버전 ('+p.contentVersions.length+')</summary><div style="margin-top:6px;max-height:200px;overflow-y:auto">';
+    p.contentVersions.slice().reverse().forEach(function(v,i){
+      var idx=p.contentVersions.length-1-i;
+      versions+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9">'+
+        '<div style="flex:1"><div style="font-size:11px;font-weight:600;color:#1E293B">v'+(idx+1)+' · '+v.date+'</div>'+
+        '<div style="font-size:10px;color:#718096">'+(v.by||'')+(v.memo?' · '+esc(v.memo):'')+'</div></div>'+
+        '<button class="btn btn-xs btn-secondary" onclick="showMktVersionDiff(\''+p.id+'\','+idx+')" style="font-size:10px">비교</button>'+
+        '<button class="btn btn-xs btn-secondary" onclick="restoreMktVersion(\''+p.id+'\','+idx+')" style="font-size:10px">복원</button>'+
+      '</div>';
+    });
+    versions+='</div></details>';
+  }
+
+  var inner=
+    '<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start">'+
+      '<div><div style="font-size:16px;font-weight:700;color:#1E293B">'+esc(p.keyword||'')+'</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:2px">'+(p.category||'')+(p.publishDate?' · 발행일: '+p.publishDate:'')+'</div></div>'+
+      '<div style="display:flex;gap:6px">'+
+        (p.googleDocUrl?'<a href="'+esc(p.googleDocUrl)+'" target="_blank" class="btn btn-sm btn-secondary" style="font-size:11px;text-decoration:none">📄 구글독스 열기</a>':'')+
+        '<button class="btn btn-sm btn-primary" onclick="closeMD();openMktEditModal(\''+p.id+'\')">✏️ 수정</button>'+
+        '<button class="btn btn-sm btn-danger" onclick="deleteMktPost(\''+p.id+'\')">🗑 삭제</button>'+
+      '</div>'+
+    '</div>'+
+    timeline+
+    '<div style="margin-top:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div style="font-size:13px;font-weight:700;color:#1E293B">📝 콘텐츠 내용</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button class="btn btn-xs btn-secondary" onclick="toggleMktContentEdit(\''+p.id+'\')" id="mktContentEditBtn">편집</button>'+
+          '<button class="btn btn-xs btn-primary" onclick="saveMktContent(\''+p.id+'\')" id="mktContentSaveBtn" style="display:none">💾 저장</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="mktContentView" style="background:#FAFBFC;border:1px solid #e2e8f0;border-radius:8px;padding:14px;min-height:200px;max-height:400px;overflow-y:auto;font-size:12px;line-height:1.8;white-space:pre-wrap;color:#1E293B">'+(p.content?esc(p.content):'<span style="color:#94a3b8">콘텐츠가 없습니다. 구글독스에서 복사하여 붙여넣기 하거나 직접 작성하세요.</span>')+'</div>'+
+      '<textarea id="mktContentEditor" style="display:none;width:100%;min-height:300px;max-height:500px;border:1px solid #1A66FF;border-radius:8px;padding:14px;font-size:12px;line-height:1.8;resize:vertical;font-family:Noto Sans KR,sans-serif;color:#1E293B" placeholder="구글독스에서 콘텐츠를 복사하여 붙여넣기 하세요...">'+esc(p.content||'')+'</textarea>'+
+    '</div>'+
+    '<div id="mktDiffArea" style="display:none;margin-top:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div style="font-size:13px;font-weight:700;color:#1E293B">🔍 변경사항 비교</div>'+
+        '<button class="btn btn-xs btn-secondary" onclick="document.getElementById(\'mktDiffArea\').style.display=\'none\'">닫기</button>'+
+      '</div>'+
+      '<div id="mktDiffContent" style="background:#FAFBFC;border:1px solid #e2e8f0;border-radius:8px;padding:14px;max-height:300px;overflow-y:auto;font-size:12px;line-height:1.8"></div>'+
+    '</div>'+
+    versions+hist;
+
   openModal('콘텐츠 상세 - '+esc(p.keyword||''),inner,null,'hide');
+}
+
+function toggleMktContentEdit(id){
+  var view=document.getElementById('mktContentView');
+  var editor=document.getElementById('mktContentEditor');
+  var editBtn=document.getElementById('mktContentEditBtn');
+  var saveBtn=document.getElementById('mktContentSaveBtn');
+  if(!view||!editor)return;
+  if(editor.style.display==='none'){
+    editor.style.display='';view.style.display='none';
+    editBtn.textContent='취소';saveBtn.style.display='';
+    editor.focus();
+  }else{
+    editor.style.display='none';view.style.display='';
+    editBtn.textContent='편집';saveBtn.style.display='none';
+  }
+}
+
+function saveMktContent(id){
+  ensureMktData();
+  var p=data.marketingPosts.find(function(x){return x.id===id});
+  if(!p)return;
+  var editor=document.getElementById('mktContentEditor');
+  if(!editor)return;
+  var newContent=editor.value;
+  if(!p.contentVersions)p.contentVersions=[];
+
+  // 이전 내용이 있으면 버전 저장
+  if(p.content&&p.content.trim()!==''){
+    p.contentVersions.push({
+      date:new Date().toISOString().slice(0,16).replace('T',' '),
+      content:p.content,
+      by:auth.currentUser?auth.currentUser.email:'',
+      memo:p.contentVersions.length===0?'최초 저장':'수정'
+    });
+  }
+
+  p.content=newContent;
+  if(!p.history)p.history=[];
+  p.history.push({date:new Date().toISOString().slice(0,10),action:'콘텐츠 수정',by:auth.currentUser?auth.currentUser.email:''});
+  saveData();
+  toast('콘텐츠 저장 완료');
+  closeMD();
+  openMktDetailModal(id);
+}
+
+function showMktVersionDiff(id,versionIdx){
+  ensureMktData();
+  var p=data.marketingPosts.find(function(x){return x.id===id});
+  if(!p||!p.contentVersions||!p.contentVersions[versionIdx])return;
+  var oldText=p.contentVersions[versionIdx].content||'';
+  var newText=p.content||'';
+  var diffHtml=computeLineDiff(oldText,newText);
+  var area=document.getElementById('mktDiffArea');
+  var diffContent=document.getElementById('mktDiffContent');
+  if(area&&diffContent){
+    diffContent.innerHTML='<div style="margin-bottom:8px;font-size:11px;color:#718096">v'+(versionIdx+1)+' → 현재 버전</div>'+diffHtml;
+    area.style.display='';
+  }
+}
+
+function restoreMktVersion(id,versionIdx){
+  ensureMktData();
+  var p=data.marketingPosts.find(function(x){return x.id===id});
+  if(!p||!p.contentVersions||!p.contentVersions[versionIdx])return;
+  if(!confirm('v'+(versionIdx+1)+' 버전으로 복원하시겠습니까? 현재 내용은 새 버전으로 저장됩니다.'))return;
+
+  // 현재 내용을 버전으로 저장
+  p.contentVersions.push({
+    date:new Date().toISOString().slice(0,16).replace('T',' '),
+    content:p.content,
+    by:auth.currentUser?auth.currentUser.email:'',
+    memo:'복원 전 백업'
+  });
+
+  p.content=p.contentVersions[versionIdx].content;
+  if(!p.history)p.history=[];
+  p.history.push({date:new Date().toISOString().slice(0,10),action:'v'+(versionIdx+1)+' 복원',by:auth.currentUser?auth.currentUser.email:''});
+  saveData();toast('버전 복원 완료');
+  closeMD();openMktDetailModal(id);
+}
+
+// 라인 단위 Diff 비교
+function computeLineDiff(oldText,newText){
+  var oldLines=oldText.split('\n');
+  var newLines=newText.split('\n');
+  var html='';
+
+  // Simple LCS-based diff
+  var m=oldLines.length,n=newLines.length;
+  // Build LCS table
+  var dp=[];
+  for(var i=0;i<=m;i++){dp[i]=[];for(var j=0;j<=n;j++)dp[i][j]=0}
+  for(var i=1;i<=m;i++){
+    for(var j=1;j<=n;j++){
+      if(oldLines[i-1]===newLines[j-1])dp[i][j]=dp[i-1][j-1]+1;
+      else dp[i][j]=Math.max(dp[i-1][j],dp[i][j-1]);
+    }
+  }
+
+  // Backtrack to get diff
+  var result=[];
+  var i=m,j=n;
+  while(i>0||j>0){
+    if(i>0&&j>0&&oldLines[i-1]===newLines[j-1]){
+      result.unshift({type:'same',text:oldLines[i-1]});i--;j--;
+    }else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])){
+      result.unshift({type:'add',text:newLines[j-1]});j--;
+    }else{
+      result.unshift({type:'del',text:oldLines[i-1]});i--;
+    }
+  }
+
+  result.forEach(function(r){
+    var escaped=r.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if(r.type==='add'){
+      html+='<div style="background:#ECFDF5;border-left:3px solid #059669;padding:2px 8px;margin:1px 0;font-family:monospace;font-size:11px"><span style="color:#059669;font-weight:700">+ </span>'+escaped+'</div>';
+    }else if(r.type==='del'){
+      html+='<div style="background:#FEF2F2;border-left:3px solid #DC2626;padding:2px 8px;margin:1px 0;font-family:monospace;font-size:11px;text-decoration:line-through;opacity:0.7"><span style="color:#DC2626;font-weight:700">- </span>'+escaped+'</div>';
+    }else{
+      html+='<div style="padding:2px 8px;margin:1px 0;font-family:monospace;font-size:11px;color:#64748b">  '+escaped+'</div>';
+    }
+  });
+
+  if(!html)html='<div style="padding:10px;color:#94a3b8;text-align:center">변경사항이 없습니다</div>';
+  return html;
 }
 
 function deleteMktPost(id){
@@ -10581,5 +10974,18 @@ function renderMarketing(){
 }
 
 </script>
+
+<!-- Generic Modal -->
+<div class="MO" id="genericModal">
+<div class="MD" style="max-width:900px">
+<div class="MH"><h2 id="gmTitle">모달</h2><button class="MC" onclick="closeMD()">&times;</button></div>
+<div class="MB" id="gmBody"></div>
+<div class="MF" id="gmFooter">
+<button class="btn btn-secondary" onclick="closeMD()">닫기</button>
+<button class="btn btn-primary" id="gmSaveBtn" onclick="if(window._mdCb)window._mdCb()">저장</button>
+</div>
+</div>
+</div>
+
 </body>
 </html>
