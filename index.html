@@ -2927,12 +2927,8 @@ function renderMonthlyFilingAlert(){
       if(nm===curMonth&&ny===curYear)vatCount++;
     });
   }
-  var vatTotal=AC().filter(function(c){return c.taxType==='부가세신고대상'}).length;
   if(isVatMonth&&vatCount>0){
     items.push({label:'부가세 신고',count:vatCount,color:'#e53e3e',tab:'vat'});
-  }else if(vatTotal>0){
-    var nextVatM=[1,4,7,10].filter(function(m){return m>curMonth})[0]||(curMonth<=12?[1,4,7,10].filter(function(m){return m>curMonth})[0]||1:1);
-    items.push({label:'부가세 대상',count:vatTotal,color:'#e53e3e',tab:'vat'});
   }
 
   // 2) 면세 신고 (2월)
