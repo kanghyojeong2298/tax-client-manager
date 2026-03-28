@@ -2910,22 +2910,29 @@ function renderMonthlyFilingAlert(){
   var ym=curYear+'-'+(curMonth<10?'0'+curMonth:curMonth);
   var items=[];
 
-  // 1) 부가세 신고 대상 (1,4,7,10월)
-  if([1,4,7,10].indexOf(curMonth)!==-1){
-    var vatCount=0;
-    AC().filter(function(c){return c.taxType==='부가세신고대상'}).forEach(function(c){
-      var freq=getVatFreq(c);
-      var fm=getVatFilingMonths(freq);
-      if(fm.indexOf(curMonth)!==-1)vatCount++;
-    });
-    // 폐업/법인전환 (전월 폐업 → 이번달 신고)
+  // 1) 부가세 신고 대상 (매월 표시)
+  var vatCount=0;
+  var isVatMonth=[1,4,7,10].indexOf(curMonth)!==-1;
+  AC().filter(function(c){return c.taxType==='부가세신고대상'}).forEach(function(c){
+    var freq=getVatFreq(c);
+    var fm=getVatFilingMonths(freq);
+    if(isVatMonth&&fm.indexOf(curMonth)!==-1)vatCount++;
+  });
+  // 폐업/법인전환 (전월 폐업 → 이번달 신고)
+  if(isVatMonth){
     data.clients.filter(function(c){return c.status==='해임'&&(c.dismissReason==='폐업'||c.dismissReason==='법인전환')&&c.taxType==='부가세신고대상'&&c.closureDate}).forEach(function(c){
       var cd=new Date(c.closureDate);
       var nm=cd.getMonth()+2;var ny=cd.getFullYear()+(nm>12?1:0);
       if(nm>12)nm-=12;
       if(nm===curMonth&&ny===curYear)vatCount++;
     });
-    if(vatCount>0)items.push({label:'부가세 신고',count:vatCount,color:'#e53e3e',tab:'vat'});
+  }
+  var vatTotal=AC().filter(function(c){return c.taxType==='부가세신고대상'}).length;
+  if(isVatMonth&&vatCount>0){
+    items.push({label:'부가세 신고',count:vatCount,color:'#e53e3e',tab:'vat'});
+  }else if(vatTotal>0){
+    var nextVatM=[1,4,7,10].filter(function(m){return m>curMonth})[0]||(curMonth<=12?[1,4,7,10].filter(function(m){return m>curMonth})[0]||1:1);
+    items.push({label:'부가세 대상',count:vatTotal,color:'#e53e3e',tab:'vat'});
   }
 
   // 2) 면세 신고 (2월)
