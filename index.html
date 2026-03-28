@@ -2910,41 +2910,36 @@ function renderMonthlyFilingAlert(){
   var ym=curYear+'-'+(curMonth<10?'0'+curMonth:curMonth);
   var items=[];
 
-  // 1) 부가세 신고 대상 — renderVatList()와 동일 로직
-  var isVatMonth=[1,4,7,10].indexOf(curMonth)!==-1;
-  var nextVatMonth=[1,4,7,10].filter(function(m){return m>curMonth})[0]||1;
-  var vatTargetMonth=isVatMonth?curMonth:nextVatMonth;
-  var vatTargetYear=(!isVatMonth&&nextVatMonth<curMonth)?curYear+1:curYear;
-  var vatDeadlineYm=vatTargetYear+'-'+(vatTargetMonth<10?'0'+vatTargetMonth:vatTargetMonth);
+  // 1) 부가세 신고 대상 — 이번달 기준, renderVatList()와 동일 로직
+  var vatDeadlineYm=ym;
   var vatRows=[];
   // 정상신고
   AC().filter(function(c){return c.taxType==='부가세신고대상'}).forEach(function(c){
     if(typeof wasOnboardedByDeadline==='function'&&!wasOnboardedByDeadline(c,vatDeadlineYm))return;
     var freq=getVatFreq(c);
     var fm=getVatFilingMonths(freq);
-    if(fm.indexOf(vatTargetMonth)!==-1)vatRows.push(c.id);
+    if(fm.indexOf(curMonth)!==-1)vatRows.push(c.id);
   });
   // 간이포기 첫신고
   AC().filter(function(c){return c.taxType==='부가세신고대상'&&c.ganiPogiMonth&&c.ganiPogiNextMonth}).forEach(function(c){
     var pnm=c.ganiPogiNextMonth.split('-').map(Number);
-    if(pnm[1]===vatTargetMonth&&pnm[0]===vatTargetYear&&vatRows.indexOf(c.id)===-1)vatRows.push(c.id);
+    if(pnm[1]===curMonth&&pnm[0]===curYear&&vatRows.indexOf(c.id)===-1)vatRows.push(c.id);
   });
   // 폐업/법인전환
   data.clients.filter(function(c){return c.status==='해임'&&(c.dismissReason==='폐업'||c.dismissReason==='법인전환')&&c.taxType==='부가세신고대상'&&c.closureDate}).forEach(function(c){
     var cd=new Date(c.closureDate);var nm=cd.getMonth()+2;var ny=cd.getFullYear()+(nm>12?1:0);if(nm>12)nm-=12;
-    if(nm===vatTargetMonth&&ny===vatTargetYear)vatRows.push(c.id);
+    if(nm===curMonth&&ny===curYear)vatRows.push(c.id);
   });
   // 휴업
   data.clients.filter(function(c){return c.status==='해임'&&c.dismissReason==='휴업'&&c.taxType==='부가세신고대상'}).forEach(function(c){
     var isCorpType=(c.entityType==='법인'||c.entityType==='성실법인');
     var hMonths=isCorpType?[1,4,7,10]:[1,7];
-    if(hMonths.indexOf(vatTargetMonth)===-1)return;
-    if(c.closureDate){var cd2=new Date(c.closureDate);var fd=new Date(vatTargetYear,vatTargetMonth-1,25);if(cd2<=fd)vatRows.push(c.id)}
+    if(hMonths.indexOf(curMonth)===-1)return;
+    if(c.closureDate){var cd2=new Date(c.closureDate);var fd=new Date(curYear,curMonth-1,25);if(cd2<=fd)vatRows.push(c.id)}
   });
   var vatCount=vatRows.length;
   if(vatCount>0){
-    var vatLabel=isVatMonth?'부가세 신고':'부가세 신고 ('+vatTargetMonth+'월)';
-    items.push({label:vatLabel,count:vatCount,color:'#e53e3e',tab:'vat'});
+    items.push({label:'부가세 신고',count:vatCount,color:'#e53e3e',tab:'vat'});
   }
 
   // 2) 면세 신고 (2월)
