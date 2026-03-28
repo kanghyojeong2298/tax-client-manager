@@ -138,6 +138,7 @@ tr:hover td{background:#f8fafc}
   </div>
   <div id="smartAlertRow" style="display:none;margin-bottom:10px"></div>
   <div id="clientStatsDetail" style="display:none">
+  <div id="extraRevenueCards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card" id="bizStatsCard" style="margin-bottom:0"></div>
     <div class="card" id="sourceChannelCard" style="display:none;margin-bottom:0"></div>
@@ -2690,26 +2691,8 @@ function renderSmartAlerts(){
   var prevYM=prevY+'-'+('0'+prevM).slice(-2);
   var cards=[];
 
-  // 1) 이번달 신규수임
-  var newThisMonth=data.clients.filter(function(c){
-    var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
-    return cm===ym&&c.status==='활성';
-  });
-  var newFee=newThisMonth.reduce(function(s,c){return s+(c.fee||0)},0);
-  if(newThisMonth.length>0){
-    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:10px;min-width:200px">'
-      +'<span style="font-size:20px">🎉</span>'
-      +'<div><div style="font-size:12px;font-weight:700;color:#276749">이번달 신규수임 '+newThisMonth.length+'건</div>'
-      +'<div style="font-size:11px;color:#38a169">월 기장료 +'+W(newFee)+'</div></div></div>');
-  }
-
-  // 2) 이번달 기장료 합계
-  var ac=AC();
-  var totalMonthlyFee=ac.reduce(function(s,c){return s+(c.fee||0)},0);
-  cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;min-width:200px">'
-    +'<span style="font-size:20px">💰</span>'
-    +'<div><div style="font-size:12px;font-weight:700;color:#2a4365">월 기장료 합계</div>'
-    +'<div style="font-size:15px;font-weight:800;color:#1A66FF">'+W(totalMonthlyFee)+'</div></div></div>');
+  // 1) 이번달 신규수임 — extraStats로 이동됨
+  // 2) 이번달 기장료 합계 — extraStats로 이동됨
 
   // 3) 상담 전환율 (이번달 vs 전월 vs 전년 동월)
   var cons=data.consultations||[];
@@ -2788,6 +2771,24 @@ function renderStats(){
     <div class="SC"><div class="SV" style="color:#e53e3e">${dis}</div><div class="SL">해임</div></div>
     <div class="RB" onclick="var d=document.getElementById('clientStatsDetail');d.style.display=d.style.display==='none'?'':'none'" style="cursor:pointer;display:${extraStatsVisible?'':'none'}"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출 <span style="font-size:9px;color:rgba(255,255,255,0.7)">▼ 상세</span></div></div>`;
   // totalRevenue 제거됨
+
+  // 이번달 신규수임 + 월기장료 합계 (extraStats 영역)
+  var now2=new Date();var ym2=now2.getFullYear()+'-'+('0'+(now2.getMonth()+1)).slice(-2);
+  var newThisMonth=data.clients.filter(function(c){var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');return cm===ym2&&c.status==='활성'});
+  var newFee=newThisMonth.reduce(function(s,c){return s+(c.fee||0)},0);
+  var extraCards='';
+  if(newThisMonth.length>0){
+    extraCards+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:10px;min-width:200px">'
+      +'<span style="font-size:20px">🎉</span>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#276749">이번달 신규수임 '+newThisMonth.length+'건</div>'
+      +'<div style="font-size:11px;color:#38a169">월 기장료 +'+W(newFee)+'</div></div></div>';
+  }
+  extraCards+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;min-width:200px">'
+    +'<span style="font-size:20px">💰</span>'
+    +'<div><div style="font-size:12px;font-weight:700;color:#2a4365">월 기장료 합계</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#1A66FF">'+W(mf)+'</div></div></div>';
+  var extraEl=document.getElementById('extraRevenueCards');
+  if(extraEl)extraEl.innerHTML=extraCards;
 
   // Business type stats
   const biz={일반:0,스타트업:0,전자상거래:0};
