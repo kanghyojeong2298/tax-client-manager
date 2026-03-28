@@ -8882,7 +8882,30 @@ function renderConsultStats(){
   // 유입경로별
   var srcMap={};
   filtered.forEach(function(c){var s=c.source||'미분류';if(!srcMap[s])srcMap[s]={total:0,contracted:0};srcMap[s].total++;if(c.contracted==='Y')srcMap[s].contracted++});
-  // 상담자별
+  // 1차/2차 상담자 역할 분리 집계
+  var c1Map={},c2Map={};
+  filtered.forEach(function(c){
+    var n1=c.counselor1||'';
+    var n2=c.counselor2||'';
+    var isY=c.contracted==='Y';
+    var isN=c.contracted==='N';
+    var has2=!!n2;
+    if(n1){
+      if(!c1Map[n1])c1Map[n1]={total:0,contracted1:0,linked2:0,closed:0,progressing:0,fee:0};
+      c1Map[n1].total++;
+      if(has2)c1Map[n1].linked2++;
+      if(!has2&&isY)c1Map[n1].contracted1++;
+      if(!has2&&isN)c1Map[n1].closed++;
+      if(c.contracted==='P')c1Map[n1].progressing++;
+      if(isY)c1Map[n1].fee+=(c.expectedFee||0);
+    }
+    if(n2){
+      if(!c2Map[n2])c2Map[n2]={total:0,contracted:0,fee:0};
+      c2Map[n2].total++;
+      if(isY){c2Map[n2].contracted++;c2Map[n2].fee+=(c.expectedFee||0)}
+    }
+  });
+  // legacy cslrMap for backward compat
   var cslrMap={};
   filtered.forEach(function(c){
     [c.counselor1,c.counselor2].forEach(function(name){
@@ -8970,9 +8993,12 @@ function renderConsultStats(){
   h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:3px solid #d69e2e;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#d69e2e">'+W(contractedExpFee)+'</div><div style="font-size:10px;color:#718096">계약 기장료</div>'+trendBadge(contractedExpFee,prevFee)+'</div>';
   h+='</div>';
 
-  // 상담자 성과 랭킹 + 유입경로 계약률 랭킹
-  var cslrKeys=Object.keys(cslrMap).sort(function(a,b){return cslrMap[b].total-cslrMap[a].total});
-  var maxCslr=cslrKeys.length?cslrMap[cslrKeys[0]].total:1;
+  // === 1차 상담자 퍼널 스택바 + 2차 상담자 전환률 ===
+  var c1Keys=Object.keys(c1Map).sort(function(a,b){return c1Map[b].total-c1Map[a].total});
+  var c2Keys=Object.keys(c2Map).sort(function(a,b){return (c2Map[b].total>0?c2Map[b].contracted/c2Map[b].total:0)-(c2Map[a].total>0?c2Map[a].contracted/c2Map[a].total:0)});
+  var maxC1=c1Keys.length?c1Map[c1Keys[0]].total:1;
+
+  // 유입경로
   var srcKeys=Object.keys(srcMap).sort(function(a,b){
     var ra=srcMap[a].total>0?srcMap[a].contracted/srcMap[a].total:0;
     var rb=srcMap[b].total>0?srcMap[b].contracted/srcMap[b].total:0;
@@ -8980,76 +9006,97 @@ function renderConsultStats(){
   });
   var maxSrc=srcKeys.length?srcMap[srcKeys[0]].total:1;
   srcKeys.forEach(function(k){if(srcMap[k].total>maxSrc)maxSrc=srcMap[k].total});
-
-  var rankColors=['#d69e2e','#a0aec0','#cd7f32'];
-  var cslrColors=['#1A66FF','#38a169','#d53f8c','#805ad5','#d69e2e','#e53e3e','#319795','#dd6b20'];
+  var srcColors=['#0B71F4','#77C5F1','#8EEBF8','#DCE7F2','#F3F3F3'];
 
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">';
 
-  // 왼쪽: 상담자 성과 랭킹
+  // 왼쪽: 1차 상담자 퍼널 스택바
   h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">';
-  h+='<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px">🏆 상담자 성과 랭킹</div>';
-  cslrKeys.forEach(function(k,i){
-    var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-    var fee=cslrFee[k]||0;
-    var rc=i<3?rankColors[i]:'#e2e8f0';var rtc=i>=3?'#4a5568':'#fff';
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7fafc;border:1px solid #edf2f7;border-radius:8px;margin-bottom:6px">';
-    h+='<div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+rtc+';background:'+rc+';flex-shrink:0">'+(i+1)+'</div>';
-    h+='<div style="flex:1"><div style="font-size:11px;font-weight:700">'+k+'</div><div style="font-size:9px;color:#718096">상담 '+d.total+'건 → 계약 '+d.contracted+'건'+(fee?' · 기장료 '+W(fee):'')+'</div></div>';
-    h+='<div style="font-size:13px;font-weight:800;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px">📞 1차 상담자 결과 분포</div>';
+  h+='<div style="font-size:9px;color:#718096;margin-bottom:10px">경영지원팀 · 상담 후 결과별 분류</div>';
+  c1Keys.forEach(function(k){
+    var d=c1Map[k];
+    var linkRate=d.total>0?Math.round(d.linked2/d.total*100):0;
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">';
+    h+='<span style="font-size:10px;font-weight:700;min-width:42px;color:#1E293B">'+k+'</span>';
+    h+='<div style="flex:1;display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:9px;color:#fff;font-weight:600">';
+    // 1차계약 (Blue)
+    if(d.contracted1>0){var w1=Math.max(Math.round(d.contracted1/d.total*100),8);
+      h+='<div style="width:'+w1+'%;background:#0B71F4;display:flex;align-items:center;justify-content:center" title="1차계약">'+d.contracted1+'</div>';}
+    // 2차연결 (Sky Blue)
+    if(d.linked2>0){var w2=Math.max(Math.round(d.linked2/d.total*100),8);
+      h+='<div style="width:'+w2+'%;background:#77C5F1;display:flex;align-items:center;justify-content:center" title="2차연결">'+d.linked2+'</div>';}
+    // 종결 (Light Gray)
+    if(d.closed>0){var w3=Math.max(Math.round(d.closed/d.total*100),8);
+      h+='<div style="width:'+w3+'%;background:#bcc3cd;display:flex;align-items:center;justify-content:center;color:#4a5568" title="종결">'+d.closed+'</div>';}
+    // 진행중 (Pale Blue)
+    if(d.progressing>0){var w4=Math.max(Math.round(d.progressing/d.total*100),8);
+      h+='<div style="width:'+w4+'%;background:#DCE7F2;display:flex;align-items:center;justify-content:center;color:#4a5568" title="진행중">'+d.progressing+'</div>';}
+    h+='</div>';
+    h+='<span style="font-size:9px;font-weight:700;min-width:50px;text-align:right;color:#1E293B">'+d.total+'건 <span style="color:#0B71F4">'+linkRate+'%</span></span>';
     h+='</div>';
   });
-  // 상담자별 비교 바
-  if(cslrKeys.length){
-    h+='<div style="margin-top:10px"><div style="font-size:10px;color:#718096;margin-bottom:6px;font-weight:600">상담건수 대비 계약 비율</div>';
-    cslrKeys.forEach(function(k,i){
-      var d=cslrMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
-      var bw=Math.round(d.total/maxCslr*100);
-      var clr=cslrColors[i%cslrColors.length];
-      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
-      h+='<span style="font-size:10px;font-weight:600;min-width:46px">'+k+'</span>';
-      h+='<div style="flex:1;height:18px;background:#edf2f7;border-radius:4px;overflow:hidden;position:relative">';
-      h+='<div style="width:'+bw+'%;height:100%;background:'+clr+';opacity:.25;border-radius:4px"></div>';
-      h+='<div style="position:absolute;top:0;left:0;width:'+Math.round(bw*r/100)+'%;height:100%;background:'+clr+';border-radius:4px;opacity:.7"></div>';
-      h+='<span style="position:absolute;left:6px;top:2px;font-size:9px;color:#2d3748;font-weight:600">'+d.total+'건</span>';
+  h+='<div style="display:flex;gap:10px;font-size:9px;color:#718096;margin-top:6px;flex-wrap:wrap">';
+  h+='<span><span style="display:inline-block;width:8px;height:8px;background:#0B71F4;border-radius:2px;margin-right:2px"></span>1차계약</span>';
+  h+='<span><span style="display:inline-block;width:8px;height:8px;background:#77C5F1;border-radius:2px;margin-right:2px"></span>2차연결</span>';
+  h+='<span><span style="display:inline-block;width:8px;height:8px;background:#bcc3cd;border-radius:2px;margin-right:2px"></span>종결</span>';
+  h+='<span><span style="display:inline-block;width:8px;height:8px;background:#DCE7F2;border-radius:2px;margin-right:2px"></span>진행중</span>';
+  h+='</div>';
+
+  // 2차 상담자 전환률
+  if(c2Keys.length>0){
+    h+='<div style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0">';
+    h+='<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px">👔 2차 상담자 계약 전환</div>';
+    h+='<div style="font-size:9px;color:#718096;margin-bottom:8px">세무사 · 2차 배정 후 계약 전환률</div>';
+    c2Keys.forEach(function(k){
+      var d=c2Map[k];
+      var r=d.total>0?Math.round(d.contracted/d.total*100):0;
+      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">';
+      h+='<span style="font-size:10px;font-weight:700;min-width:42px;color:#1E293B">'+k+'</span>';
+      h+='<div style="flex:1;display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:9px;font-weight:600">';
+      h+='<div style="width:'+Math.max(r,5)+'%;background:#0B71F4;display:flex;align-items:center;justify-content:center;color:#fff">'+d.contracted+'건</div>';
+      h+='<div style="width:'+(100-Math.max(r,5))+'%;background:#F3F3F3;display:flex;align-items:center;justify-content:center;color:#718096">'+(d.total-d.contracted)+'건</div>';
       h+='</div>';
-      h+='<span style="font-size:9px;font-weight:700;min-width:30px;text-align:right;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</span>';
+      h+='<span style="font-size:11px;font-weight:800;min-width:36px;text-align:right;color:'+(r>=60?'#0B71F4':r>=40?'#77C5F1':'#bcc3cd')+'">'+r+'%</span>';
       h+='</div>';
     });
-    h+='<div style="display:flex;gap:12px;font-size:9px;color:#718096;margin-top:4px"><span><span style="display:inline-block;width:8px;height:8px;background:#cbd5e0;border-radius:2px;margin-right:2px"></span>상담</span><span><span style="display:inline-block;width:8px;height:8px;background:#4a5568;border-radius:2px;margin-right:2px"></span>계약</span></div>';
+    h+='<div style="display:flex;gap:10px;font-size:9px;color:#718096;margin-top:4px">';
+    h+='<span><span style="display:inline-block;width:8px;height:8px;background:#0B71F4;border-radius:2px;margin-right:2px"></span>계약</span>';
+    h+='<span><span style="display:inline-block;width:8px;height:8px;background:#F3F3F3;border:1px solid #e2e8f0;border-radius:2px;margin-right:2px"></span>미계약</span>';
+    h+='</div>';
     h+='</div>';
   }
   h+='</div>';
 
   // 오른쪽: 유입경로 계약률 랭킹
+  var rankColors=['#0B71F4','#77C5F1','#8EEBF8'];
   h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">';
-  h+='<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px">📊 유입경로 계약률 랭킹</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px">📊 유입경로 계약률</div>';
   srcKeys.forEach(function(k,i){
     var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
     var fee=srcFee[k]||0;
-    var rc=i<3?rankColors[i]:'#e2e8f0';var rtc=i>=3?'#4a5568':'#fff';
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7fafc;border:1px solid #edf2f7;border-radius:8px;margin-bottom:6px">';
-    h+='<div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+rtc+';background:'+rc+';flex-shrink:0">'+(i+1)+'</div>';
-    h+='<div style="flex:1"><div style="font-size:11px;font-weight:700">'+k+'</div><div style="font-size:9px;color:#718096">상담 '+d.total+'건 → 계약 '+d.contracted+'건'+(fee?' · 기장료 '+W(fee):'')+'</div></div>';
-    h+='<div style="font-size:13px;font-weight:800;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</div>';
+    var rc=i<3?rankColors[i]:'#DCE7F2';var rtc=i<3?'#fff':'#4a5568';
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#F3F3F3;border:1px solid #edf2f7;border-radius:8px;margin-bottom:5px">';
+    h+='<div style="width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:'+rtc+';background:'+rc+';flex-shrink:0">'+(i+1)+'</div>';
+    h+='<div style="flex:1"><div style="font-size:11px;font-weight:700">'+k+'</div><div style="font-size:9px;color:#718096">'+d.total+'건 → '+d.contracted+'건'+(fee?' · '+W(fee):'')+'</div></div>';
+    h+='<div style="font-size:12px;font-weight:800;color:'+(r>=50?'#0B71F4':r>=30?'#77C5F1':'#bcc3cd')+'">'+r+'%</div>';
     h+='</div>';
   });
-  // 유입경로별 비교 바
+  // 유입경로별 바
   if(srcKeys.length){
     h+='<div style="margin-top:10px"><div style="font-size:10px;color:#718096;margin-bottom:6px;font-weight:600">유입건수 대비 계약 비율</div>';
-    var srcColors=['#d69e2e','#1A66FF','#6366f1','#d53f8c','#38a169','#e53e3e','#319795','#dd6b20'];
     srcKeys.forEach(function(k,i){
       var d=srcMap[k];var r=d.total>0?Math.round(d.contracted/d.total*100):0;
       var bw=Math.round(d.total/maxSrc*100);
-      var clr=srcColors[i%srcColors.length];
+      var clr=srcColors[i%srcColors.length]||'#77C5F1';
       h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
-      h+='<span style="font-size:10px;font-weight:600;min-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k+'</span>';
-      h+='<div style="flex:1;height:18px;background:#edf2f7;border-radius:4px;overflow:hidden;position:relative">';
-      h+='<div style="width:'+bw+'%;height:100%;background:'+clr+';opacity:.25;border-radius:4px"></div>';
-      h+='<div style="position:absolute;top:0;left:0;width:'+Math.round(bw*r/100)+'%;height:100%;background:'+clr+';border-radius:4px;opacity:.7"></div>';
-      h+='<span style="position:absolute;left:6px;top:2px;font-size:9px;color:#2d3748;font-weight:600">'+d.total+'건</span>';
+      h+='<span style="font-size:10px;font-weight:600;min-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k+'</span>';
+      h+='<div style="flex:1;height:18px;background:#F3F3F3;border-radius:4px;overflow:hidden;position:relative">';
+      h+='<div style="width:'+bw+'%;height:100%;background:'+clr+';opacity:.2;border-radius:4px"></div>';
+      h+='<div style="position:absolute;top:0;left:0;width:'+Math.round(bw*r/100)+'%;height:100%;background:'+clr+';border-radius:4px;opacity:.8"></div>';
+      h+='<span style="position:absolute;left:6px;top:2px;font-size:9px;color:#1E293B;font-weight:600">'+d.total+'건</span>';
       h+='</div>';
-      h+='<span style="font-size:9px;font-weight:700;min-width:30px;text-align:right;color:'+(r>=50?'#276749':r>=40?'#975a16':'#c53030')+'">'+r+'%</span>';
+      h+='<span style="font-size:9px;font-weight:700;min-width:30px;text-align:right;color:'+(r>=50?'#0B71F4':'#718096')+'">'+r+'%</span>';
       h+='</div>';
     });
     h+='</div>';
@@ -9057,25 +9104,25 @@ function renderConsultStats(){
   h+='</div></div>';
 
   // 핵심 인사이트
-  var bestCslr=cslrKeys.length?cslrKeys[0]:'';
-  var bestCslrRate=bestCslr&&cslrMap[bestCslr]?Math.round(cslrMap[bestCslr].contracted/cslrMap[bestCslr].total*100):0;
+  var bestC1=c1Keys.length?c1Keys[0]:'';
+  var bestC1Link=bestC1&&c1Map[bestC1]?Math.round(c1Map[bestC1].linked2/c1Map[bestC1].total*100):0;
+  var bestC2=c2Keys.length?c2Keys[0]:'';
+  var bestC2Rate=bestC2&&c2Map[bestC2]?Math.round(c2Map[bestC2].contracted/c2Map[bestC2].total*100):0;
   var bestSrc=srcKeys.length?srcKeys[0]:'';
   var bestSrcRate=bestSrc&&srcMap[bestSrc]?Math.round(srcMap[bestSrc].contracted/srcMap[bestSrc].total*100):0;
-  var worstSrc=srcKeys.length?srcKeys[srcKeys.length-1]:'';
-  var worstSrcRate=worstSrc&&srcMap[worstSrc]?Math.round(srcMap[worstSrc].contracted/srcMap[worstSrc].total*100):0;
 
-  if(bestCslr||bestSrc){
-    h+='<div style="background:linear-gradient(90deg,#ebf8ff,#f0fff4);border:1px solid #bee3f8;border-radius:10px;padding:14px">';
-    h+='<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:8px">💡 핵심 인사이트</div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11px;color:#2d3748">';
-    if(bestCslr){
-      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#1A66FF;margin-bottom:3px">최고 성과 상담자</div><div>'+bestCslr+' — 계약률 '+bestCslrRate+'%<br><span style="font-size:10px;color:#718096">상담 '+cslrMap[bestCslr].total+'건 중 '+cslrMap[bestCslr].contracted+'건 계약</span></div></div>';
+  if(bestC1||bestC2||bestSrc){
+    h+='<div style="background:linear-gradient(90deg,#DCE7F2,#F3F3F3);border:1px solid #DCE7F2;border-radius:10px;padding:12px">';
+    h+='<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:6px">💡 핵심 인사이트</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;color:#1E293B">';
+    if(bestC1){
+      h+='<div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#0B71F4;font-size:10px;margin-bottom:2px">최다 상담 (1차)</div>'+bestC1+' · 2차연결 '+bestC1Link+'%</div>';
+    }
+    if(bestC2){
+      h+='<div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#0B71F4;font-size:10px;margin-bottom:2px">최고 전환 (2차)</div>'+bestC2+' · 계약률 '+bestC2Rate+'%</div>';
     }
     if(bestSrc){
-      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#d69e2e;margin-bottom:3px">최고 전환 경로</div><div>'+bestSrc+' — 계약률 '+bestSrcRate+'%<br><span style="font-size:10px;color:#718096">소개 마케팅 강화 권장</span></div></div>';
-    }
-    if(worstSrc&&worstSrc!==bestSrc){
-      h+='<div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#c53030;margin-bottom:3px">개선 필요</div><div>'+worstSrc+' — 계약률 '+worstSrcRate+'%<br><span style="font-size:10px;color:#718096">상담 품질 또는 타겟 점검</span></div></div>';
+      h+='<div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e2e8f0"><div style="font-weight:700;color:#0B71F4;font-size:10px;margin-bottom:2px">최고 유입경로</div>'+bestSrc+' · 계약률 '+bestSrcRate+'%</div>';
     }
     h+='</div></div>';
   }
