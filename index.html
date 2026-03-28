@@ -739,77 +739,82 @@ tr:hover td{background:#f8fafc}
         <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('원천세')">원천세</button>
         <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('종소세')">종소세</button>
         <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('기타')">기타</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('휴가')">🏖️휴가</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('회사일정')">🏢일정</button>
       </div>
       <div id="calDeadlineList"></div>
     </div>
-    <!-- 우측: 구글캘린더 3개 -->
+    <!-- 우측: 구글캘린더 통합뷰 -->
     <div style="padding:20px;background:#f7fafc;overflow-y:auto">
-      <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#3182ce;display:inline-block"></span>Google Calendar</div>
-
-      <!-- 탭 전환 버튼 -->
-      <div style="display:flex;gap:4px;margin-bottom:12px" id="gcalTabs">
-        <button class="btn btn-sm" style="background:#38a169;color:#fff;flex:1" onclick="switchGcalTab(0)">🏖️ 휴가</button>
-        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0;flex:1" onclick="switchGcalTab(1)">🏢 회사일정</button>
-        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0;flex:1" onclick="switchGcalTab(2)">👤 대표일정</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#3182ce;display:inline-block"></span>Google Calendar</div>
+        <button class="btn btn-sm" style="font-size:11px;background:#edf2f7;color:#4a5568" onclick="toggleGcalSetup()">⚙️ 캘린더 설정</button>
       </div>
 
-      <!-- 캘린더 슬롯 0: 휴가 -->
-      <div class="gcal-slot" id="gcalSlot0" style="margin-bottom:12px">
-        <div id="gcalIframeWrap0" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe0" style="width:100%;height:360px;border:none"></iframe>
-          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(0)">연동 해제</button></div>
+      <!-- 통합 캘린더 iframe -->
+      <div id="gcalCombinedWrap" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:12px">
+        <iframe id="gcalCombinedIframe" style="width:100%;height:440px;border:none"></iframe>
+        <!-- 범례 -->
+        <div style="display:flex;gap:12px;padding:8px 14px;background:#f7fafc;font-size:11px;align-items:center;flex-wrap:wrap">
+          <span id="gcalLegend0" style="display:none;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#38a169;display:inline-block"></span>🏖️ 휴가</span>
+          <span id="gcalLegend1" style="display:none;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#3182ce;display:inline-block"></span>🏢 회사일정</span>
+          <span id="gcalLegend2" style="display:none;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#805ad5;display:inline-block"></span>👤 대표일정</span>
         </div>
-        <div id="gcalSetup0" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">🏖️</div>
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px">휴가 캘린더</div>
-          <div style="font-size:11px;color:#718096;margin-bottom:12px">직원 휴가/연차 관리용 구글캘린더</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="text" id="gcalUrl0" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
-            <button class="btn btn-sm" style="background:#38a169;color:#fff" onclick="saveGcalUrl(0)">연동</button>
+      </div>
+
+      <!-- 미연동 안내 -->
+      <div id="gcalEmptyGuide" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:30px;text-align:center;margin-bottom:12px">
+        <div style="font-size:40px;margin-bottom:10px">📅</div>
+        <div style="font-weight:600;font-size:15px;margin-bottom:6px">Google Calendar 연동</div>
+        <div style="font-size:12px;color:#718096;margin-bottom:12px">아래 ⚙️ 캘린더 설정 버튼을 눌러<br>캘린더 ID를 등록하세요</div>
+      </div>
+
+      <!-- 캘린더 설정 패널 (접기/펼치기) -->
+      <div id="gcalSetupPanel" style="display:none;margin-bottom:12px">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">📋 캘린더 연동 설정</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="min-width:80px;font-size:12px;font-weight:600;color:#38a169">🏖️ 휴가</span>
+              <input type="text" id="gcalUrl0" placeholder="캘린더 ID (예: xxx@group.calendar.google.com)" style="flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+              <button class="btn btn-sm" style="font-size:10px;color:#e53e3e;padding:2px 6px" onclick="removeGcalUrl(0)">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="min-width:80px;font-size:12px;font-weight:600;color:#3182ce">🏢 회사일정</span>
+              <input type="text" id="gcalUrl1" placeholder="캘린더 ID (예: xxx@group.calendar.google.com)" style="flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+              <button class="btn btn-sm" style="font-size:10px;color:#e53e3e;padding:2px 6px" onclick="removeGcalUrl(1)">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="min-width:80px;font-size:12px;font-weight:600;color:#805ad5">👤 대표일정</span>
+              <input type="text" id="gcalUrl2" placeholder="캘린더 ID (예: xxx@group.calendar.google.com)" style="flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+              <button class="btn btn-sm" style="font-size:10px;color:#e53e3e;padding:2px 6px" onclick="removeGcalUrl(2)">✕</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-sm btn-primary" onclick="saveAllGcalUrls()">저장 및 연동</button>
+            <button class="btn btn-sm" onclick="toggleGcalSetup()">닫기</button>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:#a0aec0;line-height:1.5">
+            💡 구글캘린더 → 설정 → 캘린더 설정 → '캘린더 통합' → '캘린더 ID' 복사<br>
+            각 캘린더별로 색상이 구분되어 한 화면에 표시됩니다
           </div>
         </div>
-      </div>
-
-      <!-- 캘린더 슬롯 1: 회사일정 -->
-      <div class="gcal-slot" id="gcalSlot1" style="margin-bottom:12px;display:none">
-        <div id="gcalIframeWrap1" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe1" style="width:100%;height:360px;border:none"></iframe>
-          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(1)">연동 해제</button></div>
-        </div>
-        <div id="gcalSetup1" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">🏢</div>
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px">회사 일정 캘린더</div>
-          <div style="font-size:11px;color:#718096;margin-bottom:12px">전사 공유 일정/미팅/행사 관리</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="text" id="gcalUrl1" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
-            <button class="btn btn-sm" style="background:#3182ce;color:#fff" onclick="saveGcalUrl(1)">연동</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 캘린더 슬롯 2: 대표일정 -->
-      <div class="gcal-slot" id="gcalSlot2" style="margin-bottom:12px;display:none">
-        <div id="gcalIframeWrap2" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe2" style="width:100%;height:360px;border:none"></iframe>
-          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(2)">연동 해제</button></div>
-        </div>
-        <div id="gcalSetup2" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
-          <div style="font-size:28px;margin-bottom:8px">👤</div>
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px">대표 개인일정 캘린더</div>
-          <div style="font-size:11px;color:#718096;margin-bottom:12px">대표님 개인 스케줄 관리</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="text" id="gcalUrl2" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
-            <button class="btn btn-sm" style="background:#805ad5;color:#fff" onclick="saveGcalUrl(2)">연동</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 설정 가이드 -->
-      <div style="padding:10px 12px;background:#ebf8ff;border-radius:8px;font-size:11px;color:#2a4365;line-height:1.6;margin-bottom:12px">
-        💡 <strong>연동 방법:</strong> 구글캘린더 → 설정 → 캘린더 설정 → '캘린더 통합' → '이 캘린더의 공개 URL' 또는 '캘린더 ID' 복사
       </div>
 
       <!-- 오늘의 주요 마감 -->
       <div id="calTodayEvents" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 오늘의 주요 마감</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 7일 이내 주요 마감</div>
         <div id="calTodaySummary"></div>
+      </div>
+      <!-- 이번달 휴가자 명단 -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">🏖️ 이번달 휴가자 명단</div>
+        <div id="calVacationList"></div>
+      </div>
+      <!-- 이번주 주요일정 -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📋 이번주 주요일정</div>
+        <div id="calWeeklySchedule"></div>
       </div>
     </div>
   </div>
@@ -825,7 +830,7 @@ tr:hover td{background:#f8fafc}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">마감일 *</label><input type="date" id="calDlDate" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"></div>
         <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">카테고리</label>
-          <select id="calDlCat" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"><option value="부가세">부가세</option><option value="법인세">법인세</option><option value="원천세">원천세</option><option value="종소세">종소세</option><option value="기타">기타</option></select>
+          <select id="calDlCat" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"><option value="부가세">부가세</option><option value="법인세">법인세</option><option value="원천세">원천세</option><option value="종소세">종소세</option><option value="기타">기타</option><option value="휴가">🏖️ 휴가</option><option value="회사일정">🏢 회사일정</option></select>
         </div>
       </div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">대상</label><input type="text" id="calDlTarget" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="예: 법인사업자, 개인 일반과세자"></div>
@@ -1005,7 +1010,7 @@ tr:hover td{background:#f8fafc}
     <div class="ST">자료수령 관리</div>
     <div class="FG">
       <div class="FGI"><label>세금계산서 이월</label><select id="f_invoiceCarry"><option value="N">미해당</option><option value="Y">이월대상</option></select></div>
-      <div class="FGI"><label>자료수령 상태</label><select id="f_docStatus"><option value="">미지정</option><option value="받는중">받는중</option><option value="수령완료">수령완료</option></select></div>
+      <div class="FGI"><label>자료수령 상태</label><select id="f_docStatus"><option value="미수령">미수령</option><option value="받는중">받는중</option><option value="수령완료">수령완료</option></select></div>
       <div class="FGI"><label>자료수령 메모</label><input id="f_docMemo" placeholder="자료수령 관련 특이사항"></div>
     </div>
     <div class="ST">경영지원 체크리스트</div>
@@ -1378,7 +1383,7 @@ function saveData(){
     db.collection('users').doc(auth.currentUser.uid).set({
       data: JSON.stringify(data),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function(e){console.error('Firestore save error:',e)});
+    }).catch(function(e){console.error('Firestore save error:',e);toast('⚠️ 클라우드 저장 실패 — 네트워크를 확인해주세요')});
   }
 }
 let data=loadData();
@@ -1396,6 +1401,8 @@ runChecklistMigration2();
 // 추가 마이그레이션3: 자료 미수령 업체는 체크리스트 초기화 (온보딩 진행 필요)
 function runChecklistMigration3(){if(data._ckInit0328c)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){if(c.status!=='활성')return;var ds=c.docStatus||'';if(ds==='받는중'||ds==='수령완료')return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=false})});data._ckInit0328c=true;saveData()}
 runChecklistMigration3();
+// 마이그레이션: 빈 docStatus → '미수령' 통일
+if(!data._docStatusV2){data.clients.forEach(function(c){var ds=c.docStatus||'';if(!ds)c.docStatus='미수령'});data._docStatusV2=true;saveData()}
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -1997,8 +2004,9 @@ function goToTab(key){
     renderTabBar();
     refreshAll();
   }else if(ADMIN_SUB_KEYS.indexOf(key)!==-1){
-    // 관리자 서브탭 - 비밀번호 보호 (최종관리자 제외)
-    if(!protectedTabsUnlocked['admin']&&!isSuperAdmin()){
+    // 관리자 서브탭 - 최종관리자는 즉시 통과, 그 외 비밀번호 보호
+    if(isSuperAdmin())protectedTabsUnlocked['admin']=true;
+    if(!protectedTabsUnlocked['admin']){
       openPinModal('관리자 탭 비밀번호',function(){
         protectedTabsUnlocked['admin']=true;
         activeMainTab='admin';activeAdminSub=key;
@@ -2175,7 +2183,7 @@ function openClientModal(ec){
     document.getElementById('f_closingType').value=ec.closingType||'기본';
     document.getElementById('f_closingChangeDate').value=ec.closingChangeDate||'';
     document.getElementById('f_invoiceCarry').value=ec.invoiceCarry||'N';
-    document.getElementById('f_docStatus').value=ec.docStatus||'';
+    document.getElementById('f_docStatus').value=ec.docStatus||'미수령';
     document.getElementById('f_docMemo').value=ec.docMemo||'';
     var cl=ec.onboardChecklist||{};
     ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
@@ -2201,7 +2209,7 @@ function openClientModal(ec){
     document.getElementById('f_closingType').selectedIndex=0;
     document.getElementById('f_closingChangeDate').value='';
     document.getElementById('f_invoiceCarry').value='N';
-    document.getElementById('f_docStatus').value='';
+    document.getElementById('f_docStatus').value='미수령';
     ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
     document.getElementById('f_docMemo').value='';
     document.getElementById('f_clientOrigin').value='신규';
@@ -2486,7 +2494,7 @@ function viewClient(id){
     <div><small style="color:#64748b">1:1교육</small><br>${c.trainer||'-'}</div>
     <div><small style="color:#64748b">유입구분</small><br>${c.clientOrigin==='이관'?'<span style="color:#dd6b20;font-weight:600">이관</span>':'신규'}</div>
     ${c.clientOrigin==='이관'&&c.originOffice?'<div><small style="color:#64748b">이관 사무실</small><br><strong style="color:#dd6b20">'+c.originOffice+'</strong></div>':''}
-    ${c.docStatus?'<div><small style="color:#64748b">자료수령</small><br><span style="color:'+(c.docStatus==='수령완료'?'#38a169':'#d69e2e')+';font-weight:600">'+c.docStatus+'</span></div>':''}
+    ${c.docStatus&&c.docStatus!=='수령완료'?'<div><small style="color:#64748b">자료수령</small><br><span style="color:'+(c.docStatus==='미수령'?'#c53030':'#d69e2e')+';font-weight:600">'+c.docStatus+'</span></div>':''}
     ${c.invoiceCarry==='Y'?'<div><small style="color:#d69e2e">세금계산서 이월</small><br><strong style="color:#d69e2e">이월대상</strong></div>':''}
     ${c.docMemo?'<div><small style="color:#64748b">자료메모</small><br>'+c.docMemo+'</div>':''}
   </div>
@@ -2646,7 +2654,7 @@ function renderDocStatusBanner(){
   var el=document.getElementById('docStatusBanner');if(!el)return;
   var row=document.getElementById('alertBannerRow');
   var ac=AC();
-  var notReceived=ac.filter(function(c){var ds=c.docStatus||'';return !ds||ds==='미수령'});
+  var notReceived=ac.filter(function(c){var ds=c.docStatus||'미수령';return ds==='미수령'});
   var missingInfo=ac.filter(function(c){var m=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))m=true;if(c.type==='2부'&&!c.extraFee)m=true;return m}).length;
   var checklistIncomplete=ac.filter(function(c){var prog=getChecklistProgress(c);return prog.done<prog.total}).length;
   var hasAlerts=notReceived.length||missingInfo||checklistIncomplete;
@@ -2701,23 +2709,30 @@ function renderSmartAlerts(){
     +'<div><div style="font-size:12px;font-weight:700;color:#2a4365">월 기장료 합계</div>'
     +'<div style="font-size:15px;font-weight:800;color:#2b6cb0">'+W(totalMonthlyFee)+'</div></div></div>');
 
-  // 3) 상담 전환율 (이번달 vs 전월)
+  // 3) 상담 전환율 (이번달 vs 전월 vs 전년 동월)
   var cons=data.consultations||[];
   var thisMonthCons=cons.filter(function(c){return c.date&&c.date.slice(0,7)===ym});
   var prevMonthCons=cons.filter(function(c){return c.date&&c.date.slice(0,7)===prevYM});
+  var lastYearYM=(now.getFullYear()-1)+'-'+('0'+(now.getMonth()+1)).slice(-2);
+  var lastYearCons=cons.filter(function(c){return c.date&&c.date.slice(0,7)===lastYearYM});
   var thisContracted=thisMonthCons.filter(function(c){return c.contracted==='Y'}).length;
   var thisRate=thisMonthCons.length>0?Math.round(thisContracted/thisMonthCons.length*100):0;
   var prevContracted=prevMonthCons.filter(function(c){return c.contracted==='Y'}).length;
   var prevRate=prevMonthCons.length>0?Math.round(prevContracted/prevMonthCons.length*100):0;
+  var lyContracted=lastYearCons.filter(function(c){return c.contracted==='Y'}).length;
+  var lyRate=lastYearCons.length>0?Math.round(lyContracted/lastYearCons.length*100):0;
   if(thisMonthCons.length>0){
     var diff=thisRate-prevRate;
     var trendIcon=diff>0?'📈':diff<0?'📉':'➡️';
     var trendColor=diff>0?'#276749':diff<0?'#c53030':'#718096';
     var trendText=diff>0?'+'+diff+'%p ↑':diff<0?diff+'%p ↓':'동일';
-    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+(diff>0?'#f0fff4':'#f7fafc')+';border:1px solid '+(diff>0?'#c6f6d5':'#e2e8f0')+';border-radius:10px;min-width:200px;cursor:pointer" onclick="goToTab(\'consult\')">'
+    var lyDiff=thisRate-lyRate;
+    var lyText=lastYearCons.length>0?(lyDiff>0?'전년대비 +'+lyDiff+'%p':lyDiff<0?'전년대비 '+lyDiff+'%p':'전년 동일'):'전년 데이터 없음';
+    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+(diff>0?'#f0fff4':'#f7fafc')+';border:1px solid '+(diff>0?'#c6f6d5':'#e2e8f0')+';border-radius:10px;min-width:220px;cursor:pointer" onclick="goToTab(\'consult\')">'
       +'<span style="font-size:20px">'+trendIcon+'</span>'
-      +'<div><div style="font-size:12px;font-weight:700;color:#2d3748">상담 전환율 '+thisRate+'%</div>'
-      +'<div style="font-size:11px;color:'+trendColor+'">전월대비 '+trendText+' · '+thisMonthCons.length+'건 중 '+thisContracted+'건 계약</div></div></div>');
+      +'<div><div style="font-size:12px;font-weight:700;color:#2d3748">상담 전환율 '+thisRate+'% <span style="font-weight:400;color:#718096;font-size:10px">('+thisMonthCons.length+'건 중 '+thisContracted+'건)</span></div>'
+      +'<div style="font-size:11px;color:'+trendColor+'">전월대비 '+trendText+'</div>'
+      +'<div style="font-size:10px;color:#718096;margin-top:1px">'+lyText+'</div></div></div>');
   }
 
   // 4) 상담 후 7일 미계약 → 2차연락 필요
@@ -2992,7 +3007,7 @@ function renderClients(){
   const list=data.clients.filter(c=>{
     if(s&&!c.name.toLowerCase().includes(s)&&!c.id.toLowerCase().includes(s)&&!(c.ownerName||'').toLowerCase().includes(s))return false;
     if(ft&&c.type!==ft)return false;if(fs&&c.status!==fs)return false;if(fm&&c.manager!==fm)return false;if(fe&&c.entityType!==fe)return false;
-    if(fd){var ds=c.docStatus||'';if(fd==='미수령'&&ds!==''&&ds!=='미수령')return false;if(fd==='받는중'&&ds!=='받는중')return false;if(fd==='수령완료'&&ds!=='수령완료')return false;}
+    if(fd){var ds=c.docStatus||'미수령';if(fd!==ds)return false;}
     if(fmi&&c.status==='활성'){var hasMissing=!c.ownerName||!c.ownerBirth||!c.bizRegDate||!c.manager;if(c.type==='1부'&&(!c.fee||!c.adjFee))hasMissing=true;if(c.type==='2부'&&!c.extraFee)hasMissing=true;if(!hasMissing)return false;}
     return true;
   });
@@ -3041,7 +3056,7 @@ function renderClients(){
     var closingSpan=c.closingType==='월결산'?'<span style="color:#e53e3e;font-weight:600">월</span>':c.closingType==='분기결산'?'<span style="color:#805ad5;font-weight:600">분기</span>':'<span style="color:#a0aec0">기본</span>';
     // 자료상태 배경색
     var docBg='';
-    if(c.status==='활성'){var ds=c.docStatus||'';if(!ds||ds==='미수령')docBg='background:#fff5f5;';else if(ds==='받는중')docBg='background:#fffff0;';}
+    if(c.status==='활성'){var ds=c.docStatus||'미수령';if(ds==='미수령')docBg='background:#fff5f5;';else if(ds==='받는중')docBg='background:#fffff0;';}
     // 굵은 테두리 그룹 스타일 (안A)
     var rowStyle='';var tdFirstExtra='';var tdLastExtra='';
     if(gi.pos!=='none'){
@@ -7688,24 +7703,25 @@ function toggleObChecklist(clientId,key){
 function renderOnboarding(){
   var ym=document.getElementById('obMonth').value;
   var mgrF=document.getElementById('obMgrFilter').value;
-  // 신규수임 대상: 임시/미정 업체 + 자료받는중 업체
+  // 신규수임 대상: 임시/미정 업체 + 자료미수령 + 자료받는중 업체
   var pending=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
     var nm=c.name||'';
     var isPending=nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1;
-    var isReceiving=c.docStatus==='받는중';
-    if(!isPending&&!isReceiving)return false;
+    var ds=c.docStatus||'미수령';
+    if(!isPending&&ds!=='미수령'&&ds!=='받는중')return false;
     var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
     if(ym&&cMonth&&cMonth>ym)return false;
     if(mgrF&&c.manager!==mgrF)return false;
     return true;
   });
-  // 이번 달 전환된 업체
+  // 이번 달 전환된 업체 (자료수령완료 상태만)
   var converted=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
     var nm=c.name||'';
     if(nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1)return false;
-    if(c.docStatus==='받는중')return false;
+    var ds=c.docStatus||'미수령';
+    if(ds!=='수령완료')return false;
     var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
     if(cMonth!==ym)return false;
     if(mgrF&&c.manager!==mgrF)return false;
@@ -7729,10 +7745,9 @@ function renderOnboarding(){
     var prog=getChecklistProgress(c);
     return prog.done<prog.total;
   });
-  // 분류: 자료미수령 vs 자료받는중
-  function hasDocInfo(c){return c.bizRegNo&&c.bizRegNo.length>5}
-  var docWaiting=pending.filter(function(c){return c.docStatus!=='받는중'&&!hasDocInfo(c)});
-  var receiving=pending.filter(function(c){return c.docStatus==='받는중'||hasDocInfo(c)});
+  // 분류: 자료미수령 vs 자료받는중 (docStatus 기준)
+  var docWaiting=pending.filter(function(c){var ds=c.docStatus||'미수령';return ds==='미수령'});
+  var receiving=pending.filter(function(c){return c.docStatus==='받는중'});
   // 파이프라인
   var pipe=document.getElementById('obPipeline');
   pipe.innerHTML=(incomplete.length?'<div style="flex:1;text-align:center;padding:10px;background:#fed7e2;color:#97266d;border-radius:8px 0 0 0;font-weight:700"><div style="font-size:22px">'+incomplete.length+'</div><div style="font-size:11px">전환미완료</div></div><div style="width:2px;background:#e2e8f0"></div>':'')
@@ -7836,11 +7851,25 @@ function renderOnboarding(){
     converted.forEach(function(c){
       var prog=getChecklistProgress(c);
       var pct=prog.total?Math.round(prog.done/prog.total*100):0;
-      h3+='<div style="display:flex;align-items:center;padding:10px 14px;border:1px solid #c6f6d5;border-radius:8px;margin-bottom:6px;background:#f0fff4">'
+      var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
+      var cl=c.onboardChecklist||{};
+      h3+='<div style="padding:10px 14px;border:1px solid #c6f6d5;border-radius:8px;margin-bottom:6px;background:#f0fff4">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
         +'<div style="flex:1"><div style="font-weight:700;font-size:13px">'+c.name+' <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:10px">전환완료</span>'
         +(pct<100?' <span style="background:#fed7d7;color:#c53030;padding:2px 6px;border-radius:10px;font-size:9px">체크 '+prog.done+'/'+prog.total+'</span>':'')+'</div>'
         +'<div style="font-size:11px;color:#718096;margin-top:2px">담당: '+(c.manager||'-')+' · 기장료: '+W(c.fee||0)+(c.deferredMonths>0?' · 이연: '+c.deferredMonths+'개월':'')+'</div></div>'
-        +'</div>';
+        +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+prog.done+'/'+prog.total+'</span></div>';
+      if(pct<100){
+        h3+='<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:4px;transition:width .3s"></div></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:4px">';
+        OB_CHECKLIST_ITEMS.forEach(function(it){
+          var checked=!!cl[it.key];
+          h3+='<label onclick="toggleObChecklist(\''+c.id+'\',\''+it.key+'\')" style="display:flex;align-items:center;gap:2px;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;user-select:none;border:1px solid '+(checked?'#c6f6d5':'#e2e8f0')+';background:'+(checked?'#f0fff4':'#fff')+';color:'+(checked?'#276749':'#718096')+';font-weight:'+(checked?'600':'400')+'">'
+            +'<span style="font-size:11px">'+(checked?'✓':'○')+'</span> '+it.label+'</label>';
+        });
+        h3+='</div>';
+      }
+      h3+='</div>';
     });
   }
   document.getElementById('obConverted').innerHTML=h3;
@@ -7943,12 +7972,9 @@ function renderCalDeadlines(){
     if(calFilter!=='all'&&dl.cat!==calFilter)return;
     items.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',repeat:dl.repeat,idx:idx,dday:dDay(rd)});
   });
-  // D-day 순 정렬
+  // D-day 순 정렬 — 앞으로 2개월(61일) 이내만 표시
   items.sort(function(a,b){return a.date.localeCompare(b.date)});
-  // 지난 일정(30일 이내)은 뒤로, 미래 일정 먼저
-  var future=items.filter(function(i){return i.dday>=0});
-  var past=items.filter(function(i){return i.dday<0&&i.dday>=-30});
-  var sorted=future.concat(past);
+  var sorted=items.filter(function(i){return i.dday>=0&&i.dday<=61});
 
   var h='';
   if(sorted.length===0){
@@ -7963,7 +7989,7 @@ function renderCalDeadlines(){
     else if(dd<=7){badgeColor='#dd6b20';badgeText='D-'+dd;borderColor='#fefcbf';bgColor='#fffff0'}
     else if(dd<=14){badgeColor='#d69e2e';badgeText='D-'+dd;borderColor='#fefcbf';bgColor='#fff'}
     else{badgeColor='#38a169';badgeText='D-'+dd;borderColor='#e2e8f0';bgColor='#fff'}
-    var catIcon={'부가세':'💰','법인세':'🏢','원천세':'📋','종소세':'👤','기타':'📌'}[item.cat]||'📌';
+    var catIcon={'부가세':'💰','법인세':'🏢','원천세':'📋','종소세':'👤','기타':'📌','휴가':'🏖️','회사일정':'🗓️'}[item.cat]||'📌';
     var dm=item.date.slice(5,7)+'월';
     var ddd=parseInt(item.date.slice(8,10));
     h+='<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1px solid '+borderColor+';background:'+bgColor+';margin-bottom:8px;cursor:pointer" onclick="openCalDeadlineModal('+item.idx+')">';
@@ -7992,6 +8018,57 @@ function renderCalDeadlines(){
     });
   }
   document.getElementById('calTodaySummary').innerHTML=ts;
+
+  // 이번달 휴가자 명단 (cat==='휴가' && 이번달 범위)
+  var nowDate=new Date();var curY=nowDate.getFullYear();var curM=nowDate.getMonth();
+  var mStart=new Date(curY,curM,1);var mEnd=new Date(curY,curM+1,0);
+  var allItems=[];
+  (data.calendarDeadlines||[]).forEach(function(dl,idx){
+    var rd=resolveDate(dl.date);allItems.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',idx:idx,dday:dDay(rd)});
+  });
+  var vacItems=allItems.filter(function(i){
+    if(i.cat!=='휴가')return false;
+    var d=new Date(i.date);return d>=mStart&&d<=mEnd;
+  }).sort(function(a,b){return a.date.localeCompare(b.date)});
+  var vh='';
+  if(vacItems.length===0){
+    vh='<div style="font-size:12px;color:#a0aec0;padding:8px 0">이번달 등록된 휴가가 없습니다 ✅</div>';
+  }else{
+    vacItems.forEach(function(vi){
+      vh+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">';
+      vh+='<span style="width:6px;height:6px;border-radius:50%;background:#38a169;display:inline-block"></span>';
+      vh+='<span style="color:#718096;min-width:50px">'+vi.date.slice(5)+'</span>';
+      vh+='<span style="font-weight:600">'+vi.title+'</span>';
+      if(vi.target)vh+='<span style="margin-left:auto;font-size:11px;color:#718096">'+vi.target+'</span>';
+      vh+='</div>';
+    });
+  }
+  document.getElementById('calVacationList').innerHTML=vh;
+
+  // 이번주 주요일정 (cat==='회사일정' + 세무마감 중 이번주 범위)
+  var dayOfWeek=nowDate.getDay();var diffMon=dayOfWeek===0?-6:1-dayOfWeek;
+  var weekStart=new Date(curY,curM,nowDate.getDate()+diffMon);
+  var weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+6);
+  var weekStr=function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)};
+  var ws=weekStr(weekStart),we=weekStr(weekEnd);
+  var weekItems=allItems.filter(function(i){return i.date>=ws&&i.date<=we}).sort(function(a,b){return a.date.localeCompare(b.date)});
+  var wh='';
+  if(weekItems.length===0){
+    wh='<div style="font-size:12px;color:#a0aec0;padding:8px 0">이번주 등록된 일정이 없습니다 ✅</div>';
+  }else{
+    var dayNames=['일','월','화','수','목','금','토'];
+    weekItems.forEach(function(wi){
+      var wd=new Date(wi.date);var dayN=dayNames[wd.getDay()];
+      var ic={'부가세':'💰','법인세':'🏢','원천세':'📋','종소세':'👤','휴가':'🏖️','회사일정':'🗓️','기타':'📌'}[wi.cat]||'📌';
+      var col=wi.cat==='휴가'?'#38a169':wi.cat==='회사일정'?'#3182ce':'#e53e3e';
+      wh+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">';
+      wh+='<span style="width:6px;height:6px;border-radius:50%;background:'+col+';display:inline-block"></span>';
+      wh+='<span style="color:#718096;min-width:60px">'+wi.date.slice(5)+' ('+dayN+')</span>';
+      wh+='<span>'+ic+' '+wi.title+'</span>';
+      wh+='</div>';
+    });
+  }
+  document.getElementById('calWeeklySchedule').innerHTML=wh;
 }
 
 function openCalDeadlineModal(idx){
@@ -8056,63 +8133,67 @@ function deleteCalDeadline(){
 }
 
 var GCAL_NAMES=['휴가','회사일정','대표일정'];
-var GCAL_COLORS=['#38a169','#3182ce','#805ad5'];
-var activeGcalTab=0;
+var GCAL_COLORS=['#0b8043','#3f51b5','#8e24aa'];
+var gcalSetupOpen=false;
 
-function switchGcalTab(idx){
-  activeGcalTab=idx;
-  var btns=document.getElementById('gcalTabs').querySelectorAll('button');
-  btns.forEach(function(b,i){
-    if(i===idx){b.style.background=GCAL_COLORS[i];b.style.color='#fff';b.style.border='none'}
-    else{b.style.background='#fff';b.style.color='#4a5568';b.style.border='1px solid #e2e8f0'}
-  });
-  for(var i=0;i<3;i++){
-    document.getElementById('gcalSlot'+i).style.display=i===idx?'':'none';
-  }
-}
-
-function parseGcalSrc(url){
+function extractCalId(url){
   if(!url)return'';
-  if(url.indexOf('calendar.google.com/calendar/embed')!==-1)return url;
-  if(url.indexOf('@')!==-1||url.indexOf('calendar.google.com')!==-1){
-    var calId=url;
-    var match=url.match(/[?&]cid=([^&]+)/);
-    if(match)calId=decodeURIComponent(match[1]);
-    return'https://calendar.google.com/calendar/embed?src='+encodeURIComponent(calId)+'&ctz=Asia/Seoul';
-  }
+  url=url.trim();
+  // 이미 캘린더 ID 형태 (xxx@group.calendar.google.com 또는 이메일)
+  if(url.indexOf('@')!==-1&&url.indexOf('/')===-1)return url;
+  // embed URL에서 src 추출
+  var match=url.match(/[?&]src=([^&]+)/);
+  if(match)return decodeURIComponent(match[1]);
+  // cid 파라미터
+  match=url.match(/[?&]cid=([^&]+)/);
+  if(match)return decodeURIComponent(match[1]);
   return url;
 }
 
-function saveGcalUrl(idx){
-  var url=document.getElementById('gcalUrl'+idx).value.trim();
-  if(!url){toast('URL 또는 캘린더 ID를 입력하세요');return}
+function buildCombinedGcalSrc(){
+  var urls=data.googleCalUrls||['','',''];
+  var ids=urls.map(function(u){return extractCalId(u)}).filter(function(id){return!!id});
+  if(!ids.length)return'';
+  var src='https://calendar.google.com/calendar/embed?ctz=Asia/Seoul&wkst=1';
+  ids.forEach(function(id,i){
+    src+='&src='+encodeURIComponent(id);
+    src+='&color='+encodeURIComponent(GCAL_COLORS[i]||'#039BE5');
+  });
+  return src;
+}
+
+function toggleGcalSetup(){
+  gcalSetupOpen=!gcalSetupOpen;
+  document.getElementById('gcalSetupPanel').style.display=gcalSetupOpen?'':'none';
+  // 설정 열 때 기존 값 채우기
+  if(gcalSetupOpen){
+    var urls=data.googleCalUrls||['','',''];
+    for(var i=0;i<3;i++){
+      var el=document.getElementById('gcalUrl'+i);
+      if(el)el.value=urls[i]||'';
+    }
+  }
+}
+
+function saveAllGcalUrls(){
   if(!data.googleCalUrls)data.googleCalUrls=['','',''];
-  data.googleCalUrls[idx]=url;
+  for(var i=0;i<3;i++){
+    data.googleCalUrls[i]=document.getElementById('gcalUrl'+i).value.trim();
+  }
   saveData();
-  loadGcalSlot(idx);
-  toast(GCAL_NAMES[idx]+' 캘린더가 연동되었습니다');
+  loadGoogleCal();
+  gcalSetupOpen=false;
+  document.getElementById('gcalSetupPanel').style.display='none';
+  toast('캘린더 연동이 저장되었습니다');
 }
 
 function removeGcalUrl(idx){
-  if(!confirm(GCAL_NAMES[idx]+' 캘린더 연동을 해제하시겠습니까?'))return;
   if(!data.googleCalUrls)data.googleCalUrls=['','',''];
   data.googleCalUrls[idx]='';
+  document.getElementById('gcalUrl'+idx).value='';
   saveData();
-  loadGcalSlot(idx);
+  loadGoogleCal();
   toast(GCAL_NAMES[idx]+' 캘린더 연동이 해제되었습니다');
-}
-
-function loadGcalSlot(idx){
-  var urls=data.googleCalUrls||['','',''];
-  var url=urls[idx]||'';
-  if(!url){
-    document.getElementById('gcalSetup'+idx).style.display='';
-    document.getElementById('gcalIframeWrap'+idx).style.display='none';
-  }else{
-    document.getElementById('gcalSetup'+idx).style.display='none';
-    document.getElementById('gcalIframeWrap'+idx).style.display='';
-    document.getElementById('gcalIframe'+idx).src=parseGcalSrc(url);
-  }
 }
 
 function loadGoogleCal(){
@@ -8123,10 +8204,19 @@ function loadGoogleCal(){
     saveData();
   }
   if(!data.googleCalUrls)data.googleCalUrls=['','',''];
-  for(var i=0;i<3;i++)loadGcalSlot(i);
-  // 연동된 첫 번째 탭으로 자동 전환
-  var first=data.googleCalUrls.findIndex(function(u){return!!u});
-  if(first>=0)switchGcalTab(first);else switchGcalTab(0);
+  var src=buildCombinedGcalSrc();
+  if(src){
+    document.getElementById('gcalCombinedWrap').style.display='';
+    document.getElementById('gcalEmptyGuide').style.display='none';
+    document.getElementById('gcalCombinedIframe').src=src;
+    // 범례 표시
+    for(var i=0;i<3;i++){
+      document.getElementById('gcalLegend'+i).style.display=data.googleCalUrls[i]?'inline-flex':'none';
+    }
+  }else{
+    document.getElementById('gcalCombinedWrap').style.display='none';
+    document.getElementById('gcalEmptyGuide').style.display='';
+  }
 }
 
 function renderCalendar(){
