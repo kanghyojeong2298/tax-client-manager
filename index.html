@@ -3080,7 +3080,7 @@ function renderClients(){
       var bdr='2.5px solid #334155';
       var topB=(gi.pos==='top'||gi.pos==='single')?'border-top:'+bdr+';':'';
       var botB=(gi.pos==='bottom'||gi.pos==='single')?'border-bottom:'+bdr+';':'';
-      var bg=gi.isChild?'background:#fffbeb;':docBg;
+      var bg=gi.isChild?'background:#f0f2f5;':docBg;
       rowStyle=topB+botB+bg;
       tdFirstExtra='border-left:'+bdr+';';
       tdLastExtra='border-right:'+bdr+';';
@@ -8043,9 +8043,12 @@ function renderCalDeadlines(){
   (data.calendarDeadlines||[]).forEach(function(dl,idx){
     var rd=resolveDate(dl.date);allItems.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',idx:idx,dday:dDay(rd)});
   });
+  var vacKeywords=['휴가','연차','엽차','반차','병가','경조','대휴','보상휴가','출산','육아'];
   var vacItems=allItems.filter(function(i){
-    if(i.cat!=='휴가')return false;
-    var d=new Date(i.date);return d>=mStart&&d<=mEnd;
+    var d=new Date(i.date);if(d<mStart||d>mEnd)return false;
+    if(i.cat==='휴가')return true;
+    var t=(i.title||'').toLowerCase();
+    return vacKeywords.some(function(kw){return t.indexOf(kw)!==-1});
   }).sort(function(a,b){return a.date.localeCompare(b.date)});
   var vh='';
   if(vacItems.length===0){
