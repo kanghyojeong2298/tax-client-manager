@@ -121,24 +121,8 @@ tr:hover td{background:#f8fafc}
   </div>
 </div>
 
-<nav class="tab-nav">
-  <button class="tab-btn active" data-tab="clients">업체관리</button>
-  <button class="tab-btn" data-tab="onboarding">신규수임</button>
-  <button class="tab-btn" data-tab="consult">상담관리</button>
-  <button class="tab-btn" data-tab="vat">부가세신고</button>
-  <button class="tab-btn" data-tab="exempt">면세신고</button>
-  <button class="tab-btn" data-tab="corp">법인세신고</button>
-  <button class="tab-btn" data-tab="income">소득세신고</button>
-  <button class="tab-btn" data-tab="sincere">성실신고</button>
-  <button class="tab-btn" data-tab="invoice">세금계산서</button>
-  <button class="tab-btn" data-tab="closing">월/분기결산</button>
-  <button class="tab-btn" data-tab="dismissed">해임현황</button>
-  <button class="tab-btn" data-tab="managers">담당자현황</button>
-  <button class="tab-btn" data-tab="bonus">상여실적</button>
-  <button class="tab-btn" data-tab="performance">성과</button>
-  <button class="tab-btn" data-tab="calendar">📅캘린더</button>
-  <button class="tab-btn" data-tab="admin">관리자</button>
-</nav>
+<nav class="tab-nav" id="mainTabNav"></nav>
+<div id="subTabBar" style="display:none;background:#f7fafc;border-bottom:2px solid #e2e8f0;padding:0 12px;gap:1px;overflow-x:auto"></div>
 
 <!-- ===== 업체관리 ===== -->
 <div id="tab-clients" class="TC active">
@@ -757,29 +741,74 @@ tr:hover td{background:#f8fafc}
       </div>
       <div id="calDeadlineList"></div>
     </div>
-    <!-- 우측: 구글캘린더 -->
-    <div style="padding:20px;background:#f7fafc">
+    <!-- 우측: 구글캘린더 3개 -->
+    <div style="padding:20px;background:#f7fafc;overflow-y:auto">
       <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#3182ce;display:inline-block"></span>Google Calendar</div>
-      <div id="calGoogleArea">
-        <div id="calGoogleEmbed" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px">
-          <div id="calIframeWrap" style="display:none"><iframe id="calIframe" style="width:100%;height:420px;border:none"></iframe></div>
-          <div id="calSetupGuide" style="padding:30px;text-align:center">
-            <div style="font-size:40px;margin-bottom:12px">📅</div>
-            <div style="font-weight:600;font-size:15px;margin-bottom:6px">Google Calendar 연동</div>
-            <div style="font-size:12px;color:#718096;margin-bottom:16px;line-height:1.6">구글캘린더의 공개 URL을 입력하면<br>이 영역에 캘린더가 표시됩니다.</div>
-            <div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">
-              <input type="text" id="calGoogleUrl" placeholder="구글캘린더 공유 URL 또는 캘린더 ID" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
-              <button class="btn btn-sm" style="background:#3182ce;color:#fff" onclick="saveGoogleCalUrl()">연동</button>
-            </div>
-            <div style="margin-top:12px;font-size:11px;color:#a0aec0;line-height:1.6;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
-              💡 <strong>설정 방법:</strong> 구글캘린더 → 설정 → 캘린더 설정 → '캘린더 통합' → <br>'이 캘린더의 공개 URL' 또는 '캘린더 ID'를 복사하세요
-            </div>
+
+      <!-- 탭 전환 버튼 -->
+      <div style="display:flex;gap:4px;margin-bottom:12px" id="gcalTabs">
+        <button class="btn btn-sm" style="background:#38a169;color:#fff;flex:1" onclick="switchGcalTab(0)">🏖️ 휴가</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0;flex:1" onclick="switchGcalTab(1)">🏢 회사일정</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0;flex:1" onclick="switchGcalTab(2)">👤 대표일정</button>
+      </div>
+
+      <!-- 캘린더 슬롯 0: 휴가 -->
+      <div class="gcal-slot" id="gcalSlot0" style="margin-bottom:12px">
+        <div id="gcalIframeWrap0" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe0" style="width:100%;height:360px;border:none"></iframe>
+          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(0)">연동 해제</button></div>
+        </div>
+        <div id="gcalSetup0" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">🏖️</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px">휴가 캘린더</div>
+          <div style="font-size:11px;color:#718096;margin-bottom:12px">직원 휴가/연차 관리용 구글캘린더</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="gcalUrl0" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+            <button class="btn btn-sm" style="background:#38a169;color:#fff" onclick="saveGcalUrl(0)">연동</button>
           </div>
         </div>
-        <div id="calTodayEvents" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 오늘의 주요 마감</div>
-          <div id="calTodaySummary"></div>
+      </div>
+
+      <!-- 캘린더 슬롯 1: 회사일정 -->
+      <div class="gcal-slot" id="gcalSlot1" style="margin-bottom:12px;display:none">
+        <div id="gcalIframeWrap1" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe1" style="width:100%;height:360px;border:none"></iframe>
+          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(1)">연동 해제</button></div>
         </div>
+        <div id="gcalSetup1" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">🏢</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px">회사 일정 캘린더</div>
+          <div style="font-size:11px;color:#718096;margin-bottom:12px">전사 공유 일정/미팅/행사 관리</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="gcalUrl1" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+            <button class="btn btn-sm" style="background:#3182ce;color:#fff" onclick="saveGcalUrl(1)">연동</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 캘린더 슬롯 2: 대표일정 -->
+      <div class="gcal-slot" id="gcalSlot2" style="margin-bottom:12px;display:none">
+        <div id="gcalIframeWrap2" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden"><iframe id="gcalIframe2" style="width:100%;height:360px;border:none"></iframe>
+          <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:#f7fafc"><button class="btn btn-sm" style="font-size:10px;color:#e53e3e" onclick="removeGcalUrl(2)">연동 해제</button></div>
+        </div>
+        <div id="gcalSetup2" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">👤</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px">대표 개인일정 캘린더</div>
+          <div style="font-size:11px;color:#718096;margin-bottom:12px">대표님 개인 스케줄 관리</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="gcalUrl2" placeholder="캘린더 공유 URL 또는 ID" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+            <button class="btn btn-sm" style="background:#805ad5;color:#fff" onclick="saveGcalUrl(2)">연동</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 설정 가이드 -->
+      <div style="padding:10px 12px;background:#ebf8ff;border-radius:8px;font-size:11px;color:#2a4365;line-height:1.6;margin-bottom:12px">
+        💡 <strong>연동 방법:</strong> 구글캘린더 → 설정 → 캘린더 설정 → '캘린더 통합' → '이 캘린더의 공개 URL' 또는 '캘린더 ID' 복사
+      </div>
+
+      <!-- 오늘의 주요 마감 -->
+      <div id="calTodayEvents" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 오늘의 주요 마감</div>
+        <div id="calTodaySummary"></div>
       </div>
     </div>
   </div>
@@ -814,6 +843,19 @@ tr:hover td{background:#f8fafc}
 
 <!-- ===== 관리자 ===== -->
 <div id="tab-admin" class="TC">
+
+  <!-- 탭 순서 관리 -->
+  <div class="card" id="tabOrderCard" style="display:none">
+    <div class="card-title" style="cursor:pointer" onclick="var d=document.getElementById('tabOrderBody');d.style.display=d.style.display==='none'?'':'none'">🔀 탭 순서 관리 <span style="font-size:11px;color:#64748b">▼</span></div>
+    <div id="tabOrderBody" style="display:none">
+      <div style="font-size:11px;color:#718096;margin-bottom:10px">↑↓ 버튼으로 탭 순서를 변경하세요. 관리자 탭은 항상 마지막에 고정됩니다.</div>
+      <div id="tabOrderList"></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-sm btn-primary" onclick="saveTabOrder()">순서 저장</button>
+        <button class="btn btn-sm" onclick="resetTabOrder()">기본값 복원</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 승인 대기 -->
   <div class="card" id="pendingApprovalsCard" style="display:none">
@@ -1361,6 +1403,57 @@ function addLog(type,clientId,clientName,detail){
   if(data.activityLog.length>2000)data.activityLog=data.activityLog.slice(0,2000);
 }
 
+// ============ 탭 순서 관리 ============
+function renderTabOrderUI(){
+  var card=document.getElementById('tabOrderCard');
+  if(!card)return;
+  card.style.display=isAdmin()?'':'none';
+  var order=getTabOrder();
+  // admin은 항상 마지막이므로 제외하고 표시
+  var editable=order.filter(function(k){return k!=='admin'});
+  var h='';
+  editable.forEach(function(key,i){
+    var label=TAB_LABELS[key]||key;
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:4px">';
+    h+='<span style="min-width:24px;text-align:center;font-weight:700;color:#718096;font-size:12px">'+(i+1)+'</span>';
+    h+='<span style="flex:1;font-size:13px;font-weight:600">'+label+'</span>';
+    h+='<button class="btn btn-sm" style="padding:2px 8px;font-size:14px" onclick="moveTab('+i+',-1)"'+(i===0?' disabled style="padding:2px 8px;font-size:14px;opacity:.3"':'')+'>▲</button>';
+    h+='<button class="btn btn-sm" style="padding:2px 8px;font-size:14px" onclick="moveTab('+i+',1)"'+(i===editable.length-1?' disabled style="padding:2px 8px;font-size:14px;opacity:.3"':'')+'>▼</button>';
+    h+='</div>';
+  });
+  document.getElementById('tabOrderList').innerHTML=h;
+}
+
+function moveTab(idx,dir){
+  var order=getTabOrder();
+  var editable=order.filter(function(k){return k!=='admin'});
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=editable.length)return;
+  var tmp=editable[idx];editable[idx]=editable[newIdx];editable[newIdx]=tmp;
+  editable.push('admin');
+  data.tabOrder=editable;
+  renderTabOrderUI();
+}
+
+function saveTabOrder(){
+  var order=getTabOrder();
+  var editable=order.filter(function(k){return k!=='admin'});
+  editable.push('admin');
+  data.tabOrder=editable;
+  saveData();
+  renderTabBar();
+  renderTabOrderUI();
+  toast('탭 순서가 저장되었습니다');
+}
+
+function resetTabOrder(){
+  data.tabOrder=DEFAULT_TAB_ORDER.slice();
+  saveData();
+  renderTabBar();
+  renderTabOrderUI();
+  toast('탭 순서가 기본값으로 복원되었습니다');
+}
+
 function renderAdminLog(){
   if(!data.activityLog)data.activityLog=[];
   var logs=data.activityLog.slice();
@@ -1790,22 +1883,96 @@ function submitPinModal(){
   closePinModal();
   if(cb)cb();
 }
-document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{
-  var tabName=b.dataset.tab;
-  if(['admin','bonus','managers','performance'].indexOf(tabName)!==-1&&!protectedTabsUnlocked[tabName]){
-    var tabLabel={'admin':'관리자','bonus':'상여실적','managers':'담당자현황','performance':'성과'}[tabName];
+// ============ 동적 탭 시스템 ============
+var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',invoice:'세금계산서',dismissed:'해임현황',managers:'담당자현황',bonus:'상여실적',performance:'성과',admin:'관리자'};
+var TAX_SUBTABS=[{key:'vat',label:'부가세신고'},{key:'exempt',label:'면세신고'},{key:'corp',label:'법인세신고'},{key:'income',label:'소득세신고'},{key:'sincere',label:'성실신고'},{key:'closing',label:'월/분기결산'}];
+var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','invoice','dismissed','managers','bonus','performance','admin'];
+var activeMainTab='clients';
+var activeTaxSub='vat';
+
+function getTabOrder(){return data.tabOrder||DEFAULT_TAB_ORDER.slice()}
+
+function renderTabBar(){
+  var order=getTabOrder();
+  var nav=document.getElementById('mainTabNav');
+  var h='';
+  order.forEach(function(key){
+    var label=TAB_LABELS[key];if(!label)return;
+    var cls='tab-btn'+(key===activeMainTab?' active':'');
+    h+='<button class="'+cls+'" data-tab="'+key+'" onclick="clickMainTab(\''+key+'\')">'+label+'</button>';
+  });
+  nav.innerHTML=h;
+  // 서브탭 표시/숨김
+  var subBar=document.getElementById('subTabBar');
+  if(activeMainTab==='tax'){
+    var sh='';
+    TAX_SUBTABS.forEach(function(st){
+      var scls='tab-btn'+(st.key===activeTaxSub?' active':'');
+      sh+='<button class="'+scls+'" data-tab="'+st.key+'" onclick="clickTaxSub(\''+st.key+'\')">'+st.label+'</button>';
+    });
+    subBar.innerHTML=sh;
+    subBar.style.display='flex';
+  }else{
+    subBar.style.display='none';
+  }
+}
+
+function clickMainTab(key){
+  // 비밀번호 보호 탭
+  if(['admin','bonus','managers','performance'].indexOf(key)!==-1&&!protectedTabsUnlocked[key]){
+    var tabLabel=TAB_LABELS[key];
     openPinModal(tabLabel+' 탭 비밀번호',function(){
-      protectedTabsUnlocked[tabName]=true;
-      document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.TC').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');refreshAll();
+      protectedTabsUnlocked[key]=true;
+      activateMainTab(key);
     });
     return;
   }
-  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('.TC').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');refreshAll();
-})});
+  activateMainTab(key);
+}
+
+function activateMainTab(key){
+  activeMainTab=key;
+  document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+  if(key==='tax'){
+    // 세금신고 그룹: 서브탭 활성화
+    var el=document.getElementById('tab-'+activeTaxSub);
+    if(el)el.classList.add('active');
+  }else{
+    var el=document.getElementById('tab-'+key);
+    if(el)el.classList.add('active');
+  }
+  renderTabBar();
+  refreshAll();
+}
+
+function clickTaxSub(subKey){
+  activeTaxSub=subKey;
+  document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+  var el=document.getElementById('tab-'+subKey);
+  if(el)el.classList.add('active');
+  renderTabBar();
+  refreshAll();
+}
+
+// 탭으로 이동하는 헬퍼 (배지 클릭 등에서 사용)
+var TAX_SUB_KEYS=['vat','exempt','corp','income','sincere','closing'];
+function goToTab(key){
+  if(TAX_SUB_KEYS.indexOf(key)!==-1){
+    // 세금신고 서브탭
+    activeMainTab='tax';
+    activeTaxSub=key;
+    document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+    var el=document.getElementById('tab-'+key);
+    if(el)el.classList.add('active');
+    renderTabBar();
+    refreshAll();
+  }else{
+    clickMainTab(key);
+  }
+}
+
+// 초기 탭바 렌더링
+renderTabBar();
 
 // Staff
 var currentStaffFilter='active';
@@ -2441,7 +2608,7 @@ function renderDocStatusBanner(){
   if(notReceived.length){h+='<span style="font-size:13px;font-weight:700;color:#c53030;cursor:pointer" onclick="filterByDocStatus(\'미수령\')">🔴 미수령 '+notReceived.length+'건</span>';}
   if(longOverdue){h+='<span style="font-size:11px;color:#c53030;font-weight:600">⚠️ 7일+: '+longOverdue+'건</span>';}
   if(missingInfo){if(notReceived.length)h+='<span style="color:#cbd5e0">|</span>';h+='<span style="font-size:13px;font-weight:600;color:#805ad5;cursor:pointer" onclick="filterMissingInfo()">📋 정보미입력 '+missingInfo+'건</span>';}
-  if(checklistIncomplete){h+='<span style="color:#cbd5e0">|</span><span style="font-size:13px;font-weight:600;color:#d69e2e;cursor:pointer" onclick="document.querySelector(\'[data-tab=\\\'onboarding\\\']\').click()">☑️ 체크리스트 미완료 '+checklistIncomplete+'건</span>';}
+  if(checklistIncomplete){h+='<span style="color:#cbd5e0">|</span><span style="font-size:13px;font-weight:600;color:#d69e2e;cursor:pointer" onclick="goToTab(\'onboarding\')">☑️ 체크리스트 미완료 '+checklistIncomplete+'건</span>';}
   h+='</div></div>';
   el.innerHTML=h;
   updateAlertRowVisibility();
@@ -2674,7 +2841,7 @@ function renderMonthlyFilingAlert(){
   if(!items.length){el.innerHTML='';updateAlertRowVisibility();return;}
   var badges=items.map(function(it){
     var countText=it.total?it.count+'/'+it.total+'건':it.count+'건';
-    return '<span onclick="document.querySelector(\'[data-tab=\\\''+it.tab+'\\\']\').click()" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '+it.color+';border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:'+it.color+';transition:all .2s"'
+    return '<span onclick="goToTab(\''+it.tab+'\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '+it.color+';border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:'+it.color+';transition:all .2s"'
       +' onmouseover="this.style.background=\''+it.color+'\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\''+it.color+'\'">'
       +it.label+' <strong style="font-size:14px">'+countText+'</strong></span>';
   }).join('');
@@ -7739,40 +7906,78 @@ function deleteCalDeadline(){
   }
 }
 
-function saveGoogleCalUrl(){
-  var url=document.getElementById('calGoogleUrl').value.trim();
+var GCAL_NAMES=['휴가','회사일정','대표일정'];
+var GCAL_COLORS=['#38a169','#3182ce','#805ad5'];
+var activeGcalTab=0;
+
+function switchGcalTab(idx){
+  activeGcalTab=idx;
+  var btns=document.getElementById('gcalTabs').querySelectorAll('button');
+  btns.forEach(function(b,i){
+    if(i===idx){b.style.background=GCAL_COLORS[i];b.style.color='#fff';b.style.border='none'}
+    else{b.style.background='#fff';b.style.color='#4a5568';b.style.border='1px solid #e2e8f0'}
+  });
+  for(var i=0;i<3;i++){
+    document.getElementById('gcalSlot'+i).style.display=i===idx?'':'none';
+  }
+}
+
+function parseGcalSrc(url){
+  if(!url)return'';
+  if(url.indexOf('calendar.google.com/calendar/embed')!==-1)return url;
+  if(url.indexOf('@')!==-1||url.indexOf('calendar.google.com')!==-1){
+    var calId=url;
+    var match=url.match(/[?&]cid=([^&]+)/);
+    if(match)calId=decodeURIComponent(match[1]);
+    return'https://calendar.google.com/calendar/embed?src='+encodeURIComponent(calId)+'&ctz=Asia/Seoul';
+  }
+  return url;
+}
+
+function saveGcalUrl(idx){
+  var url=document.getElementById('gcalUrl'+idx).value.trim();
   if(!url){toast('URL 또는 캘린더 ID를 입력하세요');return}
-  data.googleCalUrl=url;
+  if(!data.googleCalUrls)data.googleCalUrls=['','',''];
+  data.googleCalUrls[idx]=url;
   saveData();
-  loadGoogleCal();
-  toast('구글캘린더가 연동되었습니다');
+  loadGcalSlot(idx);
+  toast(GCAL_NAMES[idx]+' 캘린더가 연동되었습니다');
+}
+
+function removeGcalUrl(idx){
+  if(!confirm(GCAL_NAMES[idx]+' 캘린더 연동을 해제하시겠습니까?'))return;
+  if(!data.googleCalUrls)data.googleCalUrls=['','',''];
+  data.googleCalUrls[idx]='';
+  saveData();
+  loadGcalSlot(idx);
+  toast(GCAL_NAMES[idx]+' 캘린더 연동이 해제되었습니다');
+}
+
+function loadGcalSlot(idx){
+  var urls=data.googleCalUrls||['','',''];
+  var url=urls[idx]||'';
+  if(!url){
+    document.getElementById('gcalSetup'+idx).style.display='';
+    document.getElementById('gcalIframeWrap'+idx).style.display='none';
+  }else{
+    document.getElementById('gcalSetup'+idx).style.display='none';
+    document.getElementById('gcalIframeWrap'+idx).style.display='';
+    document.getElementById('gcalIframe'+idx).src=parseGcalSrc(url);
+  }
 }
 
 function loadGoogleCal(){
-  var url=data.googleCalUrl||'';
-  if(!url){
-    document.getElementById('calSetupGuide').style.display='';
-    document.getElementById('calIframeWrap').style.display='none';
-    return;
+  // 기존 단일 URL → 3개 슬롯 마이그레이션
+  if(data.googleCalUrl&&!data.googleCalUrls){
+    data.googleCalUrls=[data.googleCalUrl,'',''];
+    delete data.googleCalUrl;
+    saveData();
   }
-  // URL 또는 캘린더 ID를 iframe src로 변환
-  var src='';
-  if(url.indexOf('calendar.google.com/calendar/embed')!==-1){
-    src=url;
-  }else if(url.indexOf('@')!==-1||url.indexOf('calendar.google.com')!==-1){
-    // 캘린더 ID
-    var calId=url;
-    if(url.indexOf('calendar.google.com/calendar/u/')!==-1){
-      var match=url.match(/[?&]cid=([^&]+)/);
-      if(match)calId=decodeURIComponent(match[1]);
-    }
-    src='https://calendar.google.com/calendar/embed?src='+encodeURIComponent(calId)+'&ctz=Asia/Seoul';
-  }else{
-    src=url;
-  }
-  document.getElementById('calSetupGuide').style.display='none';
-  document.getElementById('calIframeWrap').style.display='';
-  document.getElementById('calIframe').src=src;
+  if(!data.googleCalUrls)data.googleCalUrls=['','',''];
+  for(var i=0;i<3;i++)loadGcalSlot(i);
+  // 연동된 첫 번째 탭으로 자동 전환
+  var first=data.googleCalUrls.findIndex(function(u){return!!u});
+  if(first>=0)switchGcalTab(first);else switchGcalTab(0);
 }
 
 function renderCalendar(){
@@ -8294,7 +8499,7 @@ function refreshAll(){
   setTimeout(function(){renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList()},50);
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
-  setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
+  setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals();renderTabOrderUI()},200);
   setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();renderCalendar();applyRoleUI()},250);
 }
 
