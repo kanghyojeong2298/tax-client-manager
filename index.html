@@ -136,6 +136,7 @@ tr:hover td{background:#f8fafc}
   <button class="tab-btn" data-tab="managers">담당자현황</button>
   <button class="tab-btn" data-tab="bonus">상여실적</button>
   <button class="tab-btn" data-tab="performance">성과</button>
+  <button class="tab-btn" data-tab="calendar">📅캘린더</button>
   <button class="tab-btn" data-tab="admin">관리자</button>
 </nav>
 
@@ -734,6 +735,80 @@ tr:hover td{background:#f8fafc}
     </div>
     <div id="sourceYearlyChart" style="margin-bottom:16px"></div>
     <div id="sourceMonthlyChart"></div>
+  </div>
+</div>
+
+<!-- ===== 캘린더 ===== -->
+<div id="tab-calendar" class="TC">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:calc(100vh - 160px)">
+    <!-- 좌측: 세무 마감 일정 -->
+    <div style="padding:20px;background:#fff;border-right:1px solid #e2e8f0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#e53e3e;display:inline-block"></span>세무 마감 일정</div>
+        <button class="btn btn-sm" style="background:#3182ce;color:#fff" data-role="admin" onclick="openCalDeadlineModal()">+ 일정 추가</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="calFilterBtns">
+        <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="setCalFilter('all')">전체</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('부가세')">부가세</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('법인세')">법인세</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('원천세')">원천세</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('종소세')">종소세</button>
+        <button class="btn btn-sm" style="background:#fff;color:#4a5568;border:1px solid #e2e8f0" onclick="setCalFilter('기타')">기타</button>
+      </div>
+      <div id="calDeadlineList"></div>
+    </div>
+    <!-- 우측: 구글캘린더 -->
+    <div style="padding:20px;background:#f7fafc">
+      <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#3182ce;display:inline-block"></span>Google Calendar</div>
+      <div id="calGoogleArea">
+        <div id="calGoogleEmbed" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px">
+          <div id="calIframeWrap" style="display:none"><iframe id="calIframe" style="width:100%;height:420px;border:none"></iframe></div>
+          <div id="calSetupGuide" style="padding:30px;text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">📅</div>
+            <div style="font-weight:600;font-size:15px;margin-bottom:6px">Google Calendar 연동</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:16px;line-height:1.6">구글캘린더의 공개 URL을 입력하면<br>이 영역에 캘린더가 표시됩니다.</div>
+            <div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">
+              <input type="text" id="calGoogleUrl" placeholder="구글캘린더 공유 URL 또는 캘린더 ID" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
+              <button class="btn btn-sm" style="background:#3182ce;color:#fff" onclick="saveGoogleCalUrl()">연동</button>
+            </div>
+            <div style="margin-top:12px;font-size:11px;color:#a0aec0;line-height:1.6;text-align:left;max-width:400px;margin-left:auto;margin-right:auto">
+              💡 <strong>설정 방법:</strong> 구글캘린더 → 설정 → 캘린더 설정 → '캘린더 통합' → <br>'이 캘린더의 공개 URL' 또는 '캘린더 ID'를 복사하세요
+            </div>
+          </div>
+        </div>
+        <div id="calTodayEvents" style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">📌 오늘의 주요 마감</div>
+          <div id="calTodaySummary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 세무일정 추가/수정 모달 -->
+<div id="calDeadlineModal" class="MO">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+    <h3 id="calModalTitle" style="margin:0 0 16px;font-size:16px">세무 일정 추가</h3>
+    <input type="hidden" id="calEditIdx" value="-1">
+    <div style="display:grid;gap:10px">
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">일정명 *</label><input type="text" id="calDlTitle" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="예: 부가세 확정신고"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">마감일 *</label><input type="date" id="calDlDate" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"></div>
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">카테고리</label>
+          <select id="calDlCat" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"><option value="부가세">부가세</option><option value="법인세">법인세</option><option value="원천세">원천세</option><option value="종소세">종소세</option><option value="기타">기타</option></select>
+        </div>
+      </div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">대상</label><input type="text" id="calDlTarget" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="예: 법인사업자, 개인 일반과세자"></div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">메모</label><input type="text" id="calDlMemo" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="추가 메모"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="calDlRepeat"> 매년 반복</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+      <button class="btn" onclick="closeCalDeadlineModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveCalDeadline()">저장</button>
+      <button class="btn" id="calDelBtn" style="background:#e53e3e;color:#fff;display:none" onclick="deleteCalDeadline()">삭제</button>
+    </div>
   </div>
 </div>
 
@@ -7472,6 +7547,240 @@ function editClientById(id){
   if(idx>=0)editClient(idx);
 }
 
+// ============ 캘린더 탭 ============
+var calFilter='all';
+
+// 기본 세무 마감 일정 (초기 데이터)
+var DEFAULT_TAX_DEADLINES=[
+{title:'원천세 납부',date:'*-01-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-02-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'부가세 확정신고',date:'*-01-25',cat:'부가세',target:'개인 일반과세자/법인',memo:'2기 확정',repeat:true},
+{title:'원천세 납부',date:'*-03-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'법인세 신고·납부',date:'*-03-31',cat:'법인세',target:'12월 결산법인',memo:'',repeat:true},
+{title:'부가세 예정신고',date:'*-04-25',cat:'부가세',target:'법인사업자',memo:'1기 예정',repeat:true},
+{title:'원천세 납부',date:'*-04-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-05-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'종합소득세 신고·납부',date:'*-05-31',cat:'종소세',target:'개인사업자',memo:'',repeat:true},
+{title:'원천세 납부',date:'*-06-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'부가세 확정신고',date:'*-07-25',cat:'부가세',target:'개인 일반과세자/법인',memo:'1기 확정',repeat:true},
+{title:'원천세 납부',date:'*-07-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-08-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-09-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'부가세 예정신고',date:'*-10-25',cat:'부가세',target:'법인사업자',memo:'2기 예정',repeat:true},
+{title:'원천세 납부',date:'*-10-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-11-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true},
+{title:'원천세 납부',date:'*-12-10',cat:'원천세',target:'전체 사업자',memo:'전월분 급여',repeat:true}
+];
+
+function initCalendarData(){
+  if(!data.calendarDeadlines){
+    data.calendarDeadlines=DEFAULT_TAX_DEADLINES.slice();
+    saveData();
+  }
+  if(!data.googleCalUrl)data.googleCalUrl='';
+}
+
+function setCalFilter(f){
+  calFilter=f;
+  var btns=document.getElementById('calFilterBtns').querySelectorAll('button');
+  btns.forEach(function(b){
+    if((f==='all'&&b.textContent==='전체')||b.textContent===f){
+      b.style.background='#e53e3e';b.style.color='#fff';b.style.border='none';
+    }else{
+      b.style.background='#fff';b.style.color='#4a5568';b.style.border='1px solid #e2e8f0';
+    }
+  });
+  renderCalDeadlines();
+}
+
+function resolveDate(dateStr){
+  var now=new Date();var y=now.getFullYear();
+  if(dateStr.charAt(0)==='*'){
+    var md=dateStr.slice(1);
+    var candidate=y+md;
+    // 이미 지난 날짜면 내년으로
+    if(candidate<todayStr()){
+      // 하지만 30일 이내면 보여주기
+      var diff=(new Date(todayStr())-new Date(candidate))/(86400000);
+      if(diff>30)candidate=(y+1)+md;
+    }
+    return candidate;
+  }
+  return dateStr;
+}
+
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+
+function dDay(dateStr){
+  var today=new Date(todayStr());var target=new Date(dateStr);
+  return Math.round((target-today)/86400000);
+}
+
+function renderCalDeadlines(){
+  initCalendarData();
+  var list=data.calendarDeadlines||[];
+  var now=todayStr();
+  // 실제 날짜로 변환하고 필터링
+  var items=[];
+  list.forEach(function(dl,idx){
+    var rd=resolveDate(dl.date);
+    if(calFilter!=='all'&&dl.cat!==calFilter)return;
+    items.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',repeat:dl.repeat,idx:idx,dday:dDay(rd)});
+  });
+  // D-day 순 정렬
+  items.sort(function(a,b){return a.date.localeCompare(b.date)});
+  // 지난 일정(30일 이내)은 뒤로, 미래 일정 먼저
+  var future=items.filter(function(i){return i.dday>=0});
+  var past=items.filter(function(i){return i.dday<0&&i.dday>=-30});
+  var sorted=future.concat(past);
+
+  var h='';
+  if(sorted.length===0){
+    h='<div style="text-align:center;padding:40px;color:#a0aec0">등록된 일정이 없습니다</div>';
+  }
+  sorted.forEach(function(item){
+    var dd=item.dday;
+    var badgeColor,badgeText,borderColor,bgColor;
+    if(dd<0){badgeColor='#a0aec0';badgeText='D+'+Math.abs(dd)+' 지남';borderColor='#e2e8f0';bgColor='#f7fafc'}
+    else if(dd===0){badgeColor='#c53030';badgeText='D-Day 오늘!';borderColor='#fed7d7';bgColor='#fff5f5'}
+    else if(dd<=3){badgeColor='#c53030';badgeText='D-'+dd+' 긴급!';borderColor='#fed7d7';bgColor='#fffaf0'}
+    else if(dd<=7){badgeColor='#dd6b20';badgeText='D-'+dd;borderColor='#fefcbf';bgColor='#fffff0'}
+    else if(dd<=14){badgeColor='#d69e2e';badgeText='D-'+dd;borderColor='#fefcbf';bgColor='#fff'}
+    else{badgeColor='#38a169';badgeText='D-'+dd;borderColor='#e2e8f0';bgColor='#fff'}
+    var catIcon={'부가세':'💰','법인세':'🏢','원천세':'📋','종소세':'👤','기타':'📌'}[item.cat]||'📌';
+    var dm=item.date.slice(5,7)+'월';
+    var ddd=parseInt(item.date.slice(8,10));
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1px solid '+borderColor+';background:'+bgColor+';margin-bottom:8px;cursor:pointer" onclick="openCalDeadlineModal('+item.idx+')">';
+    h+='<div style="min-width:52px;text-align:center"><div style="font-size:11px;color:#718096">'+dm+'</div><div style="font-size:22px;font-weight:800;color:'+(dd<=3?'#e53e3e':dd<=7?'#dd6b20':'#2d3748')+'">'+ddd+'</div></div>';
+    h+='<div style="flex:1"><div style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:4px">'+catIcon+' '+item.title+'</div>';
+    h+='<div style="font-size:11px;color:#718096;margin-top:2px">'+item.target+(item.memo?' · '+item.memo:'')+'</div></div>';
+    h+='<div style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:'+badgeColor+'20;color:'+badgeColor+'">'+badgeText+'</div>';
+    h+='</div>';
+  });
+  document.getElementById('calDeadlineList').innerHTML=h;
+
+  // 오늘의 주요 마감 (우측 하단)
+  var todayItems=items.filter(function(i){return i.dday>=0&&i.dday<=7});
+  var ts='';
+  if(todayItems.length===0){
+    ts='<div style="font-size:12px;color:#a0aec0;padding:8px 0">7일 이내 마감 일정이 없습니다 ✅</div>';
+  }else{
+    todayItems.forEach(function(ti){
+      var dotColor=ti.dday===0?'#e53e3e':ti.dday<=3?'#dd6b20':'#d69e2e';
+      ts+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">';
+      ts+='<span style="width:6px;height:6px;border-radius:50%;background:'+dotColor+';display:inline-block"></span>';
+      ts+='<span style="color:#718096;min-width:50px">'+ti.date.slice(5)+'</span>';
+      ts+='<span>'+ti.title+'</span>';
+      ts+='<span style="margin-left:auto;font-size:11px;color:'+dotColor+';font-weight:600">D-'+ti.dday+'</span>';
+      ts+='</div>';
+    });
+  }
+  document.getElementById('calTodaySummary').innerHTML=ts;
+}
+
+function openCalDeadlineModal(idx){
+  var m=document.getElementById('calDeadlineModal');
+  if(typeof idx==='number'&&idx>=0){
+    var dl=data.calendarDeadlines[idx];
+    document.getElementById('calModalTitle').textContent='세무 일정 수정';
+    document.getElementById('calEditIdx').value=idx;
+    document.getElementById('calDlTitle').value=dl.title;
+    // 날짜: *-MM-DD → 올해로 변환
+    var rd=resolveDate(dl.date);
+    document.getElementById('calDlDate').value=rd;
+    document.getElementById('calDlCat').value=dl.cat||'기타';
+    document.getElementById('calDlTarget').value=dl.target||'';
+    document.getElementById('calDlMemo').value=dl.memo||'';
+    document.getElementById('calDlRepeat').checked=!!dl.repeat;
+    document.getElementById('calDelBtn').style.display='';
+  }else{
+    document.getElementById('calModalTitle').textContent='세무 일정 추가';
+    document.getElementById('calEditIdx').value='-1';
+    document.getElementById('calDlTitle').value='';
+    document.getElementById('calDlDate').value='';
+    document.getElementById('calDlCat').value='부가세';
+    document.getElementById('calDlTarget').value='';
+    document.getElementById('calDlMemo').value='';
+    document.getElementById('calDlRepeat').checked=false;
+    document.getElementById('calDelBtn').style.display='none';
+  }
+  m.classList.add('show');
+}
+function closeCalDeadlineModal(){document.getElementById('calDeadlineModal').classList.remove('show')}
+
+function saveCalDeadline(){
+  var title=document.getElementById('calDlTitle').value.trim();
+  var date=document.getElementById('calDlDate').value;
+  if(!title||!date){toast('일정명과 마감일을 입력하세요');return}
+  var cat=document.getElementById('calDlCat').value;
+  var target=document.getElementById('calDlTarget').value.trim();
+  var memo=document.getElementById('calDlMemo').value.trim();
+  var repeat=document.getElementById('calDlRepeat').checked;
+  var storeDate=repeat?('*'+date.slice(4)):date;
+  var obj={title:title,date:storeDate,cat:cat,target:target,memo:memo,repeat:repeat};
+  var idx=parseInt(document.getElementById('calEditIdx').value);
+  if(idx>=0){
+    data.calendarDeadlines[idx]=obj;
+    toast('일정이 수정되었습니다');
+  }else{
+    if(!data.calendarDeadlines)data.calendarDeadlines=[];
+    data.calendarDeadlines.push(obj);
+    toast('일정이 추가되었습니다');
+  }
+  saveData();closeCalDeadlineModal();renderCalDeadlines();
+}
+
+function deleteCalDeadline(){
+  var idx=parseInt(document.getElementById('calEditIdx').value);
+  if(idx>=0&&confirm('이 일정을 삭제하시겠습니까?')){
+    data.calendarDeadlines.splice(idx,1);
+    saveData();closeCalDeadlineModal();renderCalDeadlines();
+    toast('일정이 삭제되었습니다');
+  }
+}
+
+function saveGoogleCalUrl(){
+  var url=document.getElementById('calGoogleUrl').value.trim();
+  if(!url){toast('URL 또는 캘린더 ID를 입력하세요');return}
+  data.googleCalUrl=url;
+  saveData();
+  loadGoogleCal();
+  toast('구글캘린더가 연동되었습니다');
+}
+
+function loadGoogleCal(){
+  var url=data.googleCalUrl||'';
+  if(!url){
+    document.getElementById('calSetupGuide').style.display='';
+    document.getElementById('calIframeWrap').style.display='none';
+    return;
+  }
+  // URL 또는 캘린더 ID를 iframe src로 변환
+  var src='';
+  if(url.indexOf('calendar.google.com/calendar/embed')!==-1){
+    src=url;
+  }else if(url.indexOf('@')!==-1||url.indexOf('calendar.google.com')!==-1){
+    // 캘린더 ID
+    var calId=url;
+    if(url.indexOf('calendar.google.com/calendar/u/')!==-1){
+      var match=url.match(/[?&]cid=([^&]+)/);
+      if(match)calId=decodeURIComponent(match[1]);
+    }
+    src='https://calendar.google.com/calendar/embed?src='+encodeURIComponent(calId)+'&ctz=Asia/Seoul';
+  }else{
+    src=url;
+  }
+  document.getElementById('calSetupGuide').style.display='none';
+  document.getElementById('calIframeWrap').style.display='';
+  document.getElementById('calIframe').src=src;
+}
+
+function renderCalendar(){
+  initCalendarData();
+  renderCalDeadlines();
+  loadGoogleCal();
+}
+
 // ============ 상담관리 탭 ============
 var csSortReverse=true;
 function toggleConsultSort(){csSortReverse=!csSortReverse;document.getElementById('csSortBtn').textContent=csSortReverse?'▲ 역순':'▼ 정순';renderConsultList()}
@@ -7986,7 +8295,7 @@ function refreshAll(){
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals()},200);
-  setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();applyRoleUI()},250);
+  setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();renderCalendar();applyRoleUI()},250);
 }
 
 // Init
