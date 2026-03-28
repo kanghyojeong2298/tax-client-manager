@@ -967,6 +967,138 @@ tr:hover td{background:#f8fafc}
   </div>
 </div>
 
+
+<!-- ===== 마케팅 - 콘텐츠관리 ===== -->
+<div id="tab-mkt-contents" class="TC">
+  <div style="padding:18px">
+    <!-- 상단: 블로그 채널 필터 + 버튼 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px;font-weight:700;color:#1E293B">📋 콘텐츠 관리</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label class="btn btn-sm btn-secondary" style="cursor:pointer;margin:0">📥 엑셀 업로드
+          <input type="file" accept=".xls,.xlsx,.csv" id="mktExcelInput" onchange="importMktExcel(this)" style="display:none">
+        </label>
+        <button class="btn btn-sm btn-export" onclick="exportMktExcel()">📤 내보내기</button>
+        <button class="btn btn-sm btn-primary" onclick="openMktAddModal()">+ 콘텐츠 등록</button>
+      </div>
+    </div>
+
+    <!-- 채널 필터 버튼 -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm" id="mktChAll" onclick="setMktChannel('all')" style="background:#1A66FF;color:#fff">전체</button>
+      <button class="btn btn-sm btn-secondary" id="mktChEcom" onclick="setMktChannel('전자상거래')">🛒 전자상거래센터</button>
+      <button class="btn btn-sm btn-secondary" id="mktChStartup" onclick="setMktChannel('스타트업')">🚀 스타트업센터</button>
+      <button class="btn btn-sm btn-secondary" id="mktChGangnam" onclick="setMktChannel('강남')">🏢 강남센터</button>
+      <div style="width:1px;height:20px;background:#e2e8f0;margin:0 4px"></div>
+      <select id="mktStatusFilter" onchange="renderMktContents()" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+        <option value="all">전체 상태</option>
+        <option value="초안작성">초안작성</option>
+        <option value="검토중">검토중</option>
+        <option value="작성완료">작성완료</option>
+        <option value="발행완료">발행완료</option>
+        <option value="수정필요">수정필요</option>
+      </select>
+      <input type="text" id="mktSearchInput" placeholder="키워드 검색..." oninput="renderMktContents()" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;width:150px">
+      <div style="margin-left:auto;font-size:11px;color:#64748b" id="mktCountLabel"></div>
+    </div>
+
+    <!-- 콘텐츠 테이블 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="max-height:calc(100vh - 300px);overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px" id="mktTable">
+          <thead><tr style="background:#f8fafc;position:sticky;top:0;z-index:1">
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:36px">No</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:2px solid #e2e8f0;min-width:120px">키워드/주제</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">카테고리</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">초안</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">카페</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">블로그</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">세금대왕</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">스레드</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">최종확인</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:72px">발행일</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:2px solid #e2e8f0;width:80px">비고</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:50px">관리</th>
+          </tr></thead>
+          <tbody id="mktTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 마케팅 - 발행통계 ===== -->
+<div id="tab-mkt-stats" class="TC">
+  <div style="padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px;font-weight:700;color:#1E293B">📊 발행 통계</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="mktStatsYear" onchange="renderMktStats()" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px"></select>
+      </div>
+    </div>
+    <!-- 전체 요약 통계 -->
+    <div id="mktStatsSummary" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px"></div>
+    <!-- 월별 발행 통계 그리드 -->
+    <div class="card">
+      <div class="card-title">월별 발행 건수</div>
+      <div id="mktStatsMonthly" style="overflow-x:auto"></div>
+    </div>
+    <!-- 채널별 상태 현황 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card">
+        <div class="card-title">채널별 진행 현황</div>
+        <div id="mktStatsChannel"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">워크플로우 단계별 현황</div>
+        <div id="mktStatsWorkflow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 마케팅 - 키워드분석 ===== -->
+<div id="tab-mkt-keywords" class="TC">
+  <div style="padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px;font-weight:700;color:#1E293B">🔍 키워드 분석 & 추천</h3>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-primary" onclick="openKeywordAddModal()">+ 키워드 등록</button>
+      </div>
+    </div>
+    <!-- 키워드 추천 영역 -->
+    <div class="card" style="background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border:1px solid #93C5FD">
+      <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px">💡 추천 키워드 (미작성 주제)</div>
+      <div id="mktKeywordRecommend" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <!-- 기존 키워드 목록 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-title">키워드 현황</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="text" id="kwSearchInput" placeholder="키워드 검색..." oninput="renderMktKeywords()" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;width:200px">
+        <select id="kwStatusFilter" onchange="renderMktKeywords()" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+          <option value="all">전체</option>
+          <option value="done">작성완료</option>
+          <option value="pending">미작성</option>
+        </select>
+      </div>
+      <div style="max-height:400px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#f8fafc;position:sticky;top:0">
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">키워드</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;width:70px">블로그</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;width:70px">카페</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;width:70px">세금대왕</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">상태</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;width:50px">관리</th>
+          </tr></thead>
+          <tbody id="kwTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 관리자 ===== -->
 <div id="tab-admin" class="TC">
 
@@ -2012,12 +2144,14 @@ function submitPinModal(){
   if(cb)cb();
 }
 // ============ 동적 탭 시스템 ============
-var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',accounting:'💰 회계',invoice:'세금계산서',dismissed:'해임현황',admin:'관리자'};
+var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',accounting:'💰 회계',marketing:'📢 마케팅',invoice:'세금계산서',dismissed:'해임현황',admin:'관리자'};
 var TAX_SUBTABS=[{key:'vat',label:'부가세신고'},{key:'exempt',label:'면세신고'},{key:'corp',label:'법인세신고'},{key:'income',label:'소득세신고'},{key:'sincere',label:'성실신고'},{key:'closing',label:'월/분기결산'}];
 var ADMIN_SUBTABS=[{key:'admin',label:'⚙️ 설정'},{key:'managers',label:'담당자현황'},{key:'bonus',label:'상여실적'},{key:'performance',label:'성과'}];
 var ACCOUNTING_SUBTABS=[{key:'acc-misoo',label:'📋 미수관리'},{key:'acc-daily',label:'📊 자금일보'},{key:'acc-fixed',label:'🏢 고정비정리'}];
 var activeAccSub='acc-misoo';
-var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','accounting','invoice','dismissed','admin'];
+var MARKETING_SUBTABS=[{key:'mkt-contents',label:'📋 콘텐츠관리'},{key:'mkt-stats',label:'📊 발행통계'},{key:'mkt-keywords',label:'🔍 키워드분석'}];
+var activeMktSub='mkt-contents';
+var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','accounting','marketing','invoice','dismissed','admin'];
 var activeMainTab='clients';
 var activeTaxSub='vat';
 var activeAdminSub='admin';
@@ -2066,6 +2200,14 @@ function renderTabBar(){
     });
     subBar.innerHTML=sh;
     subBar.style.display='flex';
+  }else if(activeMainTab==='marketing'){
+    var sh='';
+    MARKETING_SUBTABS.forEach(function(st){
+      var scls='tab-btn'+(st.key===activeMktSub?' active':'');
+      sh+='<button class="'+scls+'" data-tab="'+st.key+'" onclick="clickMktSub(\''+st.key+'\')">'+st.label+'</button>';
+    });
+    subBar.innerHTML=sh;
+    subBar.style.display='flex';
   }else{
     subBar.style.display='none';
   }
@@ -2097,6 +2239,9 @@ function activateMainTab(key){
     if(el)el.classList.add('active');
   }else if(key==='accounting'){
     var el=document.getElementById('tab-'+activeAccSub);
+    if(el)el.classList.add('active');
+  }else if(key==='marketing'){
+    var el=document.getElementById('tab-'+activeMktSub);
     if(el)el.classList.add('active');
   }else{
     var el=document.getElementById('tab-'+key);
@@ -2135,10 +2280,20 @@ function clickAccSub(subKey){
   else if(subKey==='acc-fixed')renderAccFixed();
 }
 
+function clickMktSub(subKey){
+  activeMktSub=subKey;
+  document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+  var el=document.getElementById('tab-'+subKey);
+  if(el)el.classList.add('active');
+  renderTabBar();
+  renderMarketing();
+}
+
 // 탭으로 이동하는 헬퍼 (배지 클릭 등에서 사용)
 var TAX_SUB_KEYS=['vat','exempt','corp','income','sincere','closing'];
 var ADMIN_SUB_KEYS=['managers','bonus','performance'];
 var ACCOUNTING_SUB_KEYS=['acc-misoo','acc-daily','acc-fixed'];
+var MARKETING_SUB_KEYS=['mkt-contents','mkt-stats','mkt-keywords'];
 function goToTab(key){
   if(TAX_SUB_KEYS.indexOf(key)!==-1){
     activeMainTab='tax';
@@ -2167,6 +2322,11 @@ function goToTab(key){
     renderTabBar();refreshAll();
   }else if(ACCOUNTING_SUB_KEYS.indexOf(key)!==-1){
     activeMainTab='accounting';activeAccSub=key;
+    document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+    var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
+    renderTabBar();refreshAll();
+  }else if(MARKETING_SUB_KEYS.indexOf(key)!==-1){
+    activeMainTab='marketing';activeMktSub=key;
     document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
     var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
     renderTabBar();refreshAll();
@@ -8908,6 +9068,7 @@ function refreshAll(){
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals();renderTabOrderUI()},200);
   setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();renderCalendar();applyRoleUI()},250);
   setTimeout(function(){renderAccounting()},300);
+  setTimeout(function(){renderMarketing()},350);
 }
 
 // Init
@@ -9544,6 +9705,611 @@ function renderAccounting(){
     else if(activeAccSub==='acc-daily')renderAccDaily();
     else if(activeAccSub==='acc-fixed')renderAccFixed();
   }
+}
+
+
+// ========== 마케팅탭 데이터 & 렌더링 ==========
+// data.marketingPosts = [{id,no,keyword,category:'전자상거래'|'스타트업'|'강남',
+//   draft:{status:'O'|'',date:''},
+//   cafe:{status:'발행완료'|'작성완료'|'작성중'|'수정필요'|'',date:''},
+//   blog:{status:'...',date:''},
+//   taxKing:{status:'...',date:''},  // 세금대왕
+//   thread:{status:'',date:''},
+//   finalCheck:{status:'발행완료'|'수정요청'|'',date:'',by:''},
+//   publishDate:'',memo:'',
+//   history:[{date,action,by}]
+// }]
+// data.marketingKeywords = [{id,keyword,blog:bool,cafe:bool,taxKing:bool,category:''}]
+
+function ensureMktData(){
+  if(!data.marketingPosts)data.marketingPosts=[];
+  if(!data.marketingKeywords)data.marketingKeywords=[];
+}
+
+var mktChannel='all';
+function setMktChannel(ch){
+  mktChannel=ch;
+  ['mktChAll','mktChEcom','mktChStartup','mktChGangnam'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.className='btn btn-sm btn-secondary';
+  });
+  var map={all:'mktChAll','전자상거래':'mktChEcom','스타트업':'mktChStartup','강남':'mktChGangnam'};
+  var active=document.getElementById(map[ch]);
+  if(active)active.className='btn btn-sm';active.style.cssText='background:#1A66FF;color:#fff';
+  renderMktContents();
+}
+
+// 상태별 버튼 스타일
+function mktStatusBtn(status,type,postId){
+  var colors={
+    'O':{bg:'#DBEAFE',text:'#1E40AF',label:'초안완료'},
+    '작성중':{bg:'#FEF3C7',text:'#92400E',label:'작성중'},
+    '작성예정':{bg:'#F3F4F6',text:'#6B7280',label:'작성예정'},
+    '작성완료':{bg:'#D1FAE5',text:'#065F46',label:'작성완료'},
+    '발행완료':{bg:'#DCFCE7',text:'#166534',label:'발행완료'},
+    '수정필요':{bg:'#FEE2E2',text:'#991B1B',label:'수정필요'},
+    '수정요청':{bg:'#FEE2E2',text:'#991B1B',label:'수정요청'},
+    '확인완료':{bg:'#DCFCE7',text:'#166534',label:'확인완료'},
+    '':{bg:'#F9FAFB',text:'#D1D5DB',label:'-'}
+  };
+  var s=status||'';
+  var c=colors[s]||colors[''];
+  return '<button onclick="cycleMktStatus(\''+postId+'\',\''+type+'\')" style="display:inline-block;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;background:'+c.bg+';color:'+c.text+';border:1px solid '+c.text+'22;cursor:pointer;min-width:48px" title="클릭하여 상태 변경">'+c.label+'</button>';
+}
+
+// 상태 순환
+function cycleMktStatus(postId,type){
+  ensureMktData();
+  var post=data.marketingPosts.find(function(p){return p.id===postId});
+  if(!post)return;
+  var field=post[type];
+  if(!field){post[type]={status:'',date:''};field=post[type]}
+
+  var cycles;
+  if(type==='draft')cycles=['','O'];
+  else if(type==='finalCheck')cycles=['','확인완료','수정요청'];
+  else cycles=['','작성중','작성완료','발행완료','수정필요'];
+
+  var idx=cycles.indexOf(field.status||'');
+  idx=(idx+1)%cycles.length;
+  field.status=cycles[idx];
+  field.date=cycles[idx]?new Date().toISOString().slice(0,10):(field.date||'');
+
+  // 히스토리 기록
+  if(!post.history)post.history=[];
+  post.history.push({date:new Date().toISOString().slice(0,10),action:type+' → '+cycles[idx],by:auth.currentUser?auth.currentUser.email:''});
+
+  saveData();renderMktContents();
+}
+
+// 콘텐츠 관리 렌더링
+function renderMktContents(){
+  ensureMktData();
+  var list=data.marketingPosts.slice();
+  var sf=document.getElementById('mktStatusFilter');
+  var sv=sf?sf.value:'all';
+  var si=document.getElementById('mktSearchInput');
+  var sq=si?si.value.trim().toLowerCase():'';
+
+  // 채널 필터
+  if(mktChannel!=='all')list=list.filter(function(p){return p.category===mktChannel});
+
+  // 상태 필터
+  if(sv!=='all'){
+    list=list.filter(function(p){
+      if(sv==='초안작성')return p.draft&&p.draft.status==='O'&&(!p.blog||!p.blog.status);
+      if(sv==='검토중')return p.blog&&(p.blog.status==='작성중'||p.blog.status==='작성완료')&&(!p.finalCheck||!p.finalCheck.status);
+      if(sv==='작성완료')return (p.blog&&p.blog.status==='작성완료')||(p.cafe&&p.cafe.status==='작성완료');
+      if(sv==='발행완료')return p.blog&&p.blog.status==='발행완료';
+      if(sv==='수정필요')return (p.blog&&p.blog.status==='수정필요')||(p.taxKing&&p.taxKing.status==='수정필요')||(p.finalCheck&&p.finalCheck.status==='수정요청');
+      return true;
+    });
+  }
+
+  // 검색
+  if(sq)list=list.filter(function(p){return (p.keyword||'').toLowerCase().indexOf(sq)!==-1});
+
+  var tbody=document.getElementById('mktTableBody');
+  if(!tbody)return;
+  var h='';
+  list.forEach(function(p,i){
+    var catBg=p.category==='전자상거래'?'#DBEAFE':p.category==='스타트업'?'#FEF3C7':'#E0E7FF';
+    var catTxt=p.category==='전자상거래'?'#1E40AF':p.category==='스타트업'?'#92400E':'#3730A3';
+    var catLabel=p.category==='전자상거래'?'전자상거래':p.category==='스타트업'?'스타트업':'강남';
+
+    h+='<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer" ondblclick="openMktEditModal(\''+p.id+'\')">';
+    h+='<td style="padding:6px;text-align:center;color:#94a3b8;font-size:10px">'+(p.no||i+1)+'</td>';
+    h+='<td style="padding:6px;font-weight:600;color:#1E293B">'+esc(p.keyword||'')+'</td>';
+    h+='<td style="padding:6px;text-align:center"><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;background:'+catBg+';color:'+catTxt+'">'+catLabel+'</span></td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.draft?p.draft.status:'','draft',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.cafe?p.cafe.status:'','cafe',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.blog?p.blog.status:'','blog',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.taxKing?p.taxKing.status:'','taxKing',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.thread?p.thread.status:'','thread',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.finalCheck?p.finalCheck.status:'','finalCheck',p.id)+'</td>';
+    h+='<td style="padding:6px;text-align:center;font-size:10px;color:#64748b">'+(p.publishDate||'-')+'</td>';
+    h+='<td style="padding:6px;font-size:10px;color:#718096">'+esc(p.memo||'')+'</td>';
+    h+='<td style="padding:6px;text-align:center"><button class="btn btn-xs btn-secondary" onclick="openMktDetailModal(\''+p.id+'\')">상세</button></td>';
+    h+='</tr>';
+  });
+  if(!h)h='<tr><td colspan="12" style="padding:30px;text-align:center;color:#94a3b8">콘텐츠가 없습니다. + 버튼으로 등록하거나 엑셀을 업로드하세요.</td></tr>';
+  tbody.innerHTML=h;
+
+  var cnt=document.getElementById('mktCountLabel');
+  if(cnt)cnt.textContent='총 '+list.length+'건';
+}
+
+// 콘텐츠 등록 모달
+function openMktAddModal(){
+  var inner='<div class="FG" style="grid-template-columns:1fr 1fr">'+
+    '<div class="FGI"><label class="FGL">키워드/주제</label><input type="text" id="mktAddKw" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">카테고리</label><select id="mktAddCat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option value="전자상거래">전자상거래센터</option><option value="스타트업">스타트업센터</option><option value="강남">강남센터</option></select></div>'+
+    '<div class="FGI"><label class="FGL">구글독스 URL</label><input type="text" id="mktAddUrl" placeholder="https://docs.google.com/..." style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">비고</label><input type="text" id="mktAddMemo" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('콘텐츠 등록',inner,function(){
+    ensureMktData();
+    var kw=document.getElementById('mktAddKw').value.trim();
+    if(!kw){toast('키워드를 입력하세요');return}
+    var maxNo=0;data.marketingPosts.forEach(function(p){if((p.no||0)>maxNo)maxNo=p.no});
+    data.marketingPosts.push({
+      id:'MK'+Date.now(),
+      no:maxNo+1,
+      keyword:kw,
+      category:document.getElementById('mktAddCat').value,
+      draft:{status:'',date:''},
+      cafe:{status:'',date:''},
+      blog:{status:'',date:''},
+      taxKing:{status:'',date:''},
+      thread:{status:'',date:''},
+      finalCheck:{status:'',date:'',by:''},
+      publishDate:'',
+      memo:document.getElementById('mktAddMemo').value,
+      googleDocUrl:document.getElementById('mktAddUrl').value,
+      history:[{date:new Date().toISOString().slice(0,10),action:'등록',by:auth.currentUser?auth.currentUser.email:''}]
+    });
+    saveData();renderMktContents();toast('콘텐츠 등록 완료');
+  });
+}
+
+// 콘텐츠 수정 모달
+function openMktEditModal(id){
+  ensureMktData();
+  var p=data.marketingPosts.find(function(x){return x.id===id});
+  if(!p)return;
+  var inner='<div class="FG" style="grid-template-columns:1fr 1fr">'+
+    '<div class="FGI"><label class="FGL">키워드/주제</label><input type="text" id="mktEditKw" value="'+esc(p.keyword||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">카테고리</label><select id="mktEditCat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option value="전자상거래"'+(p.category==='전자상거래'?' selected':'')+'>전자상거래센터</option><option value="스타트업"'+(p.category==='스타트업'?' selected':'')+'>스타트업센터</option><option value="강남"'+(p.category==='강남'?' selected':'')+'>강남센터</option></select></div>'+
+    '<div class="FGI"><label class="FGL">구글독스 URL</label><input type="text" id="mktEditUrl" value="'+esc(p.googleDocUrl||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">발행일</label><input type="date" id="mktEditPubDate" value="'+(p.publishDate||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI" style="grid-column:1/-1"><label class="FGL">비고</label><input type="text" id="mktEditMemo" value="'+esc(p.memo||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;width:100%"></div>'+
+  '</div>';
+  openModal('콘텐츠 수정',inner,function(){
+    p.keyword=document.getElementById('mktEditKw').value.trim();
+    p.category=document.getElementById('mktEditCat').value;
+    p.googleDocUrl=document.getElementById('mktEditUrl').value;
+    p.publishDate=document.getElementById('mktEditPubDate').value;
+    p.memo=document.getElementById('mktEditMemo').value;
+    if(!p.history)p.history=[];
+    p.history.push({date:new Date().toISOString().slice(0,10),action:'수정',by:auth.currentUser?auth.currentUser.email:''});
+    saveData();renderMktContents();toast('수정 완료');
+  });
+}
+
+// 상세보기 모달 (타임라인)
+function openMktDetailModal(id){
+  ensureMktData();
+  var p=data.marketingPosts.find(function(x){return x.id===id});
+  if(!p)return;
+
+  // 워크플로우 타임라인
+  var steps=[
+    {label:'초안작성',field:p.draft,icon:'📝'},
+    {label:'카페 업로드',field:p.cafe,icon:'☕'},
+    {label:'블로그 업로드',field:p.blog,icon:'📰'},
+    {label:'세금대왕 업로드',field:p.taxKing,icon:'👑'},
+    {label:'스레드',field:p.thread,icon:'🧵'},
+    {label:'최종확인',field:p.finalCheck,icon:'✅'}
+  ];
+
+  var timeline='<div style="margin-bottom:16px">';
+  steps.forEach(function(s){
+    var f=s.field||{};
+    var done=!!f.status&&f.status!==''&&f.status!=='수정필요'&&f.status!=='수정요청';
+    var clr=done?'#059669':(f.status==='수정필요'||f.status==='수정요청')?'#DC2626':'#CBD5E1';
+    timeline+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-left:3px solid '+clr+';padding-left:12px;margin-left:8px">'+
+      '<span>'+s.icon+'</span><div><div style="font-size:12px;font-weight:600;color:#1E293B">'+s.label+'</div>'+
+      '<div style="font-size:10px;color:#718096">'+(f.status||'대기중')+''+(f.date?' · '+f.date:'')+'</div></div></div>';
+  });
+  timeline+='</div>';
+
+  // 히스토리
+  var hist='<div style="font-size:12px;font-weight:600;color:#1E293B;margin-bottom:6px">변경 이력</div>';
+  if(p.history&&p.history.length>0){
+    p.history.slice().reverse().forEach(function(h){
+      hist+='<div style="font-size:10px;color:#64748b;padding:3px 0">'+h.date+' · '+esc(h.action)+''+(h.by?' ('+h.by.split('@')[0]+')':'')+'</div>';
+    });
+  }else{hist+='<div style="font-size:10px;color:#94a3b8">이력 없음</div>'}
+
+  var inner='<div style="margin-bottom:12px"><div style="font-size:16px;font-weight:700;color:#1E293B">'+esc(p.keyword||'')+'</div><div style="font-size:11px;color:#64748b;margin-top:2px">'+(p.category||'')+(p.googleDocUrl?' · <a href="'+esc(p.googleDocUrl)+'" target="_blank" style="color:#1A66FF">구글독스 열기</a>':'')+'</div></div>'+
+    timeline+hist+
+    '<div style="display:flex;gap:6px;margin-top:14px">'+
+      '<button class="btn btn-sm btn-primary" onclick="closeMD();openMktEditModal(\''+p.id+'\')">✏️ 수정</button>'+
+      '<button class="btn btn-sm btn-danger" onclick="deleteMktPost(\''+p.id+'\')">🗑 삭제</button>'+
+    '</div>';
+  openModal('콘텐츠 상세 - '+esc(p.keyword||''),inner,null,'hide');
+}
+
+function deleteMktPost(id){
+  if(!confirm('이 콘텐츠를 삭제하시겠습니까?'))return;
+  data.marketingPosts=data.marketingPosts.filter(function(p){return p.id!==id});
+  saveData();closeMD();renderMktContents();toast('삭제 완료');
+}
+
+// 엑셀 업로드 (기존 관리 엑셀 형식 파싱)
+function importMktExcel(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      ensureMktData();
+      var imported=0;
+
+      wb.SheetNames.forEach(function(sn){
+        // 블로그(전자상거래) 시트 파싱
+        var ws=wb.Sheets[sn];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(rows.length<3)return;
+
+        // 헤더 행 찾기 (주제명 칼럼)
+        var headerIdx=-1;
+        for(var ri=0;ri<Math.min(5,rows.length);ri++){
+          for(var ci=0;ci<rows[ri].length;ci++){
+            if(String(rows[ri][ci]).indexOf('주제명')!==-1){headerIdx=ri;break}
+          }
+          if(headerIdx>=0)break;
+        }
+        if(headerIdx<0)return;
+
+        var hdr=rows[headerIdx];
+        // 칼럼 인덱스 찾기
+        var kwCol=-1,draftCol=-1,cafeCol=-1,blogCol=-1,tkCol=-1,threadCol=-1,pubCol=-1,memoCol=-1;
+        hdr.forEach(function(v,i){
+          var s=String(v).trim();
+          if(s==='주제명'&&kwCol<0)kwCol=i;
+          if(s==='초안')draftCol=i;
+          if(s==='카페')cafeCol=i;
+          if(s.indexOf('블로그')!==-1&&blogCol<0)blogCol=i;
+          if(s.indexOf('세금대왕')!==-1)tkCol=i;
+          if(s.indexOf('스레드')!==-1)threadCol=i;
+          if(s.indexOf('발행일')!==-1)pubCol=i;
+          if(s==='비고')memoCol=i;
+        });
+        if(kwCol<0)return;
+
+        // 카테고리 추정
+        var cat='전자상거래';
+        var snLow=sn.toLowerCase();
+        if(snLow.indexOf('스타트업')!==-1)cat='스타트업';
+        else if(snLow.indexOf('법인')!==-1||snLow.indexOf('강남')!==-1)cat='강남';
+
+        // 데이터 행 파싱
+        for(var r=headerIdx+1;r<rows.length;r++){
+          var row=rows[r];
+          var kw=String(row[kwCol]||'').trim();
+          if(!kw||kw.indexOf('📌')!==-1)continue;
+
+          // 중복 체크
+          var exists=data.marketingPosts.some(function(p){return p.keyword===kw&&p.category===cat});
+          if(exists)continue;
+
+          var maxNo=0;data.marketingPosts.forEach(function(p){if((p.no||0)>maxNo)maxNo=p.no});
+          var draftSt=draftCol>=0?String(row[draftCol]||'').trim():'';
+          var cafeSt=cafeCol>=0?String(row[cafeCol]||'').trim():'';
+          var blogSt=blogCol>=0?String(row[blogCol]||'').trim():'';
+          var tkSt=tkCol>=0?String(row[tkCol]||'').trim():'';
+          var threadSt=threadCol>=0?String(row[threadCol]||'').trim():'';
+          var pubDate=pubCol>=0?String(row[pubCol]||'').trim():'';
+          var memo=memoCol>=0?String(row[memoCol]||'').trim():'';
+
+          data.marketingPosts.push({
+            id:'MK'+Date.now()+Math.random().toString(36).slice(2,6),
+            no:maxNo+1,keyword:kw,category:cat,
+            draft:{status:draftSt,date:''},
+            cafe:{status:cafeSt,date:''},
+            blog:{status:blogSt,date:''},
+            taxKing:{status:tkSt,date:''},
+            thread:{status:threadSt,date:''},
+            finalCheck:{status:'',date:'',by:''},
+            publishDate:pubDate,memo:memo,googleDocUrl:'',
+            history:[{date:new Date().toISOString().slice(0,10),action:'엑셀 업로드',by:''}]
+          });
+          imported++;
+        }
+      });
+
+      saveData();renderMktContents();
+      toast('엑셀 업로드 완료: '+imported+'건 추가');
+    }catch(ex){
+      console.error('Marketing Excel parse error',ex);
+      toast('엑셀 파싱 오류: '+ex.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+// 엑셀 내보내기
+function exportMktExcel(){
+  ensureMktData();
+  if(!data.marketingPosts.length){toast('내보낼 데이터가 없습니다');return}
+  var rows=[['No','키워드','카테고리','초안','카페','블로그','세금대왕','스레드','최종확인','발행일','비고']];
+  data.marketingPosts.forEach(function(p){
+    rows.push([p.no,p.keyword,p.category,
+      p.draft?p.draft.status:'',p.cafe?p.cafe.status:'',
+      p.blog?p.blog.status:'',p.taxKing?p.taxKing.status:'',
+      p.thread?p.thread.status:'',p.finalCheck?p.finalCheck.status:'',
+      p.publishDate||'',p.memo||''
+    ]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,'마케팅콘텐츠');
+  XLSX.writeFile(wb2,'마케팅콘텐츠_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('내보내기 완료');
+}
+
+// ---- 발행통계 ----
+function renderMktStats(){
+  ensureMktData();
+  var yearSel=document.getElementById('mktStatsYear');
+  if(yearSel&&!yearSel.options.length){
+    var cy=new Date().getFullYear();
+    for(var y=cy;y>=cy-3;y--)yearSel.innerHTML+='<option value="'+y+'">'+y+'년</option>';
+  }
+  var selYear=yearSel?parseInt(yearSel.value):new Date().getFullYear();
+  var posts=data.marketingPosts;
+
+  // 전체 요약
+  var total=posts.length;
+  var published=posts.filter(function(p){return p.blog&&p.blog.status==='발행완료'}).length;
+  var drafting=posts.filter(function(p){return p.draft&&p.draft.status==='O'&&(!p.blog||!p.blog.status||p.blog.status==='작성중')}).length;
+  var needFix=posts.filter(function(p){return (p.blog&&p.blog.status==='수정필요')||(p.taxKing&&p.taxKing.status==='수정필요')||(p.finalCheck&&p.finalCheck.status==='수정요청')}).length;
+  var ecom=posts.filter(function(p){return p.category==='전자상거래'}).length;
+  var startup=posts.filter(function(p){return p.category==='스타트업'}).length;
+
+  var sumEl=document.getElementById('mktStatsSummary');
+  if(sumEl)sumEl.innerHTML=
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:22px">'+total+'</div><div class="SL">전체 콘텐츠</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:22px;color:#059669">'+published+'</div><div class="SL">발행완료</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:22px;color:#d97706">'+drafting+'</div><div class="SL">작성중</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:22px;color:#dc2626">'+needFix+'</div><div class="SL">수정필요</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px">'+ecom+' / '+startup+'</div><div class="SL">전자상거래 / 스타트업</div></div>';
+
+  // 월별 발행 건수 테이블
+  var months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  var cats=['전자상거래','스타트업','강남'];
+  var channels=['blog','cafe','taxKing'];
+  var chLabels=['블로그','카페','세금대왕'];
+
+  var mh='<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#f8fafc"><th style="padding:8px;border-bottom:2px solid #e2e8f0">채널</th>';
+  months.forEach(function(m){mh+='<th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0">'+m+'</th>'});
+  mh+='<th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0;font-weight:700">합계</th></tr></thead><tbody>';
+
+  channels.forEach(function(ch,ci){
+    mh+='<tr><td style="padding:8px;font-weight:600">'+chLabels[ci]+'</td>';
+    var yearTotal=0;
+    months.forEach(function(_,mi){
+      var cnt=posts.filter(function(p){
+        var f=p[ch];
+        if(!f||f.status!=='발행완료')return false;
+        if(!f.date)return false;
+        var d=new Date(f.date);
+        return d.getFullYear()===selYear&&d.getMonth()===mi;
+      }).length;
+      // 날짜 없으면 발행완료 카운트도 포함 (기존 엑셀 데이터)
+      if(cnt===0){
+        cnt=posts.filter(function(p){
+          var f=p[ch];
+          if(!f||f.status!=='발행완료')return false;
+          if(f.date)return false;
+          if(!p.publishDate)return false;
+          var d2=new Date(p.publishDate);
+          return d2.getFullYear()===selYear&&d2.getMonth()===mi;
+        }).length;
+      }
+      yearTotal+=cnt;
+      mh+='<td style="padding:8px;text-align:center;'+(cnt>0?'font-weight:600;color:#1A66FF':'color:#cbd5e1')+'">'+cnt+'</td>';
+    });
+    mh+='<td style="padding:8px;text-align:center;font-weight:700;color:#1E293B">'+yearTotal+'</td></tr>';
+  });
+
+  // 합계 행
+  mh+='<tr style="background:#f8fafc;font-weight:700"><td style="padding:8px">합계</td>';
+  var grandTotal=0;
+  months.forEach(function(_,mi){
+    var mCnt=0;
+    channels.forEach(function(ch){
+      mCnt+=posts.filter(function(p){var f=p[ch];if(!f||f.status!=='발행완료')return false;if(f.date){var d=new Date(f.date);return d.getFullYear()===selYear&&d.getMonth()===mi}return false}).length;
+    });
+    grandTotal+=mCnt;
+    mh+='<td style="padding:8px;text-align:center">'+mCnt+'</td>';
+  });
+  mh+='<td style="padding:8px;text-align:center;color:#1A66FF">'+grandTotal+'</td></tr></tbody></table>';
+
+  var mEl=document.getElementById('mktStatsMonthly');if(mEl)mEl.innerHTML=mh;
+
+  // 채널별 진행 현황 (바 차트)
+  var chEl=document.getElementById('mktStatsChannel');
+  if(chEl){
+    var ch2='';
+    cats.forEach(function(cat){
+      var catPosts=posts.filter(function(p){return p.category===cat});
+      var pub=catPosts.filter(function(p){return p.blog&&p.blog.status==='발행완료'}).length;
+      var wip=catPosts.filter(function(p){return p.blog&&(p.blog.status==='작성중'||p.blog.status==='작성완료')}).length;
+      var tot=catPosts.length;
+      var pct=tot>0?Math.round(pub/tot*100):0;
+      ch2+='<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="font-weight:600">'+cat+'</span><span style="color:#718096">'+pub+'/'+tot+' ('+pct+'%)</span></div>'+
+        '<div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#1A66FF,#75D5FF);width:'+pct+'%;border-radius:4px"></div></div></div>';
+    });
+    chEl.innerHTML=ch2;
+  }
+
+  // 워크플로우 단계별
+  var wfEl=document.getElementById('mktStatsWorkflow');
+  if(wfEl){
+    var wf='';
+    var stages=[
+      {label:'초안완료',count:posts.filter(function(p){return p.draft&&p.draft.status==='O'}).length,color:'#6366f1'},
+      {label:'카페 발행',count:posts.filter(function(p){return p.cafe&&p.cafe.status==='발행완료'}).length,color:'#059669'},
+      {label:'블로그 발행',count:posts.filter(function(p){return p.blog&&p.blog.status==='발행완료'}).length,color:'#1A66FF'},
+      {label:'세금대왕 발행',count:posts.filter(function(p){return p.taxKing&&p.taxKing.status==='발행완료'}).length,color:'#d97706'},
+      {label:'최종확인 완료',count:posts.filter(function(p){return p.finalCheck&&p.finalCheck.status==='확인완료'}).length,color:'#059669'}
+    ];
+    stages.forEach(function(st){
+      var pct2=total>0?Math.round(st.count/total*100):0;
+      wf+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<div style="width:80px;font-size:11px;font-weight:500">'+st.label+'</div>'+
+        '<div style="flex:1;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden"><div style="height:100%;background:'+st.color+';width:'+pct2+'%;border-radius:4px"></div></div>'+
+        '<div style="width:50px;text-align:right;font-size:11px;font-weight:600;color:'+st.color+'">'+st.count+'건</div></div>';
+    });
+    wfEl.innerHTML=wf;
+  }
+}
+
+// ---- 키워드 분석 ----
+function renderMktKeywords(){
+  ensureMktData();
+  // 추천 키워드: marketingKeywords 중 미작성
+  var recEl=document.getElementById('mktKeywordRecommend');
+  if(recEl){
+    var recs=data.marketingKeywords.filter(function(kw){
+      return !data.marketingPosts.some(function(p){return p.keyword===kw.keyword});
+    });
+    if(!recs.length)recs=generateKeywordSuggestions();
+    var rh='';
+    recs.slice(0,20).forEach(function(kw){
+      rh+='<button onclick="quickAddMktFromKeyword(\''+esc(kw.keyword).replace(/'/g,"\\'")+'\',\''+(kw.category||'전자상거래')+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #93C5FD;background:#fff;color:#1E40AF;font-size:11px;cursor:pointer;font-weight:500">+ '+esc(kw.keyword)+'</button>';
+    });
+    if(!rh)rh='<div style="font-size:11px;color:#94a3b8">모든 추천 키워드가 작성 완료되었습니다</div>';
+    recEl.innerHTML=rh;
+  }
+
+  // 키워드 목록 테이블
+  var sq=document.getElementById('kwSearchInput');
+  var sv=sq?sq.value.trim().toLowerCase():'';
+  var sf=document.getElementById('kwStatusFilter');
+  var sfv=sf?sf.value:'all';
+
+  // 모든 키워드 합치기 (등록된 키워드 + 콘텐츠 키워드)
+  var allKws=[];
+  var seen={};
+  data.marketingKeywords.forEach(function(kw){
+    if(!seen[kw.keyword]){seen[kw.keyword]=1;allKws.push(kw)}
+  });
+  data.marketingPosts.forEach(function(p){
+    if(p.keyword&&!seen[p.keyword]){
+      seen[p.keyword]=1;
+      allKws.push({keyword:p.keyword,category:p.category,blog:p.blog&&p.blog.status==='발행완료',cafe:p.cafe&&p.cafe.status==='발행완료',taxKing:p.taxKing&&p.taxKing.status==='발행완료'});
+    }
+  });
+
+  // 상태 업데이트 from posts
+  allKws.forEach(function(kw){
+    var post=data.marketingPosts.find(function(p){return p.keyword===kw.keyword});
+    if(post){
+      kw.blog=post.blog&&post.blog.status==='발행완료';
+      kw.cafe=post.cafe&&post.cafe.status==='발행완료';
+      kw.taxKing=post.taxKing&&post.taxKing.status==='발행완료';
+    }
+  });
+
+  // 필터
+  if(sv)allKws=allKws.filter(function(kw){return kw.keyword.toLowerCase().indexOf(sv)!==-1});
+  if(sfv==='done')allKws=allKws.filter(function(kw){return kw.blog&&kw.cafe&&kw.taxKing});
+  if(sfv==='pending')allKws=allKws.filter(function(kw){return !kw.blog||!kw.cafe||!kw.taxKing});
+
+  var tbody=document.getElementById('kwTableBody');
+  if(!tbody)return;
+  var h='';
+  allKws.forEach(function(kw){
+    var done=kw.blog&&kw.cafe&&kw.taxKing;
+    h+='<tr style="border-bottom:1px solid #f1f5f9">'+
+      '<td style="padding:8px;font-weight:500">'+esc(kw.keyword)+'</td>'+
+      '<td style="padding:8px;text-align:center">'+(kw.blog?'<span style="color:#059669;font-weight:700">✓</span>':'<span style="color:#cbd5e1">—</span>')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+(kw.cafe?'<span style="color:#059669;font-weight:700">✓</span>':'<span style="color:#cbd5e1">—</span>')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+(kw.taxKing?'<span style="color:#059669;font-weight:700">✓</span>':'<span style="color:#cbd5e1">—</span>')+'</td>'+
+      '<td style="padding:8px;text-align:center"><span style="padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;background:'+(done?'#D1FAE5':'#FEF3C7')+';color:'+(done?'#065F46':'#92400E')+'">'+(done?'완료':'진행중')+'</span></td>'+
+      '<td style="padding:8px;text-align:center"><button class="btn btn-xs btn-danger" onclick="deleteKeyword(\''+esc(kw.keyword).replace(/'/g,"\\'")+'\')">삭제</button></td></tr>';
+  });
+  if(!h)h='<tr><td colspan="6" style="padding:30px;text-align:center;color:#94a3b8">키워드가 없습니다</td></tr>';
+  tbody.innerHTML=h;
+}
+
+function generateKeywordSuggestions(){
+  // 기존 콘텐츠 키워드에서 파생 추천
+  var existing=data.marketingPosts.map(function(p){return p.keyword});
+  var suggestions=[
+    {keyword:'전자상거래 종합소득세',category:'전자상거래'},
+    {keyword:'쇼핑몰 부가세 환급',category:'전자상거래'},
+    {keyword:'스마트스토어 세금 절약',category:'전자상거래'},
+    {keyword:'해외구매대행 종합소득세',category:'전자상거래'},
+    {keyword:'쿠팡 셀러 세무기장',category:'전자상거래'},
+    {keyword:'스타트업 법인세 절세',category:'스타트업'},
+    {keyword:'벤처기업 세금감면',category:'스타트업'},
+    {keyword:'법인설립 후 세무',category:'강남'},
+    {keyword:'법인 대표 급여 설정',category:'강남'},
+    {keyword:'법인카드 비용처리',category:'강남'}
+  ];
+  return suggestions.filter(function(s){return existing.indexOf(s.keyword)===-1});
+}
+
+function quickAddMktFromKeyword(kw,cat){
+  ensureMktData();
+  if(data.marketingPosts.some(function(p){return p.keyword===kw})){toast('이미 등록된 키워드입니다');return}
+  var maxNo=0;data.marketingPosts.forEach(function(p){if((p.no||0)>maxNo)maxNo=p.no});
+  data.marketingPosts.push({
+    id:'MK'+Date.now(),no:maxNo+1,keyword:kw,category:cat,
+    draft:{status:'',date:''},cafe:{status:'',date:''},blog:{status:'',date:''},
+    taxKing:{status:'',date:''},thread:{status:'',date:''},
+    finalCheck:{status:'',date:'',by:''},publishDate:'',memo:'',googleDocUrl:'',
+    history:[{date:new Date().toISOString().slice(0,10),action:'키워드 추천에서 등록',by:''}]
+  });
+  saveData();renderMktContents();renderMktKeywords();toast(kw+' 등록 완료');
+}
+
+function openKeywordAddModal(){
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">키워드 (줄바꿈으로 여러 개 입력)</label><textarea id="kwAddText" rows="6" placeholder="전자상거래 부가세\n스마트스토어 세금\n쿠팡 셀러 절세" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;width:100%"></textarea></div>'+
+    '<div class="FGI"><label class="FGL">기본 카테고리</label><select id="kwAddCat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option value="전자상거래">전자상거래</option><option value="스타트업">스타트업</option><option value="강남">강남</option></select></div>'+
+  '</div>';
+  openModal('키워드 일괄 등록',inner,function(){
+    ensureMktData();
+    var text=document.getElementById('kwAddText').value;
+    var cat=document.getElementById('kwAddCat').value;
+    var kws=text.split('\n').map(function(s){return s.trim()}).filter(function(s){return s});
+    var added=0;
+    kws.forEach(function(kw){
+      if(data.marketingKeywords.some(function(k){return k.keyword===kw}))return;
+      data.marketingKeywords.push({keyword:kw,category:cat,blog:false,cafe:false,taxKing:false});
+      added++;
+    });
+    saveData();renderMktKeywords();toast(added+'개 키워드 등록됨');
+  });
+}
+
+function deleteKeyword(kw){
+  if(!confirm(kw+' 키워드를 삭제하시겠습니까?'))return;
+  data.marketingKeywords=data.marketingKeywords.filter(function(k){return k.keyword!==kw});
+  saveData();renderMktKeywords();toast('삭제 완료');
+}
+
+// 마케팅 탭 메인 렌더
+function renderMarketing(){
+  if(activeMktSub==='mkt-contents')renderMktContents();
+  else if(activeMktSub==='mkt-stats')renderMktStats();
+  else if(activeMktSub==='mkt-keywords')renderMktKeywords();
 }
 
 </script>
