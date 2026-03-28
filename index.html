@@ -134,6 +134,7 @@ tr:hover td{background:#f8fafc}
     <div id="docStatusBanner" style="flex:1;min-width:0"></div>
     <div id="monthlyFilingAlert" style="flex:1;min-width:0"></div>
   </div>
+  <div id="smartAlertRow" style="display:none;margin-bottom:10px"></div>
   <div id="clientStatsDetail" style="display:none">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card" id="bizStatsCard" style="margin-bottom:0"></div>
@@ -639,7 +640,7 @@ tr:hover td{background:#f8fafc}
       <select id="dismissedFilterManager" onchange="renderDismissed()"><option value="">전체담당</option></select>
     </div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th>기장료</th><th>조정료</th><th>해임사유</th><th>해임월</th><th>폐업/휴업일</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th>기장료</th><th>조정료</th><th>해임사유</th><th>해임월</th><th>폐업/휴업일</th><th>거래기간</th></tr></thead>
       <tbody id="dismissedTable"></tbody>
     </table></div>
   </div>
@@ -1884,13 +1885,21 @@ function submitPinModal(){
   if(cb)cb();
 }
 // ============ 동적 탭 시스템 ============
-var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',invoice:'세금계산서',dismissed:'해임현황',managers:'담당자현황',bonus:'상여실적',performance:'성과',admin:'관리자'};
+var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',invoice:'세금계산서',dismissed:'해임현황',admin:'관리자'};
 var TAX_SUBTABS=[{key:'vat',label:'부가세신고'},{key:'exempt',label:'면세신고'},{key:'corp',label:'법인세신고'},{key:'income',label:'소득세신고'},{key:'sincere',label:'성실신고'},{key:'closing',label:'월/분기결산'}];
-var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','invoice','dismissed','managers','bonus','performance','admin'];
+var ADMIN_SUBTABS=[{key:'admin',label:'⚙️ 설정'},{key:'managers',label:'담당자현황'},{key:'bonus',label:'상여실적'},{key:'performance',label:'성과'}];
+var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','invoice','dismissed','admin'];
 var activeMainTab='clients';
 var activeTaxSub='vat';
+var activeAdminSub='admin';
 
-function getTabOrder(){return data.tabOrder||DEFAULT_TAB_ORDER.slice()}
+function getTabOrder(){
+  var order=data.tabOrder||DEFAULT_TAB_ORDER.slice();
+  // 이전 데이터에서 제거된 탭 필터링, 누락된 탭 추가
+  order=order.filter(function(k){return !!TAB_LABELS[k]});
+  DEFAULT_TAB_ORDER.forEach(function(k){if(order.indexOf(k)===-1)order.splice(order.length-1,0,k)});
+  return order;
+}
 
 function renderTabBar(){
   var order=getTabOrder();
@@ -1912,21 +1921,31 @@ function renderTabBar(){
     });
     subBar.innerHTML=sh;
     subBar.style.display='flex';
+  }else if(activeMainTab==='admin'){
+    var sh='';
+    ADMIN_SUBTABS.forEach(function(st){
+      var scls='tab-btn'+(st.key===activeAdminSub?' active':'');
+      sh+='<button class="'+scls+'" data-tab="'+st.key+'" onclick="clickAdminSub(\''+st.key+'\')">'+st.label+'</button>';
+    });
+    subBar.innerHTML=sh;
+    subBar.style.display='flex';
   }else{
     subBar.style.display='none';
   }
 }
 
+function isSuperAdmin(){return auth.currentUser&&auth.currentUser.email&&auth.currentUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()}
+
 function clickMainTab(key){
-  // 비밀번호 보호 탭
-  if(['admin','bonus','managers','performance'].indexOf(key)!==-1&&!protectedTabsUnlocked[key]){
-    var tabLabel=TAB_LABELS[key];
-    openPinModal(tabLabel+' 탭 비밀번호',function(){
-      protectedTabsUnlocked[key]=true;
+  // 최종관리자(m1018)는 비밀번호 없이 바로 접근
+  if(key==='admin'&&!protectedTabsUnlocked['admin']&&!isSuperAdmin()){
+    openPinModal('관리자 탭 비밀번호',function(){
+      protectedTabsUnlocked['admin']=true;
       activateMainTab(key);
     });
     return;
   }
+  if(isSuperAdmin())protectedTabsUnlocked['admin']=true;
   activateMainTab(key);
 }
 
@@ -1934,8 +1953,10 @@ function activateMainTab(key){
   activeMainTab=key;
   document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
   if(key==='tax'){
-    // 세금신고 그룹: 서브탭 활성화
     var el=document.getElementById('tab-'+activeTaxSub);
+    if(el)el.classList.add('active');
+  }else if(key==='admin'){
+    var el=document.getElementById('tab-'+activeAdminSub);
     if(el)el.classList.add('active');
   }else{
     var el=document.getElementById('tab-'+key);
@@ -1954,11 +1975,20 @@ function clickTaxSub(subKey){
   refreshAll();
 }
 
+function clickAdminSub(subKey){
+  activeAdminSub=subKey;
+  document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+  var el=document.getElementById('tab-'+subKey);
+  if(el)el.classList.add('active');
+  renderTabBar();
+  refreshAll();
+}
+
 // 탭으로 이동하는 헬퍼 (배지 클릭 등에서 사용)
 var TAX_SUB_KEYS=['vat','exempt','corp','income','sincere','closing'];
+var ADMIN_SUB_KEYS=['managers','bonus','performance'];
 function goToTab(key){
   if(TAX_SUB_KEYS.indexOf(key)!==-1){
-    // 세금신고 서브탭
     activeMainTab='tax';
     activeTaxSub=key;
     document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
@@ -1966,6 +1996,22 @@ function goToTab(key){
     if(el)el.classList.add('active');
     renderTabBar();
     refreshAll();
+  }else if(ADMIN_SUB_KEYS.indexOf(key)!==-1){
+    // 관리자 서브탭 - 비밀번호 보호 (최종관리자 제외)
+    if(!protectedTabsUnlocked['admin']&&!isSuperAdmin()){
+      openPinModal('관리자 탭 비밀번호',function(){
+        protectedTabsUnlocked['admin']=true;
+        activeMainTab='admin';activeAdminSub=key;
+        document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+        var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
+        renderTabBar();refreshAll();
+      });
+      return;
+    }
+    activeMainTab='admin';activeAdminSub=key;
+    document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+    var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
+    renderTabBar();refreshAll();
   }else{
     clickMainTab(key);
   }
@@ -1978,13 +2024,14 @@ renderTabBar();
 var currentStaffFilter='active';
 var staffModalUnlocked=false;
 function openStaffModal(){
-  if(!staffModalUnlocked){
+  if(!staffModalUnlocked&&!isSuperAdmin()){
     openPinModal('직원관리 비밀번호',function(){
       staffModalUnlocked=true;
       document.getElementById('staffModal').classList.add('show');renderStaff();
     });
     return;
   }
+  staffModalUnlocked=true;
   document.getElementById('staffModal').classList.add('show');renderStaff();
 }
 function closeStaffModal(){document.getElementById('staffModal').classList.remove('show')}
@@ -2268,6 +2315,8 @@ function saveClient(){
     if(dupMsg){if(!confirm(dupMsg+'그래도 등록하시겠습니까?'))return}
   }
   if(isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'&&!document.getElementById('f_convertedCorp').value){toast('법인전환 시 전환된 법인을 선택해주세요');return}
+  // 거래 1년 미만 해임 경고 (기존 활성→해임 전환 시)
+  if(isDismissed&&editId){var _ec=data.clients.find(function(x){return x.id===editId});if(_ec&&_ec.status==='활성'){var _sYM=document.getElementById('f_billingStart').value||document.getElementById('f_startMonth').value||'';var _dYM=document.getElementById('f_dismissDate').value||'';var _dm=calcDealMonths(_sYM,_dYM);if(_dm>=0&&_dm<12){if(!confirm('⚠️ 계약 1년 미만인 업체입니다 ('+_dm+'개월)\n정말 해임처리 하시겠습니까?'))return}}}
   const cd={name,ownerName:document.getElementById('f_owner').value.trim(),ownerBirth:document.getElementById('f_ownerBirth').value,bizRegDate:document.getElementById('f_bizRegDate').value,type,
     entityType:document.getElementById('f_entity').value,businessType:document.getElementById('f_biz').value,
     ecommerceDetail:document.getElementById('f_biz').value==='전자상거래'?document.getElementById('f_ecom').value:'',
@@ -2620,6 +2669,78 @@ function updateAlertRowVisibility(){
   var hasDoc=d&&d.innerHTML.trim().length>0;
   var hasFiling=m&&m.innerHTML.trim().length>0;
   row.style.display=(hasDoc||hasFiling)?'flex':'none';
+}
+
+function renderSmartAlerts(){
+  var el=document.getElementById('smartAlertRow');if(!el)return;
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
+  var prevM=now.getMonth()===0?12:now.getMonth();
+  var prevY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+  var prevYM=prevY+'-'+('0'+prevM).slice(-2);
+  var cards=[];
+
+  // 1) 이번달 신규수임
+  var newThisMonth=data.clients.filter(function(c){
+    var cm=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+    return cm===ym&&c.status==='활성';
+  });
+  var newFee=newThisMonth.reduce(function(s,c){return s+(c.fee||0)},0);
+  if(newThisMonth.length>0){
+    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:10px;min-width:200px">'
+      +'<span style="font-size:20px">🎉</span>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#276749">이번달 신규수임 '+newThisMonth.length+'건</div>'
+      +'<div style="font-size:11px;color:#38a169">월 기장료 +'+W(newFee)+'</div></div></div>');
+  }
+
+  // 2) 이번달 기장료 합계
+  var ac=AC();
+  var totalMonthlyFee=ac.reduce(function(s,c){return s+(c.fee||0)},0);
+  cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;min-width:200px">'
+    +'<span style="font-size:20px">💰</span>'
+    +'<div><div style="font-size:12px;font-weight:700;color:#2a4365">월 기장료 합계</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#2b6cb0">'+W(totalMonthlyFee)+'</div></div></div>');
+
+  // 3) 상담 전환율 (이번달 vs 전월)
+  var cons=data.consultations||[];
+  var thisMonthCons=cons.filter(function(c){return c.date&&c.date.slice(0,7)===ym});
+  var prevMonthCons=cons.filter(function(c){return c.date&&c.date.slice(0,7)===prevYM});
+  var thisContracted=thisMonthCons.filter(function(c){return c.contracted==='Y'}).length;
+  var thisRate=thisMonthCons.length>0?Math.round(thisContracted/thisMonthCons.length*100):0;
+  var prevContracted=prevMonthCons.filter(function(c){return c.contracted==='Y'}).length;
+  var prevRate=prevMonthCons.length>0?Math.round(prevContracted/prevMonthCons.length*100):0;
+  if(thisMonthCons.length>0){
+    var diff=thisRate-prevRate;
+    var trendIcon=diff>0?'📈':diff<0?'📉':'➡️';
+    var trendColor=diff>0?'#276749':diff<0?'#c53030':'#718096';
+    var trendText=diff>0?'+'+diff+'%p ↑':diff<0?diff+'%p ↓':'동일';
+    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+(diff>0?'#f0fff4':'#f7fafc')+';border:1px solid '+(diff>0?'#c6f6d5':'#e2e8f0')+';border-radius:10px;min-width:200px;cursor:pointer" onclick="goToTab(\'consult\')">'
+      +'<span style="font-size:20px">'+trendIcon+'</span>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#2d3748">상담 전환율 '+thisRate+'%</div>'
+      +'<div style="font-size:11px;color:'+trendColor+'">전월대비 '+trendText+' · '+thisMonthCons.length+'건 중 '+thisContracted+'건 계약</div></div></div>');
+  }
+
+  // 4) 상담 후 7일 미계약 → 2차연락 필요
+  var today=new Date();today.setHours(0,0,0,0);
+  var followUp=cons.filter(function(c){
+    if(c.contracted==='Y'||c.contracted==='P')return false;
+    if(!c.date)return false;
+    var cDate=new Date(c.date);
+    var diffDays=Math.floor((today-cDate)/(86400000));
+    return diffDays>=7&&diffDays<=60;
+  });
+  if(followUp.length>0){
+    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fffaf0;border:1px solid #fefcbf;border-radius:10px;min-width:200px;cursor:pointer" onclick="goToTab(\'consult\')">'
+      +'<span style="font-size:20px">📞</span>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#975a16">2차 연락 필요 '+followUp.length+'건</div>'
+      +'<div style="font-size:11px;color:#b7791f">상담 후 7일 이상 미계약</div></div></div>');
+  }
+
+  if(!cards.length){el.style.display='none';el.innerHTML='';return}
+  el.style.display='flex';
+  el.style.gap='10px';
+  el.style.flexWrap='wrap';
+  el.innerHTML=cards.join('');
 }
 function renderStats(){
   const ac=AC(),t1=ac.filter(c=>c.type==='1부'),t2=ac.filter(c=>c.type==='2부'),t3=ac.filter(c=>c.type==='3부');
@@ -3031,6 +3152,13 @@ function selectConvertCorp(prefix,id,name){
   document.getElementById(prefix+'convertCorpResults').style.display='none';
 }
 
+function calcDealMonths(startYM,endYM){
+  if(!startYM||!endYM)return-1;
+  var sy=parseInt(startYM.slice(0,4)),sm=parseInt(startYM.slice(5,7));
+  var ey=parseInt(endYM.slice(0,4)),em=parseInt(endYM.slice(5,7));
+  return(ey-sy)*12+(em-sm)+1;
+}
+
 function confirmDismissMini(){
   var c=data.clients.find(function(x){return x.id===_editActionClientId});if(!c)return;
   var reason=document.getElementById('dm_reason').value;
@@ -3038,6 +3166,12 @@ function confirmDismissMini(){
   var dDate=document.getElementById('dm_date').value;
   if(!dDate){toast('해임월을 입력하세요');return}
   if(reason==='법인전환'&&!document.getElementById('dm_convertedCorp').value){toast('전환된 법인을 선택하세요');return}
+  // 거래 1년 미만 경고
+  var startYM=c.billingStart||c.startMonth||'';
+  var months=calcDealMonths(startYM,dDate);
+  if(months>=0&&months<12){
+    if(!confirm('⚠️ 계약 1년 미만인 업체입니다 ('+months+'개월)\n정말 해임처리 하시겠습니까?'))return;
+  }
   c.status='해임';
   c.dismissReason=reason;
   c.dismissDate=dDate;
@@ -4238,15 +4372,30 @@ function renderDismissed(){
   // 최근 해임순 역순 정렬
   list.sort(function(a,b){var da=a.dismissDate||a.closureDate||'';var db=b.dismissDate||b.closureDate||'';if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;return db.localeCompare(da);});
   const tb=document.getElementById('dismissedTable');
-  if(!list.length){tb.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:#a0aec0">없음</td></tr>';return}
+  if(!list.length){tb.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#a0aec0">없음</td></tr>';return}
   tb.innerHTML=list.map(c=>{
     const reasonColors={휴업:'#d69e2e',이관:'#805ad5',매출부진:'#dd6b20',폐업:'#e53e3e','법인전환':'#38a169'};
     const rc=reasonColors[c.dismissReason]||'#64748b';
+    // 거래기간 계산: 출금시작일 ~ 해임월
+    var startYM=c.billingStart||c.startMonth||'';
+    var endYM=c.dismissDate||'';
+    var durText='-';var durWarn=false;
+    if(startYM&&endYM){
+      var sy=parseInt(startYM.slice(0,4)),sm=parseInt(startYM.slice(5,7));
+      var ey=parseInt(endYM.slice(0,4)),em=parseInt(endYM.slice(5,7));
+      var months=(ey-sy)*12+(em-sm)+1;
+      if(months<0)months=0;
+      if(months>=12){var yy=Math.floor(months/12);var mm=months%12;durText=yy+'년'+(mm>0?' '+mm+'개월':'');}
+      else{durText=months+'개월';durWarn=true;}
+    }
+    var durStyle=durWarn?'color:#e53e3e;font-weight:700':'color:#2d3748';
+    var warnIcon=durWarn?'⚠️ ':'';
     return`<tr><td>${c.id}</td><td>${c.name}</td><td>${c.ownerName||'-'}</td>
     <td><span class="badge ${typeBadge(c.type)}">${c.type}</span></td><td>${c.entityType}</td>
     <td>${c.manager||'-'}</td><td style="text-align:right">${fmt(c.fee)}</td><td style="text-align:right">${fmt(c.adjFee)}</td>
     <td><span style="color:${rc};font-weight:600">${c.dismissReason||'-'}</span></td>
-    <td>${c.dismissDate||'-'}</td><td>${c.closureDate||'-'}</td></tr>`}).join('');
+    <td>${c.dismissDate||'-'}</td><td>${c.closureDate||'-'}</td>
+    <td style="${durStyle};white-space:nowrap">${warnIcon}${durText}</td></tr>`}).join('');
 }
 
 // ===== 담당자현황 매트릭스 =====
@@ -8494,7 +8643,7 @@ function applyRoleUI(){
   }else{if(viewLabel)viewLabel.remove()}
 }
 function refreshAll(){
-  popDropdowns();renderStats();renderDocStatusBanner();renderClients();
+  popDropdowns();renderStats();renderDocStatusBanner();renderSmartAlerts();renderClients();
   // 나머지 탭은 지연 렌더링 (UI 블로킹 방지)
   setTimeout(function(){renderVatList();renderExemptList();renderCorpList();renderIncomeList();renderSincereList()},50);
   setTimeout(function(){renderClosingList();renderDismissed();renderInvoice()},100);
