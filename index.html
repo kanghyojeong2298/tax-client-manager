@@ -113,7 +113,6 @@ tr:hover td{background:#f8fafc}
 <div class="header">
   <h1>세무법인엑스퍼트 강남 고객관리 시스템</h1>
   <div class="header-right">
-    <span id="totalRevenue" style="font-size:12px;opacity:.9"></span>
     <button class="btn-staff" onclick="backupData()" title="데이터를 JSON 파일로 내보내기">백업</button>
     <button class="btn-staff" onclick="document.getElementById('restoreFile').click()" title="JSON 백업 파일 불러오기">복원</button>
     <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreData(this)">
@@ -1276,6 +1275,9 @@ runChecklistMigration();
 // 추가 마이그레이션: contractDate가 3월 이전인데 billingStart가 3월인 업체 체크리스트 완료 처리
 function runChecklistMigration2(){if(data._ckInit0328b)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){var cd=c.contractDate?(c.contractDate.slice(0,7)):'';var bs=c.billingStart||c.startMonth||'';if(!cd||cd>='2026-03')return;if(!c.onboardChecklist)c.onboardChecklist={};var prog=0;keys.forEach(function(k){if(c.onboardChecklist[k])prog++});if(prog>=keys.length)return;keys.forEach(function(k){c.onboardChecklist[k]=true})});data._ckInit0328b=true;saveData()}
 runChecklistMigration2();
+// 추가 마이그레이션3: 자료 미수령 업체는 체크리스트 초기화 (온보딩 진행 필요)
+function runChecklistMigration3(){if(data._ckInit0328c)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){if(c.status!=='활성')return;var ds=c.docStatus||'';if(ds==='받는중'||ds==='수령완료')return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=false})});data._ckInit0328c=true;saveData()}
+runChecklistMigration3();
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -1540,6 +1542,7 @@ async function loadFromFirestore(){
         if(!data.emailRoles)data.emailRoles={};
         runChecklistMigration();
         runChecklistMigration2();
+        runChecklistMigration3();
         refreshAll();
         toast('클라우드에서 데이터 로드 완료');
       }
@@ -2404,7 +2407,7 @@ function renderStats(){
     <div class="SC" onclick="this.querySelector('.stat-detail').style.display=this.querySelector('.stat-detail').style.display==='none'?'':'none'" style="cursor:pointer"><div class="SV" style="color:#805ad5">${t3.length}</div><div class="SL">3부 <span style="font-size:9px;color:#a0aec0">▼</span></div>${entSub(t3)}</div>
     <div class="SC"><div class="SV" style="color:#e53e3e">${dis}</div><div class="SL">해임</div></div>
     <div class="RB" onclick="var d=document.getElementById('clientStatsDetail');d.style.display=d.style.display==='none'?'':'none'" style="cursor:pointer;display:${extraStatsVisible?'':'none'}"><div class="RV">${W(ann)}</div><div class="RL">예상 연매출 <span style="font-size:9px;color:rgba(255,255,255,0.7)">▼ 상세</span></div></div>`;
-  document.getElementById('totalRevenue').textContent='연매출: '+W(ann);
+  // totalRevenue 제거됨
 
   // Business type stats
   const biz={일반:0,스타트업:0,전자상거래:0};
