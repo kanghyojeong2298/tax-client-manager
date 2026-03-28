@@ -1273,6 +1273,9 @@ if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.
 // 체크리스트 완료 마이그레이션 함수 (Firestore 로드 후에도 실행)
 function runChecklistMigration(){if(data._ckInit0329)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){var bs=c.billingStart||c.startMonth||'';if(bs>='2026-03')return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=true})});data._ckInit0329=true;saveData()}
 runChecklistMigration();
+// 추가 마이그레이션: contractDate가 3월 이전인데 billingStart가 3월인 업체 체크리스트 완료 처리
+function runChecklistMigration2(){if(data._ckInit0328b)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){var cd=c.contractDate?(c.contractDate.slice(0,7)):'';var bs=c.billingStart||c.startMonth||'';if(!cd||cd>='2026-03')return;if(!c.onboardChecklist)c.onboardChecklist={};var prog=0;keys.forEach(function(k){if(c.onboardChecklist[k])prog++});if(prog>=keys.length)return;keys.forEach(function(k){c.onboardChecklist[k]=true})});data._ckInit0328b=true;saveData()}
+runChecklistMigration2();
 
 // === 활동이력 로깅 ===
 function addLog(type,clientId,clientName,detail){
@@ -1536,6 +1539,7 @@ async function loadFromFirestore(){
         if(!data.consultations)data.consultations=[];
         if(!data.emailRoles)data.emailRoles={};
         runChecklistMigration();
+        runChecklistMigration2();
         refreshAll();
         toast('클라우드에서 데이터 로드 완료');
       }
