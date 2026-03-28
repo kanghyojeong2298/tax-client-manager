@@ -850,6 +850,123 @@ tr:hover td{background:#f8fafc}
   </div>
 </div>
 
+
+<!-- ===== 회계 - 미수관리 ===== -->
+<div id="tab-acc-misoo" class="TC">
+  <div style="display:flex;gap:0;min-height:calc(100vh - 160px)">
+    <!-- 왼쪽: 미수 리스트 -->
+    <div style="flex:1;padding:18px;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="font-size:16px;font-weight:700;color:#1E293B">📋 미수관리</h3>
+        <div style="display:flex;gap:6px;align-items:center">
+          <label class="btn btn-sm btn-secondary" style="cursor:pointer;margin:0">📥 CMS 파일 업로드
+            <input type="file" accept=".xls,.xlsx,.csv" id="cmsFileInput" onchange="parseCmsFile(this)" style="display:none">
+          </label>
+          <button class="btn btn-sm btn-export" onclick="exportMisooExcel()">📤 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="openMisooAddModal()">+ 미수 등록</button>
+        </div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div id="misooStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+
+      <!-- 필터 -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <select id="misooFilter" onchange="renderAccMisoo()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+          <option value="all">전체</option>
+          <option value="overdue30">30일+ 연체</option>
+          <option value="overdue15">15~30일</option>
+          <option value="recent">15일 미만</option>
+          <option value="cms-fail">CMS 출금실패</option>
+        </select>
+        <select id="misooMgrFilter" onchange="renderAccMisoo()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+          <option value="">전체 담당자</option>
+        </select>
+        <input type="text" id="misooSearch" placeholder="업체명 검색..." oninput="renderAccMisoo()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;width:160px">
+        <div style="margin-left:auto;font-size:11px;color:#64748b" id="misooCountLabel"></div>
+      </div>
+
+      <!-- 카드형 미수 리스트 -->
+      <div id="misooList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- 오른쪽: 상세 패널 -->
+    <div id="misooDetailPanel" style="width:340px;background:#fff;border-left:1px solid #E8EDF5;padding:18px;overflow-y:auto;display:none">
+      <div id="misooDetailContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 회계 - 자금일보 ===== -->
+<div id="tab-acc-daily" class="TC">
+  <div style="padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px;font-weight:700;color:#1E293B">📊 자금일보</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="date" id="accDailyDate" onchange="renderAccDaily()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+        <button class="btn btn-sm btn-primary" onclick="openDailyAddModal()">+ 거래 등록</button>
+      </div>
+    </div>
+    <!-- 일일 요약 -->
+    <div id="dailySummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <!-- 거래내역 테이블 -->
+    <div class="card">
+      <div class="card-title">거래내역</div>
+      <div style="max-height:500px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px" id="dailyTable">
+          <thead><tr style="background:#f8fafc;position:sticky;top:0">
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">구분</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">적요</th>
+            <th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">입금</th>
+            <th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">출금</th>
+            <th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">잔액</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0">비고</th>
+          </tr></thead>
+          <tbody id="dailyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 회계 - 고정비정리 ===== -->
+<div id="tab-acc-fixed" class="TC">
+  <div style="padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:16px;font-weight:700;color:#1E293B">🏢 고정비정리</h3>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-export" onclick="exportFixedExcel()">📤 내보내기</button>
+        <button class="btn btn-sm btn-primary" onclick="openFixedAddModal()">+ 고정비 등록</button>
+      </div>
+    </div>
+    <!-- 카드/계좌 필터 -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-sm" id="fixedFilterCard" onclick="setFixedFilter('card')" style="background:#1A66FF;color:#fff">💳 카드 고정비</button>
+      <button class="btn btn-sm btn-secondary" id="fixedFilterAccount" onclick="setFixedFilter('account')">🏦 계좌출금건</button>
+      <button class="btn btn-sm btn-secondary" id="fixedFilterAll" onclick="setFixedFilter('all')">전체</button>
+    </div>
+    <!-- 고정비 합계 -->
+    <div id="fixedSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <!-- 고정비 테이블 -->
+    <div class="card">
+      <div style="max-height:500px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px" id="fixedTable">
+          <thead><tr style="background:#f8fafc;position:sticky;top:0">
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">구분</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">내용</th>
+            <th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">금액</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">출금일</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">거래처</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">비고</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #e2e8f0">관리</th>
+          </tr></thead>
+          <tbody id="fixedTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 관리자 ===== -->
 <div id="tab-admin" class="TC">
 
@@ -1895,10 +2012,12 @@ function submitPinModal(){
   if(cb)cb();
 }
 // ============ 동적 탭 시스템 ============
-var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',invoice:'세금계산서',dismissed:'해임현황',admin:'관리자'};
+var TAB_LABELS={clients:'업체관리',onboarding:'신규수임',consult:'상담관리',calendar:'📅캘린더',tax:'세금신고',accounting:'💰 회계',invoice:'세금계산서',dismissed:'해임현황',admin:'관리자'};
 var TAX_SUBTABS=[{key:'vat',label:'부가세신고'},{key:'exempt',label:'면세신고'},{key:'corp',label:'법인세신고'},{key:'income',label:'소득세신고'},{key:'sincere',label:'성실신고'},{key:'closing',label:'월/분기결산'}];
 var ADMIN_SUBTABS=[{key:'admin',label:'⚙️ 설정'},{key:'managers',label:'담당자현황'},{key:'bonus',label:'상여실적'},{key:'performance',label:'성과'}];
-var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','invoice','dismissed','admin'];
+var ACCOUNTING_SUBTABS=[{key:'acc-misoo',label:'📋 미수관리'},{key:'acc-daily',label:'📊 자금일보'},{key:'acc-fixed',label:'🏢 고정비정리'}];
+var activeAccSub='acc-misoo';
+var DEFAULT_TAB_ORDER=['clients','onboarding','consult','calendar','tax','accounting','invoice','dismissed','admin'];
 var activeMainTab='clients';
 var activeTaxSub='vat';
 var activeAdminSub='admin';
@@ -1939,6 +2058,14 @@ function renderTabBar(){
     });
     subBar.innerHTML=sh;
     subBar.style.display='flex';
+  }else if(activeMainTab==='accounting'){
+    var sh='';
+    ACCOUNTING_SUBTABS.forEach(function(st){
+      var scls='tab-btn'+(st.key===activeAccSub?' active':'');
+      sh+='<button class="'+scls+'" data-tab="'+st.key+'" onclick="clickAccSub(\''+st.key+'\')">'+st.label+'</button>';
+    });
+    subBar.innerHTML=sh;
+    subBar.style.display='flex';
   }else{
     subBar.style.display='none';
   }
@@ -1968,6 +2095,9 @@ function activateMainTab(key){
   }else if(key==='admin'){
     var el=document.getElementById('tab-'+activeAdminSub);
     if(el)el.classList.add('active');
+  }else if(key==='accounting'){
+    var el=document.getElementById('tab-'+activeAccSub);
+    if(el)el.classList.add('active');
   }else{
     var el=document.getElementById('tab-'+key);
     if(el)el.classList.add('active');
@@ -1994,9 +2124,21 @@ function clickAdminSub(subKey){
   refreshAll();
 }
 
+function clickAccSub(subKey){
+  activeAccSub=subKey;
+  document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+  var el=document.getElementById('tab-'+subKey);
+  if(el)el.classList.add('active');
+  renderTabBar();
+  if(subKey==='acc-misoo')renderAccMisoo();
+  else if(subKey==='acc-daily')renderAccDaily();
+  else if(subKey==='acc-fixed')renderAccFixed();
+}
+
 // 탭으로 이동하는 헬퍼 (배지 클릭 등에서 사용)
 var TAX_SUB_KEYS=['vat','exempt','corp','income','sincere','closing'];
 var ADMIN_SUB_KEYS=['managers','bonus','performance'];
+var ACCOUNTING_SUB_KEYS=['acc-misoo','acc-daily','acc-fixed'];
 function goToTab(key){
   if(TAX_SUB_KEYS.indexOf(key)!==-1){
     activeMainTab='tax';
@@ -2020,6 +2162,11 @@ function goToTab(key){
       return;
     }
     activeMainTab='admin';activeAdminSub=key;
+    document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
+    var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
+    renderTabBar();refreshAll();
+  }else if(ACCOUNTING_SUB_KEYS.indexOf(key)!==-1){
+    activeMainTab='accounting';activeAccSub=key;
     document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
     var el=document.getElementById('tab-'+key);if(el)el.classList.add('active');
     renderTabBar();refreshAll();
@@ -8760,6 +8907,7 @@ function refreshAll(){
   setTimeout(function(){renderBu2Fee();renderManagers();renderPerformance();renderMgrPerf();renderBonus()},150);
   setTimeout(function(){renderAdminLog();renderAllowedEmails();renderPendingApprovals();renderTabOrderUI()},200);
   setTimeout(function(){renderOnboarding();renderConsultList();renderConsultStats();renderCalendar();applyRoleUI()},250);
+  setTimeout(function(){renderAccounting()},300);
 }
 
 // Init
@@ -8772,6 +8920,632 @@ document.getElementById('closingMonth').value=nowMonth();
 initObMonth();initConsultYear();initConsultCounselors();
 // 신규수임 담당자 필터 초기화
 (function(){var sel=document.getElementById('obMgrFilter');if(sel){var h='<option value="">전체 담당자</option>';data.staff.forEach(function(s){if(!s.leaveDate)h+='<option>'+s.name+'</option>'});sel.innerHTML=h}})();
+
+// ========== 회계탭 데이터 & 렌더링 ==========
+// 미수관리 데이터: data.misooList = [{id, clientName, clientId, managerId, type, amount, occurDate, dueDate, status, cmsStatus, lastCmsDate, dunningHistory:[{date,method,note}], memo}]
+// 자금일보 데이터: data.dailyLedger = [{id, date, category, description, income, expense, balance, note}]
+// 고정비정리 데이터: data.fixedCosts = [{id, type:'card'|'account', content, amount, payDay, vendor, autoTransfer, note}]
+// CMS 결과: data.cmsResults = [{회원명, 회원코드, 상태, 출금일, 납부금액, 비고, 사업자번호, 상호}]
+// 솔라피 설정: data.solapiConfig = {apiKey:'', apiSecret:'', pfId:'', templateId:''}
+
+function ensureAccData(){
+  if(!data.misooList)data.misooList=[];
+  if(!data.dailyLedger)data.dailyLedger=[];
+  if(!data.fixedCosts)data.fixedCosts=[];
+  if(!data.cmsResults)data.cmsResults=[];
+  if(!data.solapiConfig)data.solapiConfig={apiKey:'',apiSecret:'',pfId:'',templateId:''};
+}
+
+// ---- 미수관리 렌더링 ----
+var selectedMisooId=null;
+function renderAccMisoo(){
+  ensureAccData();
+  var list=data.misooList.slice();
+  var filter=document.getElementById('misooFilter');
+  var fv=filter?filter.value:'all';
+  var mgr=document.getElementById('misooMgrFilter');
+  var mv=mgr?mgr.value:'';
+  var search=document.getElementById('misooSearch');
+  var sv=search?search.value.trim().toLowerCase():'';
+  var today=new Date();
+
+  // 담당자 필터 옵션 갱신
+  if(mgr){
+    var curVal=mgr.value;
+    var mh='<option value="">전체 담당자</option>';
+    var mgrSet={};
+    list.forEach(function(m){if(m.manager)mgrSet[m.manager]=1});
+    Object.keys(mgrSet).sort().forEach(function(n){mh+='<option>'+n+'</option>'});
+    mgr.innerHTML=mh;mgr.value=curVal;mv=curVal;
+  }
+
+  // 필터링
+  list=list.filter(function(m){
+    if(sv&&(m.clientName||'').toLowerCase().indexOf(sv)===-1)return false;
+    if(mv&&m.manager!==mv)return false;
+    var days=Math.floor((today-new Date(m.occurDate))/(1000*60*60*24));
+    if(fv==='overdue30'&&days<30)return false;
+    if(fv==='overdue15'&&(days<15||days>=30))return false;
+    if(fv==='recent'&&days>=15)return false;
+    if(fv==='cms-fail'&&m.cmsStatus!=='출금실패')return false;
+    return true;
+  });
+
+  // 정렬: 연체일 많은 순
+  list.sort(function(a,b){return new Date(a.occurDate)-new Date(b.occurDate)});
+
+  // 통계
+  var totalAmt=0,over30=0,over15=0,collected=0,totalAll=0;
+  data.misooList.forEach(function(m){
+    var amt=m.amount||0;
+    if(m.status==='수금완료'){collected+=amt;totalAll+=amt;return}
+    totalAmt+=amt;totalAll+=amt;
+    var days=Math.floor((today-new Date(m.occurDate))/(1000*60*60*24));
+    if(days>=30)over30++;
+    else if(days>=15)over15++;
+  });
+  var rate=totalAll>0?Math.round(collected/totalAll*100):0;
+  var statsEl=document.getElementById('misooStats');
+  if(statsEl)statsEl.innerHTML=
+    '<div class="SC" style="padding:12px"><div class="SV" style="font-size:18px">'+W(totalAmt)+'</div><div class="SL">미수 총액</div></div>'+
+    '<div class="SC" style="padding:12px"><div class="SV" style="font-size:18px;color:#e53e3e">'+over30+'건</div><div class="SL">30일+ 연체</div></div>'+
+    '<div class="SC" style="padding:12px"><div class="SV" style="font-size:18px;color:#d97706">'+over15+'건</div><div class="SL">15~30일</div></div>'+
+    '<div class="SC" style="padding:12px"><div class="SV" style="font-size:18px;color:#059669">'+rate+'%</div><div class="SL">수금율</div></div>';
+
+  // 카드형 리스트
+  var html='';
+  list.forEach(function(m){
+    if(m.status==='수금완료')return;
+    var days=Math.floor((today-new Date(m.occurDate))/(1000*60*60*24));
+    var borderColor='#94A3B8',bgColor='#fff',amtColor='#4a5568',badgeClass='b-gray';
+    if(days>=30){borderColor='#DC2626';bgColor='#FEF2F2';amtColor='#DC2626';badgeClass='b-red'}
+    else if(days>=15){borderColor='#D97706';bgColor='#fff';amtColor='#D97706';badgeClass='b-yellow'}
+
+    var cmsTag='';
+    if(m.cmsStatus==='출금실패')cmsTag='<span style="display:inline-block;background:#fee2e2;color:#dc2626;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px">CMS실패</span>';
+    var lastCms='';
+    if(m.lastCmsDate)lastCms='<div style="font-size:10px;color:#718096">최종출금 '+m.lastCmsDate+'</div>';
+
+    var sel=selectedMisooId===m.id?'box-shadow:0 0 0 2px #1A66FF;':'';
+    html+='<div onclick="selectMisoo(\''+m.id+'\')" style="background:'+bgColor+';border:1px solid '+(days>=30?'#FECACA':days>=15?'#FDE68A':'#e2e8f0')+';border-left:4px solid '+borderColor+';border-radius:0 10px 10px 0;padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:14px;'+sel+'">'+
+      '<div style="flex:1"><div style="font-weight:700;color:#1E293B;font-size:13px">'+esc(m.clientName)+' <span class="badge '+badgeClass+'">'+days+'일</span>'+cmsTag+'</div>'+
+      '<div style="font-size:11px;color:#718096;margin-top:3px">'+(m.clientId||'')+' · '+(m.manager||'')+' · '+(m.type||'기장료')+' · '+(m.occurDate||'').slice(5)+' 발생</div></div>'+
+      '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+amtColor+'">'+W(m.amount||0)+'</div>'+lastCms+'</div></div>';
+  });
+  if(!html)html='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">미수 내역이 없습니다</div>';
+  var el=document.getElementById('misooList');if(el)el.innerHTML=html;
+  var cnt=document.getElementById('misooCountLabel');
+  if(cnt)cnt.textContent='총 '+list.filter(function(m){return m.status!=='수금완료'}).length+'건';
+}
+
+function selectMisoo(id){
+  selectedMisooId=id;
+  renderAccMisoo();
+  var m=data.misooList.find(function(x){return x.id===id});
+  if(!m)return;
+  var panel=document.getElementById('misooDetailPanel');
+  panel.style.display='block';
+  var today=new Date();
+  var days=Math.floor((today-new Date(m.occurDate))/(1000*60*60*24));
+  var bgCol=days>=30?'#FEF2F2':days>=15?'#FFFBEB':'#F0FDF4';
+  var txtCol=days>=30?'#DC2626':days>=15?'#D97706':'#059669';
+
+  // 독촉이력
+  var hist='';
+  if(m.dunningHistory&&m.dunningHistory.length>0){
+    m.dunningHistory.sort(function(a,b){return b.date.localeCompare(a.date)});
+    m.dunningHistory.forEach(function(h,i){
+      var icon=h.method==='알림톡'?'💬':h.method==='전화'?'📞':'📱';
+      hist+='<div style="padding:6px 0 6px 16px;border-left:2px solid '+(i===0?'#1A66FF':'#e2e8f0')+';font-size:10px;margin-bottom:2px"><strong>'+h.date+'</strong> '+icon+' '+esc(h.method||'')+' <span style="color:#718096">'+(h.note?esc(h.note):'')+'</span></div>';
+    });
+  }else{
+    hist='<div style="font-size:11px;color:#94a3b8;padding:8px 0">독촉 이력 없음</div>';
+  }
+
+  // CMS 정보
+  var cmsInfo='';
+  if(m.cmsStatus){
+    cmsInfo='<div style="margin-top:12px;padding:10px;background:'+(m.cmsStatus==='출금실패'?'#FEF2F2':'#F0FDF4')+';border-radius:8px;font-size:11px">'+
+      '<div style="font-weight:600;color:'+(m.cmsStatus==='출금실패'?'#DC2626':'#059669')+'">CMS: '+esc(m.cmsStatus)+'</div>'+
+      (m.lastCmsDate?'<div style="color:#718096;margin-top:2px">마지막 출금일: '+m.lastCmsDate+'</div>':'')+
+      (m.cmsNote?'<div style="color:#718096;margin-top:2px">'+esc(m.cmsNote)+'</div>':'')+
+    '</div>';
+  }
+
+  var dc=document.getElementById('misooDetailContent');
+  dc.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:14px;font-weight:700;color:#1E293B">업체 상세</div><button onclick="closeMisooPanel()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#94a3b8">✕</button></div>'+
+    '<div style="text-align:center;padding:16px;background:'+bgCol+';border-radius:10px;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:'+txtCol+'">미수금액</div>'+
+      '<div style="font-size:24px;font-weight:700;color:'+txtCol+';margin:4px 0">'+W(m.amount||0)+'</div>'+
+      '<div style="font-size:10px;color:#718096">연체 '+days+'일 경과</div>'+
+    '</div>'+
+    '<div style="font-size:12px;color:#334155;line-height:2">'+
+      '<div><strong>업체:</strong> '+esc(m.clientName)+' ('+(m.clientId||'-')+')</div>'+
+      '<div><strong>담당:</strong> '+(m.manager||'-')+'</div>'+
+      '<div><strong>유형:</strong> '+(m.type||'기장료')+'</div>'+
+      '<div><strong>발생일:</strong> '+(m.occurDate||'-')+'</div>'+
+      '<div><strong>연락처:</strong> '+(m.phone||'-')+'</div>'+
+      (m.memo?'<div><strong>메모:</strong> '+esc(m.memo)+'</div>':'')+
+    '</div>'+
+    cmsInfo+
+    '<div style="margin-top:14px"><div style="font-size:12px;font-weight:600;color:#1E293B;margin-bottom:8px">독촉 이력</div>'+hist+'</div>'+
+    '<div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">'+
+      '<button class="btn btn-primary btn-sm" onclick="markMisooCollected(\''+m.id+'\')">💰 수금처리</button>'+
+      '<button class="btn btn-danger btn-sm" onclick="openDunningModal(\''+m.id+'\')">📞 독촉기록</button>'+
+      '<button class="btn btn-sm" style="background:#6366f1;color:#fff" onclick="sendMisooAlimtalk(\''+m.id+'\')">💬 알림톡</button>'+
+      '<button class="btn btn-sm btn-secondary" onclick="openMisooEditModal(\''+m.id+'\')">✏️ 수정</button>'+
+    '</div>';
+}
+
+function closeMisooPanel(){
+  selectedMisooId=null;
+  document.getElementById('misooDetailPanel').style.display='none';
+  renderAccMisoo();
+}
+
+function markMisooCollected(id){
+  if(!confirm('수금 완료 처리하시겠습니까?'))return;
+  var m=data.misooList.find(function(x){return x.id===id});
+  if(m){m.status='수금완료';m.collectDate=new Date().toISOString().slice(0,10)}
+  saveData();closeMisooPanel();toast('수금 처리 완료');
+}
+
+// 미수 등록 모달
+function openMisooAddModal(){
+  ensureAccData();
+  var clients=AC();
+  var ch='<option value="">선택</option>';
+  clients.forEach(function(c){ch+='<option value="'+c.id+'">'+esc(c.name)+' ('+c.id+')</option>'});
+  var mh='';
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">업체</label><select id="misooAddClient" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">'+ch+'</select></div>'+
+    '<div class="FGI"><label class="FGL">유형</label><select id="misooAddType" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option>기장료</option><option>부가세수수료</option><option>법인세수수료</option><option>종소세수수료</option><option>기타</option></select></div>'+
+    '<div class="FGI"><label class="FGL">금액</label><input type="number" id="misooAddAmt" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">발생일</label><input type="date" id="misooAddDate" value="'+new Date().toISOString().slice(0,10)+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">메모</label><input type="text" id="misooAddMemo" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('미수 등록',inner,function(){
+    var sel=document.getElementById('misooAddClient');
+    var cId=sel.value;if(!cId){toast('업체를 선택하세요');return}
+    var c=data.clients.find(function(x){return x.id===cId});
+    if(!c){toast('업체를 찾을 수 없습니다');return}
+    var item={
+      id:'MS'+Date.now(),
+      clientId:cId,clientName:c.name,
+      manager:c.manager||'',
+      phone:c.phone||c.ceoPhone||'',
+      type:document.getElementById('misooAddType').value,
+      amount:parseInt(document.getElementById('misooAddAmt').value)||0,
+      occurDate:document.getElementById('misooAddDate').value,
+      status:'미수',cmsStatus:'',lastCmsDate:'',cmsNote:'',
+      dunningHistory:[],
+      memo:document.getElementById('misooAddMemo').value
+    };
+    data.misooList.push(item);saveData();renderAccMisoo();toast('미수 등록 완료');
+  });
+}
+
+// 미수 수정 모달
+function openMisooEditModal(id){
+  var m=data.misooList.find(function(x){return x.id===id});
+  if(!m)return;
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">업체</label><input type="text" value="'+esc(m.clientName)+'" disabled style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;background:#f8fafc"></div>'+
+    '<div class="FGI"><label class="FGL">유형</label><select id="misooEditType" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option'+(m.type==='기장료'?' selected':'')+'>기장료</option><option'+(m.type==='부가세수수료'?' selected':'')+'>부가세수수료</option><option'+(m.type==='법인세수수료'?' selected':'')+'>법인세수수료</option><option'+(m.type==='종소세수수료'?' selected':'')+'>종소세수수료</option><option'+(m.type==='기타'?' selected':'')+'>기타</option></select></div>'+
+    '<div class="FGI"><label class="FGL">금액</label><input type="number" id="misooEditAmt" value="'+(m.amount||0)+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">발생일</label><input type="date" id="misooEditDate" value="'+(m.occurDate||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">메모</label><input type="text" id="misooEditMemo" value="'+esc(m.memo||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('미수 수정',inner,function(){
+    m.type=document.getElementById('misooEditType').value;
+    m.amount=parseInt(document.getElementById('misooEditAmt').value)||0;
+    m.occurDate=document.getElementById('misooEditDate').value;
+    m.memo=document.getElementById('misooEditMemo').value;
+    saveData();renderAccMisoo();selectMisoo(id);toast('수정 완료');
+  });
+}
+
+// 독촉기록 모달
+function openDunningModal(id){
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">방법</label><select id="dunningMethod" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option>전화</option><option>문자</option><option>알림톡</option><option>방문</option><option>기타</option></select></div>'+
+    '<div class="FGI"><label class="FGL">메모</label><input type="text" id="dunningNote" placeholder="예: 응답없음, 분납 협의 등" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('독촉 기록 추가',inner,function(){
+    var m=data.misooList.find(function(x){return x.id===id});
+    if(!m)return;
+    if(!m.dunningHistory)m.dunningHistory=[];
+    m.dunningHistory.push({
+      date:new Date().toISOString().slice(0,10),
+      method:document.getElementById('dunningMethod').value,
+      note:document.getElementById('dunningNote').value
+    });
+    saveData();selectMisoo(id);toast('독촉 기록 추가됨');
+  });
+}
+
+// CMS 파일 파싱
+function parseCmsFile(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=e.target.result;
+      var wb=XLSX.read(d,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('CMS 파일에 데이터가 없습니다');return}
+      // 칼럼명 자동 매핑
+      var first=rows[0];
+      var keys=Object.keys(first);
+      var nameCol=keys.find(function(k){return k.indexOf('회원명')!==-1||k.indexOf('상호')!==-1})||'회원명';
+      var statusCol=keys.find(function(k){return k.indexOf('상태')!==-1})||'상태';
+      var dateCol=keys.find(function(k){return k.indexOf('출금일')!==-1})||'출금일';
+      var amtCol=keys.find(function(k){return k.indexOf('납부금액')!==-1||k.indexOf('금액')!==-1})||'납부금액';
+      var codeCol=keys.find(function(k){return k.indexOf('회원코드')!==-1})||'회원코드';
+      var noteCol=keys.find(function(k){return k.indexOf('비고')!==-1})||'비고';
+      var bizCol=keys.find(function(k){return k.indexOf('사업자번호')!==-1})||'사업자번호';
+
+      ensureAccData();
+      var matched=0,newMisoo=0;
+      rows.forEach(function(r){
+        var name=(r[nameCol]||'').toString().trim();
+        var status=(r[statusCol]||'').toString();
+        var dt=(r[dateCol]||'').toString();
+        var amt=parseInt((r[amtCol]||'0').toString().replace(/[^0-9]/g,''))||0;
+        var note=(r[noteCol]||'').toString();
+        if(!name)return;
+
+        // 기존 미수 매칭 (업체명)
+        var existing=data.misooList.find(function(m){
+          return m.clientName===name&&m.status!=='수금완료';
+        });
+
+        var isFail=status.indexOf('실패')!==-1;
+        var isSuccess=status.indexOf('성공')!==-1;
+
+        if(existing){
+          matched++;
+          if(isFail){existing.cmsStatus='출금실패';existing.cmsNote=note}
+          else if(isSuccess){existing.cmsStatus='출금성공';existing.lastCmsDate=dt}
+        }else if(isFail){
+          // 자동 미수 등록
+          var client=data.clients.find(function(c){return c.name===name||c.companyName===name});
+          newMisoo++;
+          data.misooList.push({
+            id:'MS'+Date.now()+Math.random().toString(36).slice(2,6),
+            clientId:client?client.id:'',
+            clientName:name,
+            manager:client?client.manager||'':'',
+            phone:client?client.phone||client.ceoPhone||'':'',
+            type:'기장료',
+            amount:amt,
+            occurDate:dt||new Date().toISOString().slice(0,10),
+            status:'미수',
+            cmsStatus:'출금실패',
+            lastCmsDate:'',
+            cmsNote:note,
+            dunningHistory:[],
+            memo:'CMS 자동등록'
+          });
+        }
+
+        // 출금성공인 경우 미수에서 클라이언트의 마지막 출금일 업데이트
+        if(isSuccess){
+          data.misooList.forEach(function(m){
+            if(m.clientName===name){
+              if(!m.lastCmsDate||dt>m.lastCmsDate)m.lastCmsDate=dt;
+              if(m.cmsStatus==='출금실패')m.cmsStatus='출금성공';
+            }
+          });
+        }
+      });
+
+      saveData();renderAccMisoo();
+      toast('CMS 반영완료: 매칭 '+matched+'건, 신규미수 '+newMisoo+'건');
+    }catch(ex){
+      console.error('CMS parse error',ex);
+      toast('CMS 파일 파싱 실패: '+ex.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+// 솔라피 알림톡 발송
+function sendMisooAlimtalk(id){
+  ensureAccData();
+  var cfg=data.solapiConfig;
+  if(!cfg.apiKey||!cfg.apiSecret){
+    openSolapiConfigModal();
+    toast('솔라피 API 설정을 먼저 해주세요');
+    return;
+  }
+  var m=data.misooList.find(function(x){return x.id===id});
+  if(!m){toast('미수 정보를 찾을 수 없습니다');return}
+  if(!m.phone){toast('연락처가 없습니다');return}
+  var phone=m.phone.replace(/[^0-9]/g,'');
+  if(phone.length<10){toast('유효하지 않은 연락처입니다');return}
+
+  if(!confirm(m.clientName+'에게 미수 알림톡을 발송하시겠습니까?\n연락처: '+m.phone+'\n미수금: '+W(m.amount)))return;
+
+  // 솔라피 API 호출 (단건 발송)
+  var timestamp=new Date().toISOString();
+  var salt=Math.random().toString(36).slice(2,14);
+
+  // HMAC-SHA256 서명 생성
+  generateSolapiSignature(cfg.apiSecret,timestamp,salt).then(function(signature){
+    var authHeader='HMAC-SHA256 apiKey='+cfg.apiKey+', date='+timestamp+', salt='+salt+', signature='+signature;
+    var body={
+      messages:[{
+        to:phone,
+        from:cfg.senderNumber||'',
+        kakaoOptions:{
+          pfId:cfg.pfId,
+          templateId:cfg.templateId,
+          variables:{
+            '#{고객명}':m.clientName,
+            '#{미수금액}':W(m.amount),
+            '#{발생일}':m.occurDate||'',
+            '#{연체일수}':Math.floor((new Date()-new Date(m.occurDate))/(1000*60*60*24))+'일'
+          }
+        }
+      }]
+    };
+
+    fetch('https://api.solapi.com/messages/v4/send-many',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':authHeader},
+      body:JSON.stringify(body)
+    }).then(function(r){return r.json()}).then(function(res){
+      if(res.errorCode){
+        toast('발송 실패: '+(res.errorMessage||res.errorCode));return;
+      }
+      // 독촉이력 추가
+      if(!m.dunningHistory)m.dunningHistory=[];
+      m.dunningHistory.push({date:new Date().toISOString().slice(0,10),method:'알림톡',note:'솔라피 자동발송'});
+      saveData();selectMisoo(id);
+      toast('알림톡 발송 완료');
+    }).catch(function(err){toast('발송 오류: '+err.message)});
+  });
+}
+
+// HMAC-SHA256 서명 생성 (Web Crypto API)
+async function generateSolapiSignature(secret,timestamp,salt){
+  var msg=timestamp+salt;
+  var enc=new TextEncoder();
+  var key=await crypto.subtle.importKey('raw',enc.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(msg));
+  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+
+// 솔라피 설정 모달
+function openSolapiConfigModal(){
+  ensureAccData();
+  var cfg=data.solapiConfig;
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">API Key</label><input type="text" id="solapiKey" value="'+esc(cfg.apiKey||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">API Secret</label><input type="password" id="solapiSecret" value="'+esc(cfg.apiSecret||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">카카오채널 ID (pfId)</label><input type="text" id="solapiPfId" value="'+esc(cfg.pfId||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">알림톡 템플릿 ID</label><input type="text" id="solapiTplId" value="'+esc(cfg.templateId||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">발신번호</label><input type="text" id="solapiSender" value="'+esc(cfg.senderNumber||'')+'" placeholder="01012345678" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div style="font-size:10px;color:#718096;margin-top:4px">※ 솔라피(solapi.com) 가입 후 API Key/Secret, 카카오채널 연동, 알림톡 템플릿 등록이 필요합니다</div>'+
+  '</div>';
+  openModal('솔라피 API 설정',inner,function(){
+    data.solapiConfig={
+      apiKey:document.getElementById('solapiKey').value.trim(),
+      apiSecret:document.getElementById('solapiSecret').value.trim(),
+      pfId:document.getElementById('solapiPfId').value.trim(),
+      templateId:document.getElementById('solapiTplId').value.trim(),
+      senderNumber:document.getElementById('solapiSender').value.trim()
+    };
+    saveData();toast('솔라피 설정 저장 완료');
+  });
+}
+
+// 미수 엑셀 내보내기
+function exportMisooExcel(){
+  ensureAccData();
+  if(!data.misooList.length){toast('내보낼 데이터가 없습니다');return}
+  var rows=[['업체명','업체ID','담당자','유형','금액','발생일','상태','CMS상태','최종출금일','메모']];
+  data.misooList.forEach(function(m){
+    rows.push([m.clientName,m.clientId,m.manager,m.type,m.amount,m.occurDate,m.status,m.cmsStatus,m.lastCmsDate,m.memo]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'미수관리');
+  XLSX.writeFile(wb,'미수관리_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('내보내기 완료');
+}
+
+// ---- 자금일보 렌더링 ----
+function renderAccDaily(){
+  ensureAccData();
+  var dateInput=document.getElementById('accDailyDate');
+  if(dateInput&&!dateInput.value)dateInput.value=new Date().toISOString().slice(0,10);
+  var selDate=dateInput?dateInput.value:'';
+  var list=data.dailyLedger.filter(function(r){return r.date===selDate});
+  list.sort(function(a,b){return (a.seq||0)-(b.seq||0)});
+
+  var totalIn=0,totalOut=0;
+  list.forEach(function(r){totalIn+=(r.income||0);totalOut+=(r.expense||0)});
+  var balance=totalIn-totalOut;
+
+  var sum=document.getElementById('dailySummary');
+  if(sum)sum.innerHTML=
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px;color:#059669">'+W(totalIn)+'</div><div class="SL">입금 합계</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px;color:#e53e3e">'+W(totalOut)+'</div><div class="SL">출금 합계</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px">'+W(balance)+'</div><div class="SL">잔액</div></div>';
+
+  var tbody=document.getElementById('dailyTableBody');
+  if(!tbody)return;
+  var h='';
+  var running=0;
+  list.forEach(function(r){
+    running+=(r.income||0)-(r.expense||0);
+    h+='<tr style="border-bottom:1px solid #f1f5f9">'+
+      '<td style="padding:8px">'+esc(r.category||'')+'</td>'+
+      '<td style="padding:8px">'+esc(r.description||'')+'</td>'+
+      '<td style="padding:8px;text-align:right;color:#059669">'+(r.income?W(r.income):'')+'</td>'+
+      '<td style="padding:8px;text-align:right;color:#e53e3e">'+(r.expense?W(r.expense):'')+'</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:600">'+W(running)+'</td>'+
+      '<td style="padding:8px;text-align:center;font-size:10px;color:#718096">'+esc(r.note||'')+'</td>'+
+    '</tr>';
+  });
+  if(!h)h='<tr><td colspan="6" style="padding:30px;text-align:center;color:#94a3b8">해당 날짜 거래내역이 없습니다</td></tr>';
+  tbody.innerHTML=h;
+}
+
+// 자금일보 거래 등록 모달
+function openDailyAddModal(){
+  var dateInput=document.getElementById('accDailyDate');
+  var dt=dateInput?dateInput.value:new Date().toISOString().slice(0,10);
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">날짜</label><input type="date" id="dailyAddDate" value="'+dt+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">구분</label><select id="dailyAddCat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option>하나은행 입출금</option><option>체크카드</option><option>법인카드</option><option>기타</option></select></div>'+
+    '<div class="FGI"><label class="FGL">적요</label><input type="text" id="dailyAddDesc" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">입금</label><input type="number" id="dailyAddIn" value="0" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">출금</label><input type="number" id="dailyAddOut" value="0" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">비고</label><input type="text" id="dailyAddNote" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('거래 등록',inner,function(){
+    ensureAccData();
+    data.dailyLedger.push({
+      id:'DL'+Date.now(),
+      date:document.getElementById('dailyAddDate').value,
+      category:document.getElementById('dailyAddCat').value,
+      description:document.getElementById('dailyAddDesc').value,
+      income:parseInt(document.getElementById('dailyAddIn').value)||0,
+      expense:parseInt(document.getElementById('dailyAddOut').value)||0,
+      note:document.getElementById('dailyAddNote').value,
+      seq:data.dailyLedger.length
+    });
+    saveData();renderAccDaily();toast('거래 등록 완료');
+  });
+}
+
+// ---- 고정비정리 렌더링 ----
+var fixedFilterType='card';
+function setFixedFilter(type){
+  fixedFilterType=type;
+  document.getElementById('fixedFilterCard').className='btn btn-sm '+(type==='card'?'btn-primary':'btn-secondary');
+  document.getElementById('fixedFilterAccount').className='btn btn-sm '+(type==='account'?'btn-primary':'btn-secondary');
+  document.getElementById('fixedFilterAll').className='btn btn-sm '+(type==='all'?'btn-primary':'btn-secondary');
+  renderAccFixed();
+}
+
+function renderAccFixed(){
+  ensureAccData();
+  var list=data.fixedCosts.slice();
+  if(fixedFilterType!=='all')list=list.filter(function(f){return f.type===fixedFilterType});
+
+  var cardTotal=0,accTotal=0;
+  data.fixedCosts.forEach(function(f){
+    if(f.type==='card')cardTotal+=(f.amount||0);
+    else accTotal+=(f.amount||0);
+  });
+
+  var sum=document.getElementById('fixedSummary');
+  if(sum)sum.innerHTML=
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px">'+W(cardTotal+accTotal)+'</div><div class="SL">총 고정비</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px;color:#6366f1">'+W(cardTotal)+'</div><div class="SL">💳 카드</div></div>'+
+    '<div class="SC" style="padding:14px"><div class="SV" style="font-size:18px;color:#0891b2">'+W(accTotal)+'</div><div class="SL">🏦 계좌</div></div>';
+
+  var tbody=document.getElementById('fixedTableBody');
+  if(!tbody)return;
+  var h='';
+  list.forEach(function(f){
+    h+='<tr style="border-bottom:1px solid #f1f5f9">'+
+      '<td style="padding:8px"><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;background:'+(f.type==='card'?'#EDE9FE':'#E0F2FE')+';color:'+(f.type==='card'?'#6366f1':'#0891b2')+'">'+(f.type==='card'?'카드':'계좌')+'</span></td>'+
+      '<td style="padding:8px">'+esc(f.content||'')+'</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:600">'+W(f.amount||0)+'</td>'+
+      '<td style="padding:8px">'+esc(f.payDay||'')+'</td>'+
+      '<td style="padding:8px">'+esc(f.vendor||'')+'</td>'+
+      '<td style="padding:8px;font-size:10px;color:#718096">'+esc(f.note||'')+'</td>'+
+      '<td style="padding:8px;text-align:center"><button class="btn btn-xs btn-secondary" onclick="editFixed(\''+f.id+'\')">수정</button> <button class="btn btn-xs btn-danger" onclick="deleteFixed(\''+f.id+'\')">삭제</button></td>'+
+    '</tr>';
+  });
+  if(!h)h='<tr><td colspan="7" style="padding:30px;text-align:center;color:#94a3b8">고정비 내역이 없습니다</td></tr>';
+  tbody.innerHTML=h;
+}
+
+function openFixedAddModal(){
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">구분</label><select id="fixedAddType" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option value="card">카드 고정비</option><option value="account">계좌출금건</option></select></div>'+
+    '<div class="FGI"><label class="FGL">내용</label><input type="text" id="fixedAddContent" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">금액</label><input type="number" id="fixedAddAmt" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">출금일</label><input type="text" id="fixedAddPayDay" placeholder="예: 매월 15일" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">거래처</label><input type="text" id="fixedAddVendor" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">비고</label><input type="text" id="fixedAddNote" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('고정비 등록',inner,function(){
+    ensureAccData();
+    data.fixedCosts.push({
+      id:'FC'+Date.now(),
+      type:document.getElementById('fixedAddType').value,
+      content:document.getElementById('fixedAddContent').value,
+      amount:parseInt(document.getElementById('fixedAddAmt').value)||0,
+      payDay:document.getElementById('fixedAddPayDay').value,
+      vendor:document.getElementById('fixedAddVendor').value,
+      note:document.getElementById('fixedAddNote').value
+    });
+    saveData();renderAccFixed();toast('고정비 등록 완료');
+  });
+}
+
+function editFixed(id){
+  var f=data.fixedCosts.find(function(x){return x.id===id});
+  if(!f)return;
+  var inner='<div class="FG" style="grid-template-columns:1fr">'+
+    '<div class="FGI"><label class="FGL">구분</label><select id="fixedEditType" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"><option value="card"'+(f.type==='card'?' selected':'')+'>카드 고정비</option><option value="account"'+(f.type==='account'?' selected':'')+'>계좌출금건</option></select></div>'+
+    '<div class="FGI"><label class="FGL">내용</label><input type="text" id="fixedEditContent" value="'+esc(f.content||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">금액</label><input type="number" id="fixedEditAmt" value="'+(f.amount||0)+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">출금일</label><input type="text" id="fixedEditPayDay" value="'+esc(f.payDay||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">거래처</label><input type="text" id="fixedEditVendor" value="'+esc(f.vendor||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+    '<div class="FGI"><label class="FGL">비고</label><input type="text" id="fixedEditNote" value="'+esc(f.note||'')+'" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px"></div>'+
+  '</div>';
+  openModal('고정비 수정',inner,function(){
+    f.type=document.getElementById('fixedEditType').value;
+    f.content=document.getElementById('fixedEditContent').value;
+    f.amount=parseInt(document.getElementById('fixedEditAmt').value)||0;
+    f.payDay=document.getElementById('fixedEditPayDay').value;
+    f.vendor=document.getElementById('fixedEditVendor').value;
+    f.note=document.getElementById('fixedEditNote').value;
+    saveData();renderAccFixed();toast('수정 완료');
+  });
+}
+
+function deleteFixed(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  data.fixedCosts=data.fixedCosts.filter(function(x){return x.id!==id});
+  saveData();renderAccFixed();toast('삭제 완료');
+}
+
+function exportFixedExcel(){
+  ensureAccData();
+  if(!data.fixedCosts.length){toast('내보낼 데이터가 없습니다');return}
+  var rows=[['구분','내용','금액','출금일','거래처','비고']];
+  data.fixedCosts.forEach(function(f){
+    rows.push([f.type==='card'?'카드':'계좌',f.content,f.amount,f.payDay,f.vendor,f.note]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'고정비정리');
+  XLSX.writeFile(wb,'고정비정리_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('내보내기 완료');
+}
+
+// refreshAll에서 호출될 회계탭 렌더
+function renderAccounting(){
+  if(activeMainTab==='accounting'){
+    if(activeAccSub==='acc-misoo')renderAccMisoo();
+    else if(activeAccSub==='acc-daily')renderAccDaily();
+    else if(activeAccSub==='acc-fixed')renderAccFixed();
+  }
+}
+
 </script>
 </body>
 </html>
