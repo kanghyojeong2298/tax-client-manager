@@ -233,6 +233,8 @@ tr:hover td{background:#f8fafc}
     </div>
     <!-- 통계 -->
     <div id="consultStats" style="margin-bottom:14px"></div>
+    <!-- 부재중 재연락 알림 -->
+    <div id="csAbsentAlert" style="display:none;margin-bottom:12px"></div>
     <!-- 필터 -->
     <div class="FB" style="gap:8px;margin-bottom:10px">
       <select id="csYear" onchange="renderConsultList();renderConsultStats()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px"></select>
@@ -244,7 +246,7 @@ tr:hover td{background:#f8fafc}
       </select>
       <input type="text" id="csSearch" placeholder="성함/연락처 검색..." oninput="renderConsultList()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;min-width:140px">
       <select id="csContractFilter" onchange="renderConsultList()" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px">
-        <option value="">전체</option><option value="Y">계약완료</option><option value="N">미계약</option><option value="P">진행중</option>
+        <option value="">전체</option><option value="Y">계약완료</option><option value="N">미계약</option><option value="P">진행중</option><option value="X">부재중</option>
       </select>
     </div>
     <!-- 목록 -->
@@ -275,12 +277,12 @@ tr:hover td{background:#f8fafc}
     <div class="FGI"><label>특이사항</label><input id="cs_notes" type="text" placeholder="특이사항"></div>
     <div class="FGI"><label>1차 상담자</label><select id="cs_counselor1"></select></div>
     <div class="FGI"><label>2차 상담자</label><select id="cs_counselor2"><option value="">없음</option></select></div>
-    <div class="FGI"><label>계약여부</label><select id="cs_contracted"><option value="N">미계약</option><option value="P">진행중</option><option value="Y">계약완료</option></select></div>
+    <div class="FGI"><label>계약여부</label><select id="cs_contracted"><option value="N">미계약</option><option value="P">진행중</option><option value="Y">계약완료</option><option value="X">부재중</option></select></div>
     <div class="FGI"><label>계약일</label><input id="cs_contractDate" type="date"></div>
   </div>
   <div style="margin-top:12px">
     <label style="font-size:10px;font-weight:600;color:#4a5568;margin-bottom:2px;display:block">상담내역</label>
-    <textarea id="cs_detail" rows="5" style="width:100%" placeholder="상담 내용을 입력하세요..."></textarea>
+    <textarea id="cs_detail" rows="10" style="width:100%" placeholder="상담 내용을 입력하세요..."></textarea>
   </div>
 </div>
 <div class="MF">
@@ -297,7 +299,7 @@ tr:hover td{background:#f8fafc}
 <div class="MB">
   <div id="csDetailInfo" style="margin-bottom:12px"></div>
   <div style="margin-bottom:8px"><label style="font-size:10px;font-weight:600;color:#4a5568">상담내역</label></div>
-  <textarea id="csDetailText" rows="10" style="width:100%;font-size:12px" placeholder="상담 내용을 입력하세요..."></textarea>
+  <textarea id="csDetailText" rows="20" style="width:100%;font-size:12px" placeholder="상담 내용을 입력하세요..."></textarea>
   <input type="hidden" id="csDetailIdx">
 </div>
 <div class="MF">
@@ -1305,7 +1307,9 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_katalk"> 카톡채널</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometax"> 홈택스수임등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowTitle"> 플로우-제목</label>
-      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowSample"> 플로우샘플</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_basicUpload"> 기초자료업로드</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometaxConsent"> 홈택스수임동의</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_cms"> CMS등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_wimembers"> 위멤버스등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_contract"> 계약서</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_semoReport"> 세모레포트/자동발송</label>
@@ -2559,7 +2563,7 @@ function openClientModal(ec){
     document.getElementById('f_docStatus').value=ec.docStatus||'미수령';
     document.getElementById('f_docMemo').value=ec.docMemo||'';
     var cl=ec.onboardChecklist||{};
-    ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
+    ['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
     document.getElementById('f_clientOrigin').value=ec.clientOrigin||'신규';
     document.getElementById('f_originOffice').value=ec.originOffice||'';
     toggleOriginOffice();
@@ -2583,7 +2587,7 @@ function openClientModal(ec){
     document.getElementById('f_closingChangeDate').value='';
     document.getElementById('f_invoiceCarry').value='N';
     document.getElementById('f_docStatus').value='미수령';
-    ['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
+    ['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
     document.getElementById('f_docMemo').value='';
     document.getElementById('f_clientOrigin').value='신규';
     document.getElementById('f_originOffice').value='';
@@ -2679,8 +2683,11 @@ function saveClient(){
     if(!Number(document.getElementById('f_retroMonths').value))warnings.push('소급 개월수');
   }
   if(!document.getElementById('f_sourceChannel').value)warnings.push('유입경로');
+  if(!document.getElementById('f_bizAddress').value.trim())warnings.push('사업장주소');
+  if(!document.getElementById('f_bizType').value.trim())warnings.push('업태');
+  if(!document.getElementById('f_bizItem').value.trim())warnings.push('종목');
   // 미입력 필드 빨간 테두리 표시
-  var warnFieldMap={'대표자명':'f_owner','대표자 생년월일':'f_ownerBirth','사업자구분':'f_entity','업종':'f_biz','신고대상':'f_tax','담당자':'f_manager','기장료':'f_fee','기장계약 시작월':'f_startMonth','기장료 출금시작월':'f_billingStart','계약일':'f_contractDate','소급기장료 해당여부':'f_retroApply','소급기장료 금액':'f_retroFee','소급 개월수':'f_retroMonths','유입경로':'f_sourceChannel'};
+  var warnFieldMap={'대표자명':'f_owner','대표자 생년월일':'f_ownerBirth','사업자구분':'f_entity','업종':'f_biz','신고대상':'f_tax','담당자':'f_manager','기장료':'f_fee','기장계약 시작월':'f_startMonth','기장료 출금시작월':'f_billingStart','계약일':'f_contractDate','소급기장료 해당여부':'f_retroApply','소급기장료 금액':'f_retroFee','소급 개월수':'f_retroMonths','유입경로':'f_sourceChannel','사업장주소':'f_bizAddress','업태':'f_bizType','종목':'f_bizItem'};
   Object.values(warnFieldMap).forEach(function(fid){var el=document.getElementById(fid);if(el)el.style.borderColor=''});
   warnings.forEach(function(w){var fid=warnFieldMap[w];if(fid){var el=document.getElementById(fid);if(el)el.style.borderColor='#e53e3e'}});
   if(warnings.length>0){if(!confirm('⚠️ 아래 '+warnings.length+'개 항목이 미입력 상태입니다:\n\n• '+warnings.join('\n• ')+'\n\n이대로 저장하시겠습니까?'))return}
@@ -2726,7 +2733,7 @@ function saveClient(){
     clientOrigin:document.getElementById('f_clientOrigin').value,
     originOffice:document.getElementById('f_clientOrigin').value==='이관'?document.getElementById('f_originOffice').value.trim():'',
     invoiceCarry:document.getElementById('f_invoiceCarry').value,docStatus:document.getElementById('f_docStatus').value,docMemo:document.getElementById('f_docMemo').value.trim(),
-    onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
+    onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
     notes:document.getElementById('f_notes').value.trim(),updatedAt:new Date().toISOString()};
   // 비관리자: 승인 대기열로 보내기
   if(!isAdmin()){
@@ -3104,6 +3111,20 @@ function renderSmartAlerts(){
       +'<span style="font-size:20px">📞</span>'
       +'<div><div style="font-size:12px;font-weight:700;color:#975a16">2차 연락 필요 '+followUp.length+'건</div>'
       +'<div style="font-size:11px;color:#b7791f">상담 후 7일 이상 미계약</div></div></div>');
+  }
+  // 5) 부재중 재연락 필요 알림
+  var absentCalls=cons.filter(function(c){
+    if(c.contracted!=='X')return false;
+    if(!c.date)return false;
+    var cDate=new Date(c.date);cDate.setHours(0,0,0,0);
+    var diff=Math.floor((today-cDate)/86400000);
+    return diff>=0&&diff<=7;
+  });
+  if(absentCalls.length>0){
+    cards.push('<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff5f5;border:1px solid #fed7d7;border-radius:10px;min-width:200px;cursor:pointer" onclick="goToTab(\'consult\')">'
+      +'<span style="font-size:20px">🔔</span>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#9b2c2c">부재중 재연락 '+absentCalls.length+'건</div>'
+      +'<div style="font-size:11px;color:#c53030">7일 이내 다시 전화하세요</div></div></div>');
   }
 
   if(!cards.length){el.style.display='none';el.innerHTML='';return}
@@ -8167,7 +8188,7 @@ function initObMonth(){
 }
 var OB_CHECKLIST_ITEMS=[
   {key:'katalk',label:'카톡채널'},{key:'hometax',label:'홈택스수임등록'},
-  {key:'flowTitle',label:'플로우-제목'},{key:'flowSample',label:'플로우샘플'},
+  {key:'flowTitle',label:'플로우-제목'},{key:'basicUpload',label:'기초자료업로드'},{key:'hometaxConsent',label:'홈택스수임동의'},{key:'cms',label:'CMS등록'},
   {key:'wimembers',label:'위멤버스등록'},{key:'contract',label:'계약서'},
   {key:'semoReport',label:'세모레포트/자동발송'},{key:'customerGuide',label:'고객안내'},
   {key:'wehago',label:'위하고등록'},{key:'permission',label:'권한부여'},
@@ -8507,12 +8528,16 @@ function renderCalDeadlines(){
   }
   document.getElementById('calTodaySummary').innerHTML=ts;
 
-  // 이번달 휴가자 명단 (cat==='휴가' && 이번달 범위)
+  // 이번달 휴가자 명단 (calendarDeadlines + Google Calendar 이벤트)
   var nowDate=new Date();var curY=nowDate.getFullYear();var curM=nowDate.getMonth();
   var mStart=new Date(curY,curM,1);var mEnd=new Date(curY,curM+1,0);
   var allItems=[];
   (data.calendarDeadlines||[]).forEach(function(dl,idx){
     var rd=resolveDate(dl.date);allItems.push({title:dl.title,date:rd,cat:dl.cat,target:dl.target||'',memo:dl.memo||'',idx:idx,dday:dDay(rd)});
+  });
+  // Google Calendar에서 가져온 이벤트도 추가
+  (gcalCachedEvents||[]).forEach(function(ge){
+    allItems.push({title:ge.title,date:ge.date,cat:ge.calName||'',target:'',memo:'',idx:-1,dday:dDay(ge.date),fromGcal:true});
   });
   var vacKeywords=['휴가','연차','엽차','반차','병가','경조','대휴','보상휴가','출산','육아','공가','예비군','대체휴무'];
   var mStartStr=curY+'-'+('0'+(curM+1)).slice(-2)+'-01';
@@ -8532,8 +8557,8 @@ function renderCalDeadlines(){
       vh+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px">';
       vh+='<span style="width:6px;height:6px;border-radius:50%;background:#38a169;display:inline-block"></span>';
       vh+='<span style="color:#718096;min-width:50px">'+vi.date.slice(5)+'</span>';
-      vh+='<span style="font-weight:600">'+vi.title+'</span>';
-      if(vi.target)vh+='<span style="margin-left:auto;font-size:11px;color:#718096">'+vi.target+'</span>';
+      vh+='<span style="font-weight:600">'+escH(vi.title)+'</span>';
+      if(vi.target)vh+='<span style="margin-left:auto;font-size:11px;color:#718096">'+escH(vi.target)+'</span>';
       vh+='</div>';
     });
   }
@@ -8629,6 +8654,35 @@ function deleteCalDeadline(){
 var GCAL_NAMES=['휴가','회사일정','대표일정'];
 var GCAL_COLORS=['#0b8043','#3f51b5','#8e24aa'];
 var gcalSetupOpen=false;
+var gcalCachedEvents=[];
+
+function fetchGcalEvents(callback){
+  if(!data.googleCalUrls)data.googleCalUrls=['','',''];
+  var results=[];var pending=0;
+  var apiKey='';// public calendar는 key 없이 가능
+  data.googleCalUrls.forEach(function(url,i){
+    var calId=extractCalId(url);
+    if(!calId){return}
+    pending++;
+    var now=new Date();var y=now.getFullYear();var m=now.getMonth();
+    var tMin=new Date(y,m,1).toISOString();
+    var tMax=new Date(y,m+1,0,23,59,59).toISOString();
+    var endpoint='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(calId)+'/events?timeMin='+encodeURIComponent(tMin)+'&timeMax='+encodeURIComponent(tMax)+'&singleEvents=true&orderBy=startTime&maxResults=200';
+    fetch(endpoint).then(function(r){return r.json()}).then(function(json){
+      if(json.items){
+        json.items.forEach(function(ev){
+          var dt=ev.start&&(ev.start.date||ev.start.dateTime||'');
+          if(dt)dt=dt.slice(0,10);
+          results.push({title:ev.summary||'',date:dt,calName:GCAL_NAMES[i]||'',calIdx:i});
+        });
+      }
+    }).catch(function(e){console.warn('Gcal fetch error:',e)}).finally(function(){
+      pending--;
+      if(pending<=0){gcalCachedEvents=results;if(callback)callback()}
+    });
+  });
+  if(pending===0){gcalCachedEvents=results;if(callback)callback()}
+}
 
 function extractCalId(url){
   if(!url)return'';
@@ -8707,6 +8761,8 @@ function loadGoogleCal(){
     for(var i=0;i<3;i++){
       document.getElementById('gcalLegend'+i).style.display=data.googleCalUrls[i]?'inline-flex':'none';
     }
+    // Google Calendar 이벤트를 가져와서 휴가자 명단 업데이트
+    fetchGcalEvents(function(){renderCalDeadlines()});
   }else{
     document.getElementById('gcalCombinedWrap').style.display='none';
     document.getElementById('gcalEmptyGuide').style.display='';
@@ -8775,6 +8831,7 @@ function handleConsultExcelUpload(input){
           var cv=(row[colMap.contracted]+'').trim();
           if(cv==='Y'||cv==='계약완료'||cv==='완료')contractedVal='Y';
           else if(cv==='P'||cv==='진행중')contractedVal='P';
+          else if(cv==='X'||cv==='부재중')contractedVal='X';
         }
         var contractDateVal='';
         if(colMap.contractDate!==undefined){
@@ -8932,6 +8989,38 @@ function deleteConsult(idx){
   if(!confirm('삭제하시겠습니까?'))return;
   data.consultations.splice(idx,1);saveData();renderConsultList();renderConsultStats();toast('삭제됨');
 }
+function renderAbsentAlert(){
+  if(!data.consultations)data.consultations=[];
+  var el=document.getElementById('csAbsentAlert');if(!el)return;
+  var today=new Date();today.setHours(0,0,0,0);
+  var absentList=data.consultations.filter(function(c,i){c._absIdx=i;return true}).filter(function(c){
+    if(c.contracted!=='X')return false;
+    if(!c.date)return false;
+    var cDate=new Date(c.date);cDate.setHours(0,0,0,0);
+    var diff=Math.floor((today-cDate)/86400000);
+    return diff>=0&&diff<=7;
+  }).sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+  if(!absentList.length){el.style.display='none';el.innerHTML='';return}
+  el.style.display='';
+  var h='<div style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:12px 16px">';
+  h+='<div style="font-size:13px;font-weight:700;color:#9b2c2c;margin-bottom:8px">📞 부재중 재연락 필요 ('+absentList.length+'건)</div>';
+  absentList.forEach(function(c){
+    var cDate=new Date(c.date);cDate.setHours(0,0,0,0);
+    var diff=Math.floor((today-cDate)/86400000);
+    var urgency=diff>=5?'color:#c53030;font-weight:700':(diff>=3?'color:#dd6b20;font-weight:600':'color:#975a16');
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #fee2e2;font-size:12px">';
+    h+='<span style="'+urgency+'">D+'+diff+'</span>';
+    h+='<span style="color:#718096;min-width:70px">'+c.date+'</span>';
+    h+='<span style="font-weight:600">'+escH(c.name||'-')+'</span>';
+    h+='<span style="color:#718096">'+escH(c.phone||'-')+'</span>';
+    if(c.counselor1)h+='<span style="margin-left:auto;font-size:11px;color:#718096">담당: '+escH(c.counselor1)+'</span>';
+    h+='<button class="btn btn-xs btn-primary" style="margin-left:8px" onclick="openConsultModal('+c._absIdx+')">수정</button>';
+    h+='</div>';
+  });
+  h+='<div style="font-size:10px;color:#a0aec0;margin-top:6px">* 부재중 등록 후 7일 이내 건만 표시됩니다. 계약여부를 변경하면 알림에서 사라집니다.</div>';
+  h+='</div>';
+  el.innerHTML=h;
+}
 function renderConsultList(){
   if(!data.consultations)data.consultations=[];
   var year=document.getElementById('csYear').value;
@@ -8954,8 +9043,8 @@ function renderConsultList(){
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="16" style="text-align:center;color:#a0aec0;padding:30px">등록된 상담이 없습니다</td></tr>';return}
   var h='';
   filtered.forEach(function(c){
-    var cBadge=c.contracted==='Y'?'background:#c6f6d5;color:#276749':(c.contracted==='P'?'background:#fefcbf;color:#975a16':'background:#edf2f7;color:#4a5568');
-    var cText=c.contracted==='Y'?'계약완료':(c.contracted==='P'?'진행중':'미계약');
+    var cBadge=c.contracted==='Y'?'background:#c6f6d5;color:#276749':(c.contracted==='P'?'background:#fefcbf;color:#975a16':(c.contracted==='X'?'background:#fed7d7;color:#9b2c2c':'background:#edf2f7;color:#4a5568'));
+    var cText=c.contracted==='Y'?'계약완료':(c.contracted==='P'?'진행중':(c.contracted==='X'?'부재중':'미계약'));
     h+='<tr>'
       +'<td>'+c._dateNo+'</td>'
       +'<td>'+(c.date||'-')+'</td>'
@@ -8976,6 +9065,7 @@ function renderConsultList(){
       +'</tr>';
   });
   tbody.innerHTML=h;
+  renderAbsentAlert();
 }
 function openConsultDetailModal(idx){
   var c=data.consultations[idx];
