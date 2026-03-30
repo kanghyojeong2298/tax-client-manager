@@ -434,7 +434,7 @@ tr:hover td{background:#f8fafc}
 <div id="tab-invoice" class="TC">
   <!-- 상단: 조회 필터 + 합계 요약 -->
   <div class="card" style="margin-bottom:8px">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">세금계산서 월별 현황<button class="btn btn-sm btn-export" onclick="exportListExcel('invoice')">엑셀다운</button></div>
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">세금계산서 월별 현황<button class="btn btn-sm btn-export" onclick="exportInvoiceNTS()" style="margin-right:4px">📄 국세청양식</button><button class="btn btn-sm btn-export" onclick="exportListExcel('invoice')">엑셀다운</button></div>
     <div class="FB" style="margin-bottom:8px">
       <label style="font-size:11px;font-weight:600">조회월:</label>
       <input type="month" id="invoiceMonth" onchange="renderInvoice()">
@@ -1236,6 +1236,11 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>대표자명 *</label><input id="f_owner"></div>
       <div class="FGI"><label>대표자 생년월일 <span style="font-weight:400;font-size:10px;color:#64748b">(6자리 예:880101)</span></label><input id="f_ownerBirth" maxlength="6" placeholder="880101" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"></div>
       <div class="FGI"><label>사업자등록일</label><input id="f_bizRegDate" type="date"></div>
+      <div class="FGI"><label>사업자번호 <span style="font-weight:400;font-size:10px;color:#64748b">(-없이 10자리)</span></label><input id="f_bizNo" maxlength="10" placeholder="1234567890" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"></div>
+      <div class="FGI"><label>사업장주소</label><input id="f_bizAddress" placeholder="서울시 강남구..."></div>
+      <div class="FGI"><label>업태</label><input id="f_bizType" placeholder="서비스업"></div>
+      <div class="FGI"><label>종목</label><input id="f_bizItem" placeholder="세무대리"></div>
+      <div class="FGI"><label>이메일</label><input id="f_bizEmail" type="email" placeholder="example@email.com"></div>
       <div class="FGI"><label>업체유형 *</label><select id="f_type" onchange="onTypeChange()"><option value="1부">1부업체</option><option value="2부">2부업체</option><option value="3부">3부업체</option></select></div>
       <div class="FGI" id="linkedGroup" style="display:none"><label>연관 1부업체</label><select id="f_linked"><option value="">선택</option></select></div>
       <div class="FGI"><label>개인/법인 *</label><select id="f_entity" onchange="onEntityChange()"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select></div>
@@ -1660,11 +1665,12 @@ function loadData(){
 }
 function saveData(){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  // Also save to Firestore if logged in
+  // Also save to Firestore (shared for all users)
   if(auth.currentUser){
-    db.collection('users').doc(auth.currentUser.uid).set({
+    db.collection('shared').doc('main').set({
       data: JSON.stringify(data),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: auth.currentUser.email||''
     }).catch(function(e){console.error('Firestore save error:',e);toast('⚠️ 클라우드 저장 실패 — 네트워크를 확인해주세요')});
   }
 }
@@ -1989,9 +1995,9 @@ function rejectPending(idx){
 async function loadFromFirestore(){
   if(!auth.currentUser) return;
   try{
-    const doc = await db.collection('users').doc(auth.currentUser.uid).get();
-    if(doc.exists){
-      const d = JSON.parse(doc.data().data);
+    var sharedDoc = await db.collection('shared').doc('main').get();
+    if(sharedDoc.exists){
+      var d = JSON.parse(sharedDoc.data().data);
       if(d && d.clients){
         data = migrate(d);
         if(!data.closingData) data.closingData={};
@@ -2001,15 +2007,42 @@ async function loadFromFirestore(){
         runChecklistMigration();
         runChecklistMigration2();
         runChecklistMigration3();
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
         refreshAll();
         toast('클라우드에서 데이터 로드 완료');
       }
     } else {
-      // First time: upload current localStorage data to Firestore
-      saveData();
-      toast('로컬 데이터를 클라우드에 저장했습니다');
+      // shared/main이 없으면 → 기존 users/{uid}에서 마이그레이션 시도
+      var oldDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+      if(oldDoc.exists){
+        var od = JSON.parse(oldDoc.data().data);
+        if(od && od.clients){
+          data = migrate(od);
+          if(!data.closingData) data.closingData={};
+          if(!data.activityLog)data.activityLog=[];
+          if(!data.consultations)data.consultations=[];
+          if(!data.emailRoles)data.emailRoles={};
+          runChecklistMigration();
+          runChecklistMigration2();
+          runChecklistMigration3();
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+          // shared/main으로 복사
+          await db.collection('shared').doc('main').set({
+            data:JSON.stringify(data),
+            updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy:auth.currentUser.email||'',
+            migratedFrom:auth.currentUser.uid
+          });
+          refreshAll();
+          toast('기존 데이터를 공유 저장소로 이전 완료!');
+        }
+      } else {
+        // 어디에도 없으면 현재 localStorage 저장
+        saveData();
+        toast('로컬 데이터를 클라우드에 저장했습니다');
+      }
     }
-  }catch(e){console.error('Firestore load error:',e)}
+  }catch(e){console.error('Firestore load error:',e);toast('⚠️ 데이터 로드 실패: '+e.message)}
 }
 
 // 허용된 이메일 목록 (Firestore 공용 컬렉션 + 로컬 기본값)
@@ -2496,7 +2529,7 @@ function openClientModal(ec){
   if(ec){
     document.getElementById('clientModalTitle').textContent='업체 수정';
     document.getElementById('editId').value=ec.id;
-    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_linked:'linkedTo',f_bizRegDate:'bizRegDate'};
+    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_linked:'linkedTo',f_bizRegDate:'bizRegDate',f_bizNo:'bizNo',f_bizAddress:'bizAddress',f_bizType:'bizType',f_bizItem:'bizItem',f_bizEmail:'bizEmail'};
     Object.entries(fields).forEach(([fid,key])=>{const el=document.getElementById(fid);if(el)el.value=ec[key]||''});
     ['f_fee','f_adjFee'].forEach(id=>document.getElementById(id).value=ec[id.replace('f_','')]||'');
     document.getElementById('f_fee').value=ec.fee||'';document.getElementById('f_adjFee').value=ec.adjFee||'';document.getElementById('f_extraFee').value=ec.extraFee||'';
@@ -2665,7 +2698,7 @@ function saveClient(){
   if(isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'&&!document.getElementById('f_convertedCorp').value){toast('법인전환 시 전환된 법인을 선택해주세요');return}
   // 거래 1년 미만 해임 경고 (기존 활성→해임 전환 시)
   if(isDismissed&&editId){var _ec=data.clients.find(function(x){return x.id===editId});if(_ec&&_ec.status==='활성'){var _sYM=document.getElementById('f_billingStart').value||document.getElementById('f_startMonth').value||'';var _dYM=document.getElementById('f_dismissDate').value||'';var _dm=calcDealMonths(_sYM,_dYM);if(_dm>=0&&_dm<12){if(!confirm('⚠️ 계약 1년 미만인 업체입니다 ('+_dm+'개월)\n정말 해임처리 하시겠습니까?'))return}}}
-  const cd={name,ownerName:document.getElementById('f_owner').value.trim(),ownerBirth:document.getElementById('f_ownerBirth').value,bizRegDate:document.getElementById('f_bizRegDate').value,type,
+  const cd={name,ownerName:document.getElementById('f_owner').value.trim(),ownerBirth:document.getElementById('f_ownerBirth').value,bizRegDate:document.getElementById('f_bizRegDate').value,bizNo:document.getElementById('f_bizNo').value.trim(),bizAddress:document.getElementById('f_bizAddress').value.trim(),bizType:document.getElementById('f_bizType').value.trim(),bizItem:document.getElementById('f_bizItem').value.trim(),bizEmail:document.getElementById('f_bizEmail').value.trim(),type,
     entityType:document.getElementById('f_entity').value,businessType:document.getElementById('f_biz').value,
     ecommerceDetail:document.getElementById('f_biz').value==='전자상거래'?document.getElementById('f_ecom').value:'',
     taxType:document.getElementById('f_tax').value,
@@ -4878,7 +4911,7 @@ function downloadTemplate(){
     '유입경로(소개/외부소개/블로그/홈페이지/인스타그램/유튜브/세무서/기타)',
     '소개업체번호','외부소개유형(지인/가족/외부네트워크)',
     '최종상담자','1차상담자','1:1교육',
-    '2부연결업체번호','비고'
+    '2부연결업체번호','사업자번호(10자리)','사업장주소','업태','종목','이메일','비고'
   ];
   const example=[
     '테스트주식회사','홍길동','800115','2025-03-01',
@@ -5009,7 +5042,7 @@ function handleExcelUpload(input){
             firstConsultant:String(r['1차상담자']||'').trim(),
             trainer:String(r['1:1교육']||'').trim(),
             linkedTo:type==='2부'?String(r['2부연결업체번호']||'').trim():'',
-            notes:String(r['비고']||'').trim(),
+            bizNo:String(r['사업자번호(10자리)']||'').trim(),bizAddress:String(r['사업장주소']||'').trim(),bizType:String(r['업태']||'').trim(),bizItem:String(r['종목']||'').trim(),bizEmail:String(r['이메일']||'').trim(),notes:String(r['비고']||'').trim(),
             status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
             deferredMonths:0,
             feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:nowStr}]:[],
@@ -5036,9 +5069,10 @@ function handleExcelUpload(input){
             localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
             // Firestore 저장 (비동기)
             if(auth.currentUser){
-              db.collection('users').doc(auth.currentUser.uid).set({
+              db.collection('shared').doc('main').set({
                 data:JSON.stringify(data),
-                updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+                updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy:auth.currentUser.email||''
               }).then(function(){
                 console.log('Firestore bulk save OK');
               }).catch(function(e){console.error('Firestore bulk save error:',e)});
@@ -5310,6 +5344,105 @@ function confirmBulkConvert(){
   saveData();selectedClients.clear();updateBulkBar();closeConvertModal();refreshAll();
   var cc=data.clients.find(function(x){return x.id===corpId});
   toast('법인전환 처리 완료 ('+cnt+'건 → '+(cc?cc.name:corpId)+')');
+}
+
+// ===== 국세청 전자세금계산서 양식 다운로드 =====
+function exportInvoiceNTS(){
+  if(typeof XLSX==='undefined'){toast('XLSX 라이브러리 로딩 중...');return}
+  var month=document.getElementById('invoiceMonth').value||'';
+  if(!month){toast('발행월을 선택하세요');return}
+  var yr=month.split('-')[0]||'2026';
+  var mn=parseInt(month.split('-')[1])||1;
+  var writeDate=yr+('0'+mn).slice(-2)+'01';
+  var monthLabel=mn+'월 기장료';
+
+  // 공급자 정보 (세무법인엑스퍼트 강남)
+  var supplierBizNo='6768702085';
+  var supplierName='세무법인 엑스퍼트 강남';
+  var supplierCeo='배현진';
+  var supplierAddr='서울특별시 강남구 테헤란로 145, 5층';
+  var supplierBizType='서비스';
+  var supplierBizItem='세무대리';
+  var supplierEmail='m1018@taxexpert.kr';
+
+  // 추가발행 업체별 합산
+  var extrasByClient={};
+  (data.extraInvoices||[]).filter(function(e){return e.month===month}).forEach(function(e){
+    var key=e.client||'기타';
+    if(!extrasByClient[key])extrasByClient[key]=(extrasByClient[key]||0)+e.amount;
+  });
+
+  // 헤더 행 (국세청 양식 A~BA)
+  var headers=[
+    '전자세금계산서 종류','작성일자',
+    '공급자 사업자번호','공급자 종사업장번호','공급자 상호','공급자 성명','공급자 사업장주소','공급자 업태','공급자 종목','공급자 이메일',
+    '공급받는자 사업자번호','공급받는자 종사업장번호','공급받는자 상호','공급받는자 성명','공급받는자 사업장주소','공급받는자 업태','공급받는자 종목','공급받는자 이메일1','공급받는자 이메일2',
+    '공급가액 합계','세액 합계','비고',
+    '일자1','품목1','규격1','수량1','단가1','공급가액1','세액1','품목비고1',
+    '일자2','품목2','규격2','수량2','단가2','공급가액2','세액2','품목비고2',
+    '일자3','품목3','규격3','수량3','단가3','공급가액3','세액3','품목비고3',
+    '일자4','품목4','규격4','수량4','단가4','공급가액4','세액4','품목비고4',
+    '현금','수표','어음','외상미수금','영수(01)/청구(02)'
+  ];
+  var rows=[headers];
+
+  data.clients.forEach(function(c){
+    if(c.status==='해임'){var dm=c.dismissDate?c.dismissDate.slice(0,7):'';if(dm&&dm<month)return}
+    var cNm=c.name||'';
+    if(cNm.indexOf('미정')!==-1||cNm.indexOf('임시')!==-1)return;
+    var bs=c.billingStart||c.startMonth||'';
+    var fee=0;
+    if(bs&&bs<=month)fee=Math.round(c.fee||0);
+    if(c.deferredMonths&&Number(c.deferredMonths)>0)fee+=Math.round(c.fee||0)*Number(c.deferredMonths);
+    var rbm=(c.retroBillingMonth&&c.retroBillingMonth.trim())||(c.billingStart&&c.billingStart.trim())||(c.startMonth&&c.startMonth.trim())||'';
+    var retro=0;
+    if(c.retroFee&&c.retroMonths&&rbm&&rbm===month)retro=(c.retroFee||0)*(c.retroMonths||0);
+    var extra=extrasByClient[c.name]||0;
+    if(extra)delete extrasByClient[c.name];
+    var totalFee=fee+retro+extra;
+    if(totalFee<=0)return;
+
+    var tax=Math.round(totalFee*0.1);
+    var row=[
+      '01', writeDate,
+      supplierBizNo,'',supplierName,supplierCeo,supplierAddr,supplierBizType,supplierBizItem,supplierEmail,
+      c.bizNo||'','',(c.name||''),(c.ownerName||''),(c.bizAddress||''),(c.bizType||''),(c.bizItem||''),(c.bizEmail||''),'',
+      totalFee, tax, '',
+      '01', monthLabel, '', '', '', totalFee, tax, '',
+      '','','','','','','','',
+      '','','','','','','','',
+      '','','','','','','','',
+      '','','','', '02'
+    ];
+    rows.push(row);
+  });
+
+  // 추가발행만 있는 업체
+  Object.keys(extrasByClient).forEach(function(name){
+    var amt=extrasByClient[name];
+    var tax=Math.round(amt*0.1);
+    var c=data.clients.find(function(x){return x.name===name})||{};
+    var row=[
+      '01',writeDate,
+      supplierBizNo,'',supplierName,supplierCeo,supplierAddr,supplierBizType,supplierBizItem,supplierEmail,
+      c.bizNo||'','',(name),(c.ownerName||''),(c.bizAddress||''),(c.bizType||''),(c.bizItem||''),(c.bizEmail||''),'',
+      amt,tax,'',
+      '01',monthLabel,'','','',amt,tax,'',
+      '','','','','','','','',
+      '','','','','','','','',
+      '','','','','','','','',
+      '','','','','02'
+    ];
+    rows.push(row);
+  });
+
+  if(rows.length<=1){toast('발행 대상이 없습니다');return}
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=headers.map(function(h){return{wch:Math.max(h.length*2,10)}});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'전자세금계산서');
+  XLSX.writeFile(wb,'전자세금계산서_'+month+'.xlsx');
+  toast('국세청 양식 다운로드 완료 ('+( rows.length-1)+'건)');
 }
 
 // ===== 엑셀 다운로드 =====
@@ -6248,6 +6381,7 @@ function renderBu2MatchModal(){
   document.getElementById('bu2MatchModal').classList.add('show');
 }
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+var esc=escH;
 function openBu2Search(rowIdx,field){
   // 인라인 검색 드롭다운
   var inputId=field==='bu2'?'bu2m_bu2_'+rowIdx:'bu2m_inv_'+rowIdx;
