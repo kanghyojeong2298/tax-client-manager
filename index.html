@@ -795,6 +795,10 @@ tr:hover td{background:#f8fafc}
               <button class="btn btn-sm" style="font-size:10px;color:#e53e3e;padding:2px 6px" onclick="removeGcalUrl(2)">✕</button>
             </div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0">
+            <span style="min-width:80px;font-size:12px;font-weight:600;color:#d69e2e">🔑 API Key</span>
+            <input type="text" id="gcalApiKeyInput" placeholder="Google Calendar API Key (휴가자 명단 자동연동용)" style="flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+          </div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <button class="btn btn-sm btn-primary" onclick="saveAllGcalUrls()">저장 및 연동</button>
             <button class="btn btn-sm" onclick="toggleGcalSetup()">닫기</button>
@@ -813,7 +817,10 @@ tr:hover td{background:#f8fafc}
       </div>
       <!-- 이번달 휴가자 명단 -->
       <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px">🏖️ 이번달 휴가자 명단</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:600">🏖️ 이번달 휴가자 명단</div>
+          <button class="btn btn-sm" style="background:#38a169;color:#fff;font-size:10px;padding:3px 10px" onclick="openQuickVacModal()">+ 휴가등록</button>
+        </div>
         <div id="calVacationList"></div>
       </div>
       <!-- 이번주 주요일정 -->
@@ -821,6 +828,37 @@ tr:hover td{background:#f8fafc}
         <div style="font-size:13px;font-weight:600;margin-bottom:10px">📋 이번주 주요일정</div>
         <div id="calWeeklySchedule"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 빠른 휴가등록 모달 -->
+<div id="quickVacModal" class="MO">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+    <h3 style="margin:0 0 16px;font-size:16px">🏖️ 휴가 빠른등록</h3>
+    <div style="display:grid;gap:10px">
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">직원</label>
+        <select id="qvStaff" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff"></select>
+      </div>
+      <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">유형</label>
+        <select id="qvType" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff">
+          <option value="연차">연차</option><option value="반차(오전)">반차(오전)</option><option value="반차(오후)">반차(오후)</option>
+          <option value="병가">병가</option><option value="경조">경조</option><option value="공가">공가</option>
+          <option value="대휴">대휴</option><option value="예비군">예비군</option><option value="출산">출산</option><option value="육아">육아</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">시작일</label>
+          <input type="date" id="qvDateFrom" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+        </div>
+        <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">종료일</label>
+          <input type="date" id="qvDateTo" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-secondary" onclick="document.getElementById('quickVacModal').classList.remove('show')">취소</button>
+      <button class="btn btn-primary" onclick="saveQuickVac()">등록</button>
     </div>
   </div>
 </div>
@@ -1307,9 +1345,6 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_katalk"> 카톡채널</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometax"> 홈택스수임등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_flowTitle"> 플로우-제목</label>
-      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_basicUpload"> 기초자료업로드</label>
-      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometaxConsent"> 홈택스수임동의</label>
-      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_cms"> CMS등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_wimembers"> 위멤버스등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_contract"> 계약서</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_semoReport"> 세모레포트/자동발송</label>
@@ -1323,6 +1358,9 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_cashReceipt"> 현금영수증가맹점</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_bizAccount"> 사업용계좌등록</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_edi"> edi신청</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_basicUpload"> 기초자료업로드</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometaxConsent"> 홈택스수임동의</label>
+      <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_cms"> CMS등록</label>
     </div>
     <div class="ST">업체 유입구분 / 유입경로</div>
     <div class="FG">
@@ -1693,6 +1731,9 @@ runChecklistMigration2();
 // 추가 마이그레이션3: 자료 미수령 업체는 체크리스트 초기화 (온보딩 진행 필요)
 function runChecklistMigration3(){if(data._ckInit0328c)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){if(c.status!=='활성')return;var ds=c.docStatus||'';if(ds==='받는중'||ds==='수령완료')return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=false})});data._ckInit0328c=true;saveData()}
 runChecklistMigration3();
+// 마이그레이션4: 기존 항목 전체 체크 업체에 basicUpload/hometaxConsent/cms도 체크
+function runChecklistMigration4(){if(data._ckInit0330a)return;var oldKeys=['katalk','hometax','flowTitle','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];var newKeys=['basicUpload','hometaxConsent','cms'];data.clients.forEach(function(c){if(!c.onboardChecklist)return;var allChecked=oldKeys.every(function(k){return!!c.onboardChecklist[k]});if(allChecked){newKeys.forEach(function(k){c.onboardChecklist[k]=true})}});data._ckInit0330a=true;saveData()}
+runChecklistMigration4();
 // 마이그레이션: 빈 docStatus → '미수령' 통일
 if(!data._docStatusV2){data.clients.forEach(function(c){var ds=c.docStatus||'';if(!ds)c.docStatus='미수령'});data._docStatusV2=true;saveData()}
 
@@ -2011,6 +2052,7 @@ async function loadFromFirestore(){
         runChecklistMigration();
         runChecklistMigration2();
         runChecklistMigration3();
+        runChecklistMigration4();
         localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
         refreshAll();
         toast('클라우드에서 데이터 로드 완료');
@@ -2029,6 +2071,7 @@ async function loadFromFirestore(){
           runChecklistMigration();
           runChecklistMigration2();
           runChecklistMigration3();
+          runChecklistMigration4();
           localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
           // shared/main으로 복사
           await db.collection('shared').doc('main').set({
@@ -2563,7 +2606,7 @@ function openClientModal(ec){
     document.getElementById('f_docStatus').value=ec.docStatus||'미수령';
     document.getElementById('f_docMemo').value=ec.docMemo||'';
     var cl=ec.onboardChecklist||{};
-    ['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
+    ['katalk','hometax','flowTitle','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi','basicUpload','hometaxConsent','cms'].forEach(function(k){document.getElementById('f_chk_'+k).checked=!!cl[k]});
     document.getElementById('f_clientOrigin').value=ec.clientOrigin||'신규';
     document.getElementById('f_originOffice').value=ec.originOffice||'';
     toggleOriginOffice();
@@ -2587,7 +2630,7 @@ function openClientModal(ec){
     document.getElementById('f_closingChangeDate').value='';
     document.getElementById('f_invoiceCarry').value='N';
     document.getElementById('f_docStatus').value='미수령';
-    ['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
+    ['katalk','hometax','flowTitle','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi','basicUpload','hometaxConsent','cms'].forEach(function(k){document.getElementById('f_chk_'+k).checked=false});
     document.getElementById('f_docMemo').value='';
     document.getElementById('f_clientOrigin').value='신규';
     document.getElementById('f_originOffice').value='';
@@ -2733,7 +2776,7 @@ function saveClient(){
     clientOrigin:document.getElementById('f_clientOrigin').value,
     originOffice:document.getElementById('f_clientOrigin').value==='이관'?document.getElementById('f_originOffice').value.trim():'',
     invoiceCarry:document.getElementById('f_invoiceCarry').value,docStatus:document.getElementById('f_docStatus').value,docMemo:document.getElementById('f_docMemo').value.trim(),
-    onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','basicUpload','hometaxConsent','cms','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
+    onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi','basicUpload','hometaxConsent','cms'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
     notes:document.getElementById('f_notes').value.trim(),updatedAt:new Date().toISOString()};
   // 비관리자: 승인 대기열로 보내기
   if(!isAdmin()){
@@ -2850,9 +2893,14 @@ function viewClient(id){
   document.getElementById('detailBody').innerHTML=`<div class="FG" style="gap:8px">
     <div><small style="color:#64748b">대표자</small><br><strong>${c.ownerName||'-'}</strong></div>
     ${c.ownerBirth?'<div><small style="color:#64748b">생년월일</small><br>'+c.ownerBirth+'</div>':''}
+    ${c.bizNo?'<div><small style="color:#64748b">사업자번호</small><br>'+c.bizNo.replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')+'</div>':''}
+    ${c.bizAddress?'<div><small style="color:#64748b">사업장주소</small><br>'+c.bizAddress+'</div>':''}
+    ${c.bizEmail?'<div><small style="color:#64748b">이메일</small><br>'+c.bizEmail+'</div>':''}
     <div><small style="color:#64748b">유형</small><br>${c.type}</div>
     <div><small style="color:#64748b">구분</small><br>${c.entityType}</div>
     <div><small style="color:#64748b">업종</small><br>${bizLabel(c)}</div>
+    ${c.bizType?'<div><small style="color:#64748b">업태</small><br>'+c.bizType+'</div>':''}
+    ${c.bizItem?'<div><small style="color:#64748b">종목</small><br>'+c.bizItem+'</div>':''}
     <div><small style="color:#64748b">신고대상</small><br>${c.taxType}</div>
     ${c.taxType==='부가세신고대상'?'<div><small style="color:#64748b">부가세주기</small><br>'+vatFreqLabel(c)+'</div>':''}
     <div><small style="color:#64748b">담당</small><br>${c.manager||'-'}</div>
@@ -8188,14 +8236,15 @@ function initObMonth(){
 }
 var OB_CHECKLIST_ITEMS=[
   {key:'katalk',label:'카톡채널'},{key:'hometax',label:'홈택스수임등록'},
-  {key:'flowTitle',label:'플로우-제목'},{key:'basicUpload',label:'기초자료업로드'},{key:'hometaxConsent',label:'홈택스수임동의'},{key:'cms',label:'CMS등록'},
+  {key:'flowTitle',label:'플로우-제목'},
   {key:'wimembers',label:'위멤버스등록'},{key:'contract',label:'계약서'},
   {key:'semoReport',label:'세모레포트/자동발송'},{key:'customerGuide',label:'고객안내'},
   {key:'wehago',label:'위하고등록'},{key:'permission',label:'권한부여'},
   {key:'wehagoIdPw',label:'위하고ID/PW'},{key:'dataCollect',label:'자료수집'},
   {key:'flowBasic',label:'플로우 기본정보'},{key:'tpClient',label:'tp수임처'},
   {key:'cashReceipt',label:'현금영수증가맹점'},{key:'bizAccount',label:'사업용계좌등록'},
-  {key:'edi',label:'edi신청'}
+  {key:'edi',label:'edi신청'},
+  {key:'basicUpload',label:'기초자료업로드'},{key:'hometaxConsent',label:'홈택스수임동의'},{key:'cms',label:'CMS등록'}
 ];
 function getChecklistProgress(c){
   var cl=c.onboardChecklist||{};
@@ -8651,6 +8700,40 @@ function deleteCalDeadline(){
   }
 }
 
+function openQuickVacModal(){
+  var sel=document.getElementById('qvStaff');
+  sel.innerHTML='';
+  (data.staff||[]).forEach(function(s){
+    var o=document.createElement('option');o.value=s.name;o.textContent=s.name;sel.appendChild(o);
+  });
+  document.getElementById('qvType').value='연차';
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById('qvDateFrom').value=today;
+  document.getElementById('qvDateTo').value=today;
+  document.getElementById('quickVacModal').classList.add('show');
+}
+function saveQuickVac(){
+  var staff=document.getElementById('qvStaff').value;
+  var type=document.getElementById('qvType').value;
+  var from=document.getElementById('qvDateFrom').value;
+  var to=document.getElementById('qvDateTo').value;
+  if(!staff||!from){toast('직원과 날짜를 선택하세요');return}
+  if(!to)to=from;
+  if(!data.calendarDeadlines)data.calendarDeadlines=[];
+  var d=new Date(from);var end=new Date(to);
+  var count=0;
+  while(d<=end){
+    var ds=d.toISOString().slice(0,10);
+    data.calendarDeadlines.push({title:staff+' '+type,date:ds,cat:'휴가',target:staff,memo:type,repeat:false});
+    d.setDate(d.getDate()+1);count++;
+    if(count>60)break;
+  }
+  saveData();
+  document.getElementById('quickVacModal').classList.remove('show');
+  renderCalDeadlines();
+  toast(staff+' '+type+' '+count+'일 등록완료');
+}
+
 var GCAL_NAMES=['휴가','회사일정','대표일정'];
 var GCAL_COLORS=['#0b8043','#3f51b5','#8e24aa'];
 var gcalSetupOpen=false;
@@ -8658,8 +8741,9 @@ var gcalCachedEvents=[];
 
 function fetchGcalEvents(callback){
   if(!data.googleCalUrls)data.googleCalUrls=['','',''];
+  var apiKey=(data.gcalApiKey||'').trim();
+  if(!apiKey){gcalCachedEvents=[];if(callback)callback();return}
   var results=[];var pending=0;
-  var apiKey='';// public calendar는 key 없이 가능
   data.googleCalUrls.forEach(function(url,i){
     var calId=extractCalId(url);
     if(!calId){return}
@@ -8667,7 +8751,7 @@ function fetchGcalEvents(callback){
     var now=new Date();var y=now.getFullYear();var m=now.getMonth();
     var tMin=new Date(y,m,1).toISOString();
     var tMax=new Date(y,m+1,0,23,59,59).toISOString();
-    var endpoint='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(calId)+'/events?timeMin='+encodeURIComponent(tMin)+'&timeMax='+encodeURIComponent(tMax)+'&singleEvents=true&orderBy=startTime&maxResults=200';
+    var endpoint='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(calId)+'/events?key='+encodeURIComponent(apiKey)+'&timeMin='+encodeURIComponent(tMin)+'&timeMax='+encodeURIComponent(tMax)+'&singleEvents=true&orderBy=startTime&maxResults=200';
     fetch(endpoint).then(function(r){return r.json()}).then(function(json){
       if(json.items){
         json.items.forEach(function(ev){
@@ -8720,6 +8804,8 @@ function toggleGcalSetup(){
       var el=document.getElementById('gcalUrl'+i);
       if(el)el.value=urls[i]||'';
     }
+    var akEl=document.getElementById('gcalApiKeyInput');
+    if(akEl)akEl.value=data.gcalApiKey||'';
   }
 }
 
@@ -8728,6 +8814,7 @@ function saveAllGcalUrls(){
   for(var i=0;i<3;i++){
     data.googleCalUrls[i]=document.getElementById('gcalUrl'+i).value.trim();
   }
+  data.gcalApiKey=(document.getElementById('gcalApiKeyInput').value||'').trim();
   saveData();
   loadGoogleCal();
   gcalSetupOpen=false;
