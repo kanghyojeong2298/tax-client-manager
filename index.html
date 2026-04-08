@@ -190,6 +190,12 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;margin-left:4px">자료상태:</label>
       <select id="bulkDocStatus" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">선택</option><option value="미수령">🔴 미수령</option><option value="받는중">🟡 받는중</option><option value="수령완료">✅ 수령완료</option></select>
       <button class="btn btn-sm" style="background:#2d3748;color:#fff" onclick="bulkChangeDocStatus()">변경</button>
+      <span style="color:rgba(255,255,255,.5);margin-left:8px">|</span>
+      <label style="font-size:11px;margin-left:4px">해임:</label>
+      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="법인전환">법인전환</option></select>
+      <input type="month" id="bulkDismissMonth" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px">
+      <input type="date" id="bulkClosureDate" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px" placeholder="폐업/휴업일">
+      <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
@@ -10614,17 +10620,23 @@ function mktStatusBtn(status,type,postId){
     '수정필요':{bg:'#FEE2E2',text:'#991B1B',label:'수정필요'},
     '수정요청':{bg:'#FEE2E2',text:'#991B1B',label:'수정요청'},
     '확인완료':{bg:'#DCFCE7',text:'#166534',label:'확인완료'},
+    '발행가능':{bg:'#E0E7FF',text:'#3730A3',label:'발행가능'},
+    '보완필요':{bg:'#FFF7ED',text:'#9A3412',label:'보완필요'},
     '':{bg:'#F9FAFB',text:'#D1D5DB',label:'-'}
   };
   var s=status||'';
-  var c=colors[s]||colors[''];
   var options;
-  if(type==='draft')options=[{v:'',l:'-'},{v:'O',l:'초안완료'}];
+  if(type==='draft')options=[{v:'',l:'-'},{v:'작성예정',l:'작성예정'},{v:'작성중',l:'작성중'},{v:'O',l:'작성완료'}];
   else if(type==='finalCheck')options=[{v:'',l:'-'},{v:'확인완료',l:'확인완료'},{v:'수정요청',l:'수정요청'}];
+  else if(type==='cafe'||type==='blog'||type==='taxKing')options=[{v:'',l:'-'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'},{v:'발행가능',l:'발행가능'},{v:'보완필요',l:'보완필요'}];
+  else if(type==='thread')options=[{v:'',l:'-'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'},{v:'발행가능',l:'발행가능'},{v:'보완필요',l:'보완필요'}];
   else options=[{v:'',l:'-'},{v:'작성중',l:'작성중'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'}];
+  var validVals=options.map(function(o){return o.v});
+  var displayStatus=validVals.indexOf(s)>=0?s:'';
+  var c=colors[displayStatus]||colors[''];
   var opts='';
   options.forEach(function(o){
-    opts+='<option value="'+o.v+'"'+(o.v===s?' selected':'')+'>'+o.l+'</option>';
+    opts+='<option value="'+o.v+'"'+(o.v===displayStatus?' selected':'')+'>'+o.l+'</option>';
   });
   return '<select onchange="changeMktStatus(\''+postId+'\',\''+type+'\',this.value)" style="padding:2px 4px;border-radius:5px;font-size:10px;font-weight:600;background:'+c.bg+';color:'+c.text+';border:1px solid '+c.text+'22;cursor:pointer;min-width:48px;text-align:center;appearance:auto">'+opts+'</select>';
 }
