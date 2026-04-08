@@ -10593,7 +10593,7 @@ function ensureMktData(){
 
 var mktChannel='all';
 function setMktChannel(ch){
-  mktChannel=ch;
+  mktChannel=(mktChannel===ch)?'all':ch;
   ['mktChAll','mktChEcom','mktChStartup','mktChGangnam'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.className='btn btn-sm btn-secondary';
   });
@@ -10618,30 +10618,31 @@ function mktStatusBtn(status,type,postId){
   };
   var s=status||'';
   var c=colors[s]||colors[''];
-  return '<button onclick="cycleMktStatus(\''+postId+'\',\''+type+'\')" style="display:inline-block;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;background:'+c.bg+';color:'+c.text+';border:1px solid '+c.text+'22;cursor:pointer;min-width:48px" title="클릭하여 상태 변경">'+c.label+'</button>';
+  var options;
+  if(type==='draft')options=[{v:'',l:'-'},{v:'O',l:'초안완료'}];
+  else if(type==='finalCheck')options=[{v:'',l:'-'},{v:'확인완료',l:'확인완료'},{v:'수정요청',l:'수정요청'}];
+  else options=[{v:'',l:'-'},{v:'작성중',l:'작성중'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'}];
+  var opts='';
+  options.forEach(function(o){
+    opts+='<option value="'+o.v+'"'+(o.v===s?' selected':'')+'>'+o.l+'</option>';
+  });
+  return '<select onchange="changeMktStatus(\''+postId+'\',\''+type+'\',this.value)" style="padding:2px 4px;border-radius:5px;font-size:10px;font-weight:600;background:'+c.bg+';color:'+c.text+';border:1px solid '+c.text+'22;cursor:pointer;min-width:48px;text-align:center;appearance:auto">'+opts+'</select>';
 }
 
-// 상태 순환
-function cycleMktStatus(postId,type){
+// 상태 변경 (드롭다운)
+function changeMktStatus(postId,type,newStatus){
   ensureMktData();
   var post=data.marketingPosts.find(function(p){return p.id===postId});
   if(!post)return;
   var field=post[type];
   if(!field){post[type]={status:'',date:''};field=post[type]}
 
-  var cycles;
-  if(type==='draft')cycles=['','O'];
-  else if(type==='finalCheck')cycles=['','확인완료','수정요청'];
-  else cycles=['','작성중','작성완료','발행완료','수정필요'];
-
-  var idx=cycles.indexOf(field.status||'');
-  idx=(idx+1)%cycles.length;
-  field.status=cycles[idx];
-  field.date=cycles[idx]?new Date().toISOString().slice(0,10):(field.date||'');
+  field.status=newStatus;
+  field.date=newStatus?new Date().toISOString().slice(0,10):(field.date||'');
 
   // 히스토리 기록
   if(!post.history)post.history=[];
-  post.history.push({date:new Date().toISOString().slice(0,10),action:type+' → '+cycles[idx],by:auth.currentUser?auth.currentUser.email:''});
+  post.history.push({date:new Date().toISOString().slice(0,10),action:type+' → '+(newStatus||'-'),by:auth.currentUser?auth.currentUser.email:''});
 
   saveData();renderMktContents();
 }
