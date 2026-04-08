@@ -8446,8 +8446,8 @@ function renderOnboarding(){
   document.getElementById('obDeferredBilling').innerHTML=h4;
 }
 function editClientById(id){
-  var idx=data.clients.findIndex(function(c){return c.id===id});
-  if(idx>=0)editClient(idx);
+  var c=data.clients.find(function(c){return c.id===id});
+  if(c)editClient(c.id);
 }
 
 // ============ 캘린더 탭 ============
