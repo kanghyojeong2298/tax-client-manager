@@ -9240,16 +9240,16 @@ function renderConsultStats(){
   // === 월별 상담건수 바 차트 ===
   h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:12px">📊 '+year+'년 월별 상담건수 / 계약률</div>'
-    +'<div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:24px;position:relative">';
+    +'<div style="display:flex;align-items:flex-end;gap:6px;height:200px;padding-bottom:24px;position:relative">';
   for(var bm=1;bm<=12;bm++){
     var bmk=bm<10?'0'+bm:''+bm;
     var bmd=monthlyData[bmk]||{total:0,contracted:0,fee:0};
-    var bh=maxMonthTotal>0?Math.round(bmd.total/maxMonthTotal*100):0;
-    var ch=maxMonthTotal>0?Math.round(bmd.contracted/maxMonthTotal*100):0;
+    var bh=maxMonthTotal>0?Math.round(bmd.total/maxMonthTotal*150):0;
+    var ch=maxMonthTotal>0?Math.round(bmd.contracted/maxMonthTotal*150):0;
     var bmr=bmd.total>0?Math.round(bmd.contracted/bmd.total*100):0;
     h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
       +'<div style="font-size:9px;font-weight:700;color:#1A66FF">'+(bmd.total||'')+'</div>'
-      +'<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:100px;position:relative">'
+      +'<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:150px;position:relative">'
       +'<div style="width:100%;height:'+bh+'px;background:#bee3f8;border-radius:3px 3px 0 0;position:relative">'
       +'<div style="width:100%;height:'+ch+'px;background:#1A66FF;border-radius:3px 3px 0 0;position:absolute;bottom:0"></div>'
       +'</div></div>'
