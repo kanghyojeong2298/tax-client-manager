@@ -1082,7 +1082,7 @@ tr:hover td{background:#f8fafc}
     <div class="card" style="padding:0;overflow:hidden">
       <div style="max-height:calc(100vh - 300px);overflow-y:auto">
         <table style="width:100%;border-collapse:collapse;font-size:11px" id="mktTable">
-          <thead><tr style="background:#f8fafc;position:sticky;top:0;z-index:1">
+          <thead id="mktTableHead"><tr style="background:#f8fafc;position:sticky;top:0;z-index:1">
             <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:36px">No</th>
             <th style="padding:8px 6px;text-align:left;border-bottom:2px solid #e2e8f0;min-width:120px">키워드/주제</th>
             <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">카테고리</th>
@@ -10655,7 +10655,7 @@ function mktStatusBtn(status,type,postId){
   var options;
   if(type==='draft')options=[{v:'',l:'-'},{v:'작성예정',l:'작성예정'},{v:'작성중',l:'작성중'},{v:'O',l:'작성완료'}];
   else if(type==='finalCheck')options=[{v:'',l:'-'},{v:'확인완료',l:'확인완료'},{v:'수정요청',l:'수정요청'}];
-  else if(type==='cafe'||type==='blog'||type==='taxKing')options=[{v:'',l:'-'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'},{v:'발행가능',l:'발행가능'},{v:'보완필요',l:'보완필요'}];
+  else if(type==='cafe'||type==='blog'||type==='taxKing'||type==='corpPlus')options=[{v:'',l:'-'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'},{v:'발행가능',l:'발행가능'},{v:'보완필요',l:'보완필요'}];
   else if(type==='thread')options=[{v:'',l:'-'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'},{v:'발행가능',l:'발행가능'},{v:'보완필요',l:'보완필요'}];
   else options=[{v:'',l:'-'},{v:'작성중',l:'작성중'},{v:'작성완료',l:'작성완료'},{v:'발행완료',l:'발행완료'},{v:'수정필요',l:'수정필요'}];
   var validVals=options.map(function(o){return o.v});
@@ -10713,6 +10713,28 @@ function renderMktContents(){
   // 검색
   if(sq)list=list.filter(function(p){return (p.keyword||'').toLowerCase().indexOf(sq)!==-1});
 
+  // 센터별 컬럼 정의
+  var MKT_COLUMNS={
+    '전자상거래':[{key:'draft',label:'초안'},{key:'cafe',label:'카페'},{key:'blog',label:'블로그'},{key:'taxKing',label:'세금대왕'},{key:'thread',label:'스레드'},{key:'finalCheck',label:'최종확인'}],
+    '스타트업':[{key:'draft',label:'초안'},{key:'blog',label:'블로그'},{key:'taxKing',label:'세금대왕'},{key:'finalCheck',label:'최종확인'}],
+    '강남':[{key:'draft',label:'초안'},{key:'blog',label:'블로그'},{key:'corpPlus',label:'법인플러스'},{key:'finalCheck',label:'최종확인'}]
+  };
+  var cols=MKT_COLUMNS[mktChannel]||MKT_COLUMNS['전자상거래'];
+  // 전체 보기일 때는 전자상거래 기준
+  var thS='padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:';
+  var thead=document.getElementById('mktTableHead');
+  if(thead){
+    var th='<tr style="background:#f8fafc;position:sticky;top:0;z-index:1">';
+    th+='<th style="'+thS+'36px">No</th>';
+    th+='<th style="padding:8px 6px;text-align:left;border-bottom:2px solid #e2e8f0;min-width:120px">키워드/주제</th>';
+    th+='<th style="'+thS+'60px">카테고리</th>';
+    cols.forEach(function(c){th+='<th style="'+thS+'55px">'+c.label+'</th>'});
+    th+='<th style="'+thS+'72px">발행일</th>';
+    th+='<th style="padding:8px 6px;text-align:left;border-bottom:2px solid #e2e8f0;width:80px">비고</th>';
+    th+='<th style="'+thS+'50px">관리</th></tr>';
+    thead.innerHTML=th;
+  }
+
   var tbody=document.getElementById('mktTableBody');
   if(!tbody)return;
   var h='';
@@ -10720,23 +10742,28 @@ function renderMktContents(){
     var catBg=p.category==='전자상거래'?'#DBEAFE':p.category==='스타트업'?'#FEF3C7':'#E0E7FF';
     var catTxt=p.category==='전자상거래'?'#1E40AF':p.category==='스타트업'?'#92400E':'#3730A3';
     var catLabel=p.category==='전자상거래'?'전자상거래':p.category==='스타트업'?'스타트업':'강남';
+    // 해당 행의 카테고리에 맞는 컬럼 사용
+    var rowCols=MKT_COLUMNS[p.category]||MKT_COLUMNS['전자상거래'];
+    // 필터링된 채널이면 해당 채널 컬럼, 전체면 각 행의 카테고리 컬럼
+    var useCols=(mktChannel!=='all')?cols:rowCols;
 
     h+='<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer" ondblclick="openMktEditModal(\''+p.id+'\')">';
     h+='<td style="padding:6px;text-align:center;color:#94a3b8;font-size:10px">'+(p.no||i+1)+'</td>';
     h+='<td style="padding:6px;font-weight:600;color:#1E293B">'+esc(p.keyword||'')+'</td>';
     h+='<td style="padding:6px;text-align:center"><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;background:'+catBg+';color:'+catTxt+'">'+catLabel+'</span></td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.draft?p.draft.status:'','draft',p.id)+'</td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.cafe?p.cafe.status:'','cafe',p.id)+'</td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.blog?p.blog.status:'','blog',p.id)+'</td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.taxKing?p.taxKing.status:'','taxKing',p.id)+'</td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.thread?p.thread.status:'','thread',p.id)+'</td>';
-    h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(p.finalCheck?p.finalCheck.status:'','finalCheck',p.id)+'</td>';
+    useCols.forEach(function(c){
+      var field=p[c.key];
+      h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(field?field.status:'',c.key,p.id)+'</td>';
+    });
+    // 전체보기일 때 컬럼 수가 다를 수 있으므로 빈 셀로 채우기
+    if(mktChannel==='all'){var diff=cols.length-useCols.length;for(var d=0;d<diff;d++)h+='<td></td>'}
     h+='<td style="padding:6px;text-align:center;font-size:10px;color:#64748b">'+(p.publishDate||'-')+'</td>';
     h+='<td style="padding:6px;font-size:10px;color:#718096">'+esc(p.memo||'')+'</td>';
     h+='<td style="padding:6px;text-align:center"><button class="btn btn-xs btn-secondary" onclick="openMktDetailModal(\''+p.id+'\')">상세</button></td>';
     h+='</tr>';
   });
-  if(!h)h='<tr><td colspan="12" style="padding:30px;text-align:center;color:#94a3b8">콘텐츠가 없습니다. + 버튼으로 등록하거나 엑셀을 업로드하세요.</td></tr>';
+  var totalCols=cols.length+5;
+  if(!h)h='<tr><td colspan="'+totalCols+'" style="padding:30px;text-align:center;color:#94a3b8">콘텐츠가 없습니다. + 버튼으로 등록하거나 엑셀을 업로드하세요.</td></tr>';
   tbody.innerHTML=h;
 
   var cnt=document.getElementById('mktCountLabel');
