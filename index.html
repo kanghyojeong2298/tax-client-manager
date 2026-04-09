@@ -192,7 +192,7 @@ tr:hover td{background:#f8fafc}
       <button class="btn btn-sm" style="background:#2d3748;color:#fff" onclick="bulkChangeDocStatus()">변경</button>
       <span style="color:rgba(255,255,255,.5);margin-left:8px">|</span>
       <label style="font-size:11px;margin-left:4px">해임:</label>
-      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="법인전환">법인전환</option></select>
+      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="법인전환">법인전환</option></select>
       <input type="month" id="bulkDismissMonth" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px">
       <input type="date" id="bulkClosureDate" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px" placeholder="폐업/휴업일">
       <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
@@ -647,7 +647,7 @@ tr:hover td{background:#f8fafc}
       <label style="font-size:11px;font-weight:600">연도:</label>
       <select id="dismissedYear" onchange="renderDismissed()"><option value="">전체</option></select>
       <input type="text" id="dismissedSearch" placeholder="검색..." oninput="renderDismissed()">
-      <select id="dismissedReason" onchange="renderDismissed()"><option value="">전체사유</option><option value="휴업">휴업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option></select>
+      <select id="dismissedReason" onchange="renderDismissed()"><option value="">전체사유</option><option value="휴업">휴업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option></select>
       <select id="dismissedFilterManager" onchange="renderDismissed()"><option value="">전체담당</option></select>
     </div>
     <div class="TC2"><table>
@@ -1378,7 +1378,7 @@ tr:hover td{background:#f8fafc}
     </div>
     <div class="ST" id="dismissSection" style="display:none">해임/폐업/휴업</div>
     <div class="FG" id="dismissFields" style="display:none">
-      <div class="FGI"><label>해임 사유</label><select id="f_dismissReason" onchange="toggleConvertedCorp()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option></select></div>
+      <div class="FGI"><label>해임 사유</label><select id="f_dismissReason" onchange="toggleConvertedCorp()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option></select></div>
       <div class="FGI"><label>해임월</label><input id="f_dismissDate" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="f_closureDate" type="date"></div>
       <div class="FGI" id="convertedCorpGroup" style="display:none"><label>전환된 법인 (검색)</label>
@@ -1510,7 +1510,7 @@ tr:hover td{background:#f8fafc}
   <div class="MB" style="padding:16px">
     <div id="dismissMiniInfo" style="margin-bottom:12px;font-size:12px;color:#64748b"></div>
     <div class="FG" style="gap:10px">
-      <div class="FGI"><label>해임 사유 *</label><select id="dm_reason" onchange="toggleDmConvert()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option></select></div>
+      <div class="FGI"><label>해임 사유 *</label><select id="dm_reason" onchange="toggleDmConvert()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option></select></div>
       <div class="FGI"><label>해임월 *</label><input id="dm_date" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="dm_closure" type="date"></div>
       <div class="FGI" id="dmConvertGroup" style="display:none"><label>전환된 법인 (검색)</label>
@@ -1711,16 +1711,33 @@ function loadData(){
   try{for(const k of[STORAGE_KEY,'taxfirm_v4','taxfirm_data_v3','taxfirm_data_v2']){const d=JSON.parse(localStorage.getItem(k));if(d&&d.clients){const migrated=migrate(d);if(!migrated.closingData)migrated.closingData={};return migrated}}}catch(e){}
   return{clients:[],staff:[{name:'전상은',salary:0,targetRevenue:0},{name:'윤성현',salary:0,targetRevenue:92307692},{name:'김시원',salary:0,targetRevenue:104615385},{name:'김도원',salary:0,targetRevenue:76923077},{name:'장은미',salary:0,targetRevenue:132307692},{name:'김민경',salary:0,targetRevenue:110769231},{name:'이도경',salary:0,targetRevenue:88888889}],counters:{'1부':0,'2부':0,'3부':0},closingData:{}};
 }
+var _lastLocalSave=0;
 function saveData(){
+  _lastLocalSave=Date.now();
+  data._localTimestamp=_lastLocalSave;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  // Also save to Firestore (shared for all users)
+  // Also save to Firestore (shared for all users) with retry
   if(auth.currentUser){
-    db.collection('shared').doc('main').set({
-      data: JSON.stringify(data),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedBy: auth.currentUser.email||''
-    }).catch(function(e){console.error('Firestore save error:',e);toast('⚠️ 클라우드 저장 실패 — 네트워크를 확인해주세요')});
+    _saveToFirestore(0);
   }
+}
+function _saveToFirestore(attempt){
+  var maxRetry=3;
+  db.collection('shared').doc('main').set({
+    data: JSON.stringify(data),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: auth.currentUser?auth.currentUser.email:'',
+    localTimestamp: _lastLocalSave
+  }).then(function(){
+    if(attempt>0)toast('✅ 클라우드 저장 성공 (재시도 '+attempt+'회)');
+  }).catch(function(e){
+    console.error('Firestore save error (attempt '+(attempt+1)+'):',e);
+    if(attempt<maxRetry-1){
+      setTimeout(function(){_saveToFirestore(attempt+1)},2000*(attempt+1));
+    }else{
+      toast('⚠️ 클라우드 저장 실패 (3회 시도) — 네트워크 확인 후 수동 저장 필요','error');
+    }
+  });
 }
 let data=loadData();
 if(!data.activityLog)data.activityLog=[];
@@ -2050,18 +2067,28 @@ async function loadFromFirestore(){
     if(sharedDoc.exists){
       var d = JSON.parse(sharedDoc.data().data);
       if(d && d.clients){
-        data = migrate(d);
-        if(!data.closingData) data.closingData={};
-        if(!data.activityLog)data.activityLog=[];
-        if(!data.consultations)data.consultations=[];
-        if(!data.emailRoles)data.emailRoles={};
-        runChecklistMigration();
-        runChecklistMigration2();
-        runChecklistMigration3();
-        runChecklistMigration4();
-        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-        refreshAll();
-        toast('클라우드에서 데이터 로드 완료');
+        // localStorage가 Firestore보다 최신이면 Firestore를 업데이트하고 로컬 유지
+        var localTs=data._localTimestamp||0;
+        var remoteTs=sharedDoc.data().localTimestamp||0;
+        if(localTs>remoteTs && data.clients && data.clients.length>0){
+          console.log('로컬 데이터가 더 최신입니다 (local:'+localTs+' > remote:'+remoteTs+'). Firestore에 로컬 데이터 저장.');
+          _saveToFirestore(0);
+          refreshAll();
+          toast('로컬 데이터가 더 최신 → 클라우드에 동기화');
+        }else{
+          data = migrate(d);
+          if(!data.closingData) data.closingData={};
+          if(!data.activityLog)data.activityLog=[];
+          if(!data.consultations)data.consultations=[];
+          if(!data.emailRoles)data.emailRoles={};
+          runChecklistMigration();
+          runChecklistMigration2();
+          runChecklistMigration3();
+          runChecklistMigration4();
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+          refreshAll();
+          toast('클라우드에서 데이터 로드 완료');
+        }
       }
     } else {
       // shared/main이 없으면 → 기존 users/{uid}에서 마이그레이션 시도
@@ -10601,11 +10628,11 @@ var mktChannel='all';
 function setMktChannel(ch){
   mktChannel=(mktChannel===ch)?'all':ch;
   ['mktChAll','mktChEcom','mktChStartup','mktChGangnam'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.className='btn btn-sm btn-secondary';
+    var el=document.getElementById(id);if(el){el.className='btn btn-sm btn-secondary';el.style.cssText=''}
   });
   var map={all:'mktChAll','전자상거래':'mktChEcom','스타트업':'mktChStartup','강남':'mktChGangnam'};
-  var active=document.getElementById(map[ch]);
-  if(active)active.className='btn btn-sm';active.style.cssText='background:#1A66FF;color:#fff';
+  var active=document.getElementById(map[mktChannel]);
+  if(active){active.className='btn btn-sm';active.style.cssText='background:#1A66FF;color:#fff'}
   renderMktContents();
 }
 
