@@ -11077,7 +11077,7 @@ function importMktExcel(input){
 
         var hdr=rows[headerIdx];
         // 칼럼 인덱스 찾기
-        var kwCol=-1,draftCol=-1,cafeCol=-1,blogCol=-1,tkCol=-1,threadCol=-1,pubCol=-1,memoCol=-1;
+        var kwCol=-1,draftCol=-1,cafeCol=-1,blogCol=-1,tkCol=-1,threadCol=-1,cpCol=-1,pubCol=-1,memoCol=-1,catCol=-1;
         hdr.forEach(function(v,i){
           var s=String(v).trim();
           if(s==='주제명'&&kwCol<0)kwCol=i;
@@ -11086,13 +11086,15 @@ function importMktExcel(input){
           if(s.indexOf('블로그')!==-1&&blogCol<0)blogCol=i;
           if(s.indexOf('세금대왕')!==-1)tkCol=i;
           if(s.indexOf('스레드')!==-1)threadCol=i;
+          if(s.indexOf('법인플러스')!==-1||s.indexOf('법인+')!==-1)cpCol=i;
           if(s.indexOf('발행일')!==-1)pubCol=i;
           if(s==='비고')memoCol=i;
+          if(s==='카테고리'||s==='센터')catCol=i;
         });
         if(kwCol<0)return;
 
-        // 카테고리 추정
-        var cat='전자상거래';
+        // 카테고리 추정: 선택된 채널 > 시트 이름 > 기본값
+        var cat=mktChannel!=='all'?mktChannel:'전자상거래';
         var snLow=sn.toLowerCase();
         if(snLow.indexOf('스타트업')!==-1)cat='스타트업';
         else if(snLow.indexOf('법인')!==-1||snLow.indexOf('강남')!==-1)cat='강남';
@@ -11107,23 +11109,34 @@ function importMktExcel(input){
           var exists=data.marketingPosts.some(function(p){return p.keyword===kw&&p.category===cat});
           if(exists)continue;
 
+          // 행별 카테고리 (카테고리 컬럼 > 시트 기반 추정)
+          var rowCat=cat;
+          if(catCol>=0){
+            var cv=String(row[catCol]||'').trim();
+            if(cv.indexOf('스타트업')!==-1)rowCat='스타트업';
+            else if(cv.indexOf('강남')!==-1||cv.indexOf('법인')!==-1)rowCat='강남';
+            else if(cv.indexOf('전자상거래')!==-1)rowCat='전자상거래';
+          }
+
           var maxNo=0;data.marketingPosts.forEach(function(p){if((p.no||0)>maxNo)maxNo=p.no});
           var draftSt=draftCol>=0?String(row[draftCol]||'').trim():'';
           var cafeSt=cafeCol>=0?String(row[cafeCol]||'').trim():'';
           var blogSt=blogCol>=0?String(row[blogCol]||'').trim():'';
           var tkSt=tkCol>=0?String(row[tkCol]||'').trim():'';
           var threadSt=threadCol>=0?String(row[threadCol]||'').trim():'';
+          var cpSt=cpCol>=0?String(row[cpCol]||'').trim():'';
           var pubDate=pubCol>=0?String(row[pubCol]||'').trim():'';
           var memo=memoCol>=0?String(row[memoCol]||'').trim():'';
 
           data.marketingPosts.push({
             id:'MK'+Date.now()+Math.random().toString(36).slice(2,6),
-            no:maxNo+1,keyword:kw,category:cat,
+            no:maxNo+1,keyword:kw,category:rowCat,
             draft:{status:draftSt,date:''},
             cafe:{status:cafeSt,date:''},
             blog:{status:blogSt,date:''},
             taxKing:{status:tkSt,date:''},
             thread:{status:threadSt,date:''},
+            corpPlus:{status:cpSt,date:''},
             finalCheck:{status:'',date:'',by:''},
             publishDate:pubDate,memo:memo,googleDocUrl:'',
             history:[{date:new Date().toISOString().slice(0,10),action:'엑셀 업로드',by:''}]
