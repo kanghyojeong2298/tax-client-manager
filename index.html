@@ -10719,8 +10719,8 @@ function renderMktContents(){
     '스타트업':[{key:'draft',label:'초안'},{key:'blog',label:'블로그'},{key:'taxKing',label:'세금대왕'},{key:'finalCheck',label:'최종확인'}],
     '강남':[{key:'draft',label:'초안'},{key:'blog',label:'블로그'},{key:'corpPlus',label:'법인플러스'},{key:'finalCheck',label:'최종확인'}]
   };
-  var cols=MKT_COLUMNS[mktChannel]||MKT_COLUMNS['전자상거래'];
-  // 전체 보기일 때는 전자상거래 기준
+  var MKT_ALL_COLUMNS=[{key:'draft',label:'초안'},{key:'cafe',label:'카페'},{key:'blog',label:'블로그'},{key:'taxKing',label:'세금대왕'},{key:'thread',label:'스레드'},{key:'corpPlus',label:'법인플러스'},{key:'finalCheck',label:'최종확인'}];
+  var cols=mktChannel==='all'?MKT_ALL_COLUMNS:(MKT_COLUMNS[mktChannel]||MKT_ALL_COLUMNS);
   var thS='padding:8px 6px;text-align:center;border-bottom:2px solid #e2e8f0;width:';
   var thead=document.getElementById('mktTableHead');
   if(thead){
@@ -10742,21 +10742,21 @@ function renderMktContents(){
     var catBg=p.category==='전자상거래'?'#DBEAFE':p.category==='스타트업'?'#FEF3C7':'#E0E7FF';
     var catTxt=p.category==='전자상거래'?'#1E40AF':p.category==='스타트업'?'#92400E':'#3730A3';
     var catLabel=p.category==='전자상거래'?'전자상거래':p.category==='스타트업'?'스타트업':'강남';
-    // 해당 행의 카테고리에 맞는 컬럼 사용
-    var rowCols=MKT_COLUMNS[p.category]||MKT_COLUMNS['전자상거래'];
-    // 필터링된 채널이면 해당 채널 컬럼, 전체면 각 행의 카테고리 컬럼
-    var useCols=(mktChannel!=='all')?cols:rowCols;
+    // 해당 행의 카테고리에 맞는 컬럼 키 목록
+    var rowColKeys=(MKT_COLUMNS[p.category]||MKT_COLUMNS['전자상거래']).map(function(c){return c.key});
 
     h+='<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer" ondblclick="openMktEditModal(\''+p.id+'\')">';
     h+='<td style="padding:6px;text-align:center;color:#94a3b8;font-size:10px">'+(p.no||i+1)+'</td>';
     h+='<td style="padding:6px;font-weight:600;color:#1E293B">'+esc(p.keyword||'')+'</td>';
     h+='<td style="padding:6px;text-align:center"><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;background:'+catBg+';color:'+catTxt+'">'+catLabel+'</span></td>';
-    useCols.forEach(function(c){
-      var field=p[c.key];
-      h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(field?field.status:'',c.key,p.id)+'</td>';
+    cols.forEach(function(c){
+      if(rowColKeys.indexOf(c.key)>=0){
+        var field=p[c.key];
+        h+='<td style="padding:6px;text-align:center">'+mktStatusBtn(field?field.status:'',c.key,p.id)+'</td>';
+      }else{
+        h+='<td style="padding:6px;text-align:center;color:#e2e8f0;font-size:9px">-</td>';
+      }
     });
-    // 전체보기일 때 컬럼 수가 다를 수 있으므로 빈 셀로 채우기
-    if(mktChannel==='all'){var diff=cols.length-useCols.length;for(var d=0;d<diff;d++)h+='<td></td>'}
     h+='<td style="padding:6px;text-align:center;font-size:10px;color:#64748b">'+(p.publishDate||'-')+'</td>';
     h+='<td style="padding:6px;font-size:10px;color:#718096">'+esc(p.memo||'')+'</td>';
     h+='<td style="padding:6px;text-align:center"><button class="btn btn-xs btn-secondary" onclick="openMktDetailModal(\''+p.id+'\')">상세</button></td>';
