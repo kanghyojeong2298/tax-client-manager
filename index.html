@@ -163,16 +163,19 @@ tr:hover td{background:#f8fafc}
           <button class="btn btn-sm" data-role="edit" style="background:#38a169;color:#fff" onclick="toggleDropMenu('uploadMenu')">엑셀 일괄처리 ▾</button>
           <div id="uploadMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:160px;margin-top:4px">
             <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('excelUpload').click()">📋 업체 일괄등록</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('mgrExcelUpload').click()">🔄 담당자 일괄변경</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('mgrExcelUpload').click()">🔄 담당자 일괄변경</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px;color:#e53e3e" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('dismissExcelUpload').click()">🚫 해임 일괄처리</div>
           </div>
         </div>
         <input type="file" id="excelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this)">
         <input type="file" id="mgrExcelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleMgrExcelUpload(this)">
+        <input type="file" id="dismissExcelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleDismissExcelUpload(this)">
         <div style="position:relative;display:inline-block">
           <button class="btn btn-sm" onclick="toggleDropMenu('templateMenu')">양식 다운로드 ▾</button>
           <div id="templateMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:160px;margin-top:4px">
             <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadTemplate()">📋 업체등록 양식</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadDismissTemplate()">🚫 해임처리 양식</div>
           </div>
         </div>
         <button class="btn btn-primary" data-role="edit" onclick="openClientModal()">+ 업체등록</button>
@@ -5321,6 +5324,21 @@ function downloadMgrTemplate(){
   toast('양식 다운로드 완료');
 }
 
+function downloadDismissTemplate(){
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
+  var header=['업체명','사업자번호(10자리)','해임사유(휴업/폐업/이관/매출부진/미수/법인전환/기타)','해임일(YYYY-MM)','폐업일(YYYY-MM-DD)'];
+  var rows=data.clients.filter(function(c){return c.status==='활성'}).map(function(c){
+    return [c.name,c.bizNo||'','','',''];
+  });
+  var wsData=[header].concat(rows);
+  var ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:20},{wch:15},{wch:40},{wch:15},{wch:15}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'해임처리');
+  XLSX.writeFile(wb,'해임일괄처리_양식.xlsx');
+  toast('양식 다운로드 완료');
+}
+
 // ===== 업체 선택 & 일괄 처리 =====
 let selectedClients=new Set();
 function toggleSelectAll(){
@@ -5488,6 +5506,69 @@ function bulkDismiss(reason){
     }
   });
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast(reason+' 처리 완료');
+}
+// ===== 엑셀 일괄 해임 =====
+function handleDismissExcelUpload(input){
+  if(!canEdit()){toast('🔒 수정 권한이 없습니다');input.value='';return}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('데이터가 없습니다');return}
+      // 매칭용 인덱스
+      var bizNoMap={},nameMap={};
+      data.clients.forEach(function(c){
+        if(c.bizNo&&c.bizNo.trim())bizNoMap[c.bizNo.replace(/[^0-9]/g,'')]=c;
+        if(c.name&&c.name.trim())nameMap[c.name.trim()]=c;
+      });
+      var matched=[],notFound=[];
+      var today=new Date().toISOString().slice(0,10);
+      rows.forEach(function(r,i){
+        var name=String(r['업체명']||'').trim();
+        var bizNo=String(r['사업자번호']||r['사업자번호(10자리)']||'').trim().replace(/[^0-9]/g,'');
+        var reason=String(r['해임사유']||'').trim();
+        var dismissDate=String(r['해임일']||r['해임월']||'').trim();
+        var closureDate=String(r['폐업일']||r['휴업일']||'').trim();
+        if(!name&&!bizNo){notFound.push((i+2)+'행: 업체명/사업자번호 없음');return}
+        var c=null;
+        if(bizNo&&bizNoMap[bizNo])c=bizNoMap[bizNo];
+        else if(name&&nameMap[name])c=nameMap[name];
+        if(!c){notFound.push((i+2)+'행: '+( name||bizNo)+' - 매칭 업체 없음');return}
+        if(c.status!=='활성'){notFound.push((i+2)+'행: '+c.name+' - 이미 해임상태');return}
+        matched.push({client:c,reason:reason||'기타',dismissDate:dismissDate||today.slice(0,7),closureDate:closureDate||today});
+      });
+      if(!matched.length){
+        toast('해임 처리할 업체가 없습니다');
+        if(notFound.length)alert('⚠️ 매칭 실패:\n'+notFound.join('\n'));
+        return;
+      }
+      var msg='🚫 엑셀 일괄 해임 처리\n\n';
+      msg+='해임 대상: '+matched.length+'건\n';
+      matched.slice(0,10).forEach(function(m){msg+='  · '+m.client.name+' ('+m.reason+')\n'});
+      if(matched.length>10)msg+='  ... 외 '+(matched.length-10)+'건\n';
+      if(notFound.length)msg+='\n⚠️ 매칭 실패: '+notFound.length+'건\n';
+      msg+='\n계속하시겠습니까?';
+      if(!confirm(msg))return;
+      matched.forEach(function(m){
+        m.client.status='해임';
+        m.client.dismissReason=m.reason;
+        m.client.dismissDate=m.dismissDate;
+        if(m.reason==='폐업'||m.reason==='휴업')m.client.closureDate=m.closureDate;
+        addLog('해임',m.client.id,m.client.name,'사유: '+m.reason+' (엑셀 일괄)');
+      });
+      saveData();refreshAll();
+      var resultMsg='✅ '+matched.length+'건 해임 처리 완료!';
+      if(notFound.length)resultMsg+='\n⚠️ '+notFound.length+'건 매칭 실패';
+      toast(resultMsg);
+      if(notFound.length)alert('매칭 실패 목록:\n'+notFound.join('\n'));
+    }catch(ex){toast('파일 읽기 오류: '+ex.message)}
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
 }
 function closeConvertModal(){document.getElementById('convertModal').classList.remove('show')}
 function confirmBulkConvert(){
