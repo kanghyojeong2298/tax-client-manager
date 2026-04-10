@@ -1712,14 +1712,45 @@ function loadData(){
   return{clients:[],staff:[{name:'전상은',salary:0,targetRevenue:0},{name:'윤성현',salary:0,targetRevenue:92307692},{name:'김시원',salary:0,targetRevenue:104615385},{name:'김도원',salary:0,targetRevenue:76923077},{name:'장은미',salary:0,targetRevenue:132307692},{name:'김민경',salary:0,targetRevenue:110769231},{name:'이도경',salary:0,targetRevenue:88888889}],counters:{'1부':0,'2부':0,'3부':0},closingData:{}};
 }
 var _lastLocalSave=0;
+var _firestoreUnsubscribe=null;
+var _ignoreNextSnapshot=false;
 function saveData(){
   _lastLocalSave=Date.now();
   data._localTimestamp=_lastLocalSave;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   // Also save to Firestore (shared for all users) with retry
   if(auth.currentUser){
+    _ignoreNextSnapshot=true;
     _saveToFirestore(0);
   }
+}
+function startRealtimeSync(){
+  if(_firestoreUnsubscribe) _firestoreUnsubscribe();
+  _firestoreUnsubscribe=db.collection('shared').doc('main').onSnapshot(function(doc){
+    if(!doc.exists) return;
+    if(_ignoreNextSnapshot){_ignoreNextSnapshot=false;return;}
+    var remoteTs=doc.data().localTimestamp||0;
+    var localTs=data._localTimestamp||0;
+    if(remoteTs>localTs){
+      var d=JSON.parse(doc.data().data);
+      if(d&&d.clients){
+        data=migrate(d);
+        if(!data.closingData)data.closingData={};
+        if(!data.activityLog)data.activityLog=[];
+        if(!data.consultations)data.consultations=[];
+        if(!data.emailRoles)data.emailRoles={};
+        data._localTimestamp=remoteTs;
+        _lastLocalSave=remoteTs;
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+        refreshAll();
+        var who=doc.data().updatedBy||'다른 사용자';
+        toast('🔄 '+who+'님이 데이터를 수정했습니다');
+      }
+    }
+  },function(err){console.error('Realtime sync error:',err)});
+}
+function stopRealtimeSync(){
+  if(_firestoreUnsubscribe){_firestoreUnsubscribe();_firestoreUnsubscribe=null;}
 }
 function _saveToFirestore(attempt){
   var maxRetry=3;
@@ -2183,9 +2214,18 @@ function doLogin(){
   var email = document.getElementById('loginEmail').value.trim();
   var pw = document.getElementById('loginPw').value;
   if(!email||!pw){toast('이메일과 비밀번호를 입력하세요');return}
-  if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 문의하세요.');return}
-  auth.signInWithEmailAndPassword(email,pw).catch(function(e){
-    toast('로그인 실패: '+e.message);
+  // 먼저 Firestore에서 최신 허용 목록을 다시 불러온 후 체크
+  loadSharedEmails().then(function(){
+    if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 문의하세요.');return}
+    auth.signInWithEmailAndPassword(email,pw).catch(function(e){
+      toast('로그인 실패: '+e.message);
+    });
+  }).catch(function(){
+    // Firestore 로드 실패해도 로컬 목록으로 시도
+    if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 문의하세요.');return}
+    auth.signInWithEmailAndPassword(email,pw).catch(function(e){
+      toast('로그인 실패: '+e.message);
+    });
   });
 }
 
@@ -2194,9 +2234,16 @@ function doRegister(){
   var pw = document.getElementById('loginPw').value;
   if(!email||!pw){toast('이메일과 비밀번호를 입력하세요');return}
   if(pw.length<6){toast('비밀번호는 6자 이상이어야 합니다');return}
-  if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 등록을 요청하세요.');return}
-  auth.createUserWithEmailAndPassword(email,pw).catch(function(e){
-    toast('회원가입 실패: '+e.message);
+  loadSharedEmails().then(function(){
+    if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 등록을 요청하세요.');return}
+    auth.createUserWithEmailAndPassword(email,pw).catch(function(e){
+      toast('회원가입 실패: '+e.message);
+    });
+  }).catch(function(){
+    if(!isAllowedEmail(email)){toast('⚠️ 허가되지 않은 이메일입니다. 관리자에게 등록을 요청하세요.');return}
+    auth.createUserWithEmailAndPassword(email,pw).catch(function(e){
+      toast('회원가입 실패: '+e.message);
+    });
   });
 }
 
@@ -2211,6 +2258,7 @@ function doResetPassword(){
 }
 
 function doLogout(){
+  stopRealtimeSync();
   auth.signOut();
 }
 
@@ -2226,7 +2274,7 @@ auth.onAuthStateChanged(function(user){
     var logoutArea = document.getElementById('logoutArea');
     var adminBadge=isAdmin()?'<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:#c6f6d5;color:#276749;margin-right:4px">관리자</span>':'';
     if(logoutArea) logoutArea.innerHTML=adminBadge+'<span style="font-size:11px;opacity:.8">'+user.email+'</span> <button class="btn-staff" onclick="doLogout()" style="font-size:10px;padding:4px 10px">로그아웃</button>';
-    loadFromFirestore();
+    loadFromFirestore().then(function(){startRealtimeSync()}).catch(function(){startRealtimeSync()});
     // 관리자 로그인 시 공용 이메일 목록 동기화
     setTimeout(function(){if(isAdmin())saveSharedEmails()},4000);
     // 로그인 후 자동 백업 알림 체크 (3초 후)
@@ -3562,7 +3610,7 @@ function renderClients(){
     var groupBadge=hasLinked?'<br><span style="font-size:9px;color:#1A66FF">📎 그룹</span>':'';
     return'<tr style="'+rowStyle+'"><td style="'+tdFirstExtra+'"><input type="checkbox" class="client-cb" data-id="'+c.id+'" '+chk+' onchange="toggleSelectClient(\''+c.id+'\',this.checked)"></td>'
     +'<td><strong>'+c.id+'</strong>'+linkedBadge+groupBadge+'</td>'
-    +'<td style="cursor:pointer" onclick="viewClient(\''+c.id+'\')">'+'<span style="color:#1A66FF;font-weight:600">'+c.name+'</span>'+(function(){if(c.status!=='활성')return '';var warns=[];if(!c.ownerName)warns.push('대표자명');if(!c.ownerBirth)warns.push('생년월일');if(!c.bizRegDate)warns.push('사업자등록일');if(!c.manager)warns.push('담당자');if(c.type==='1부'){if(!c.fee)warns.push('기장료');if(!c.adjFee)warns.push('조정료')}if(c.type==='2부'&&!c.extraFee)warns.push('기타수수료');return warns.length?'<br><span style="font-size:9px;color:#e53e3e;font-weight:600">⚠ '+warns.join(', ')+' 미입력</span>':''})()+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
+    +'<td style="cursor:pointer" onclick="viewClient(\''+c.id+'\')">'+c.name+(function(){if(c.status!=='활성')return '';var warns=[];if(!c.ownerName)warns.push('대표자명');if(!c.ownerBirth)warns.push('생년월일');if(!c.bizRegDate)warns.push('사업자등록일');if(!c.manager)warns.push('담당자');if(c.type==='1부'){if(!c.fee)warns.push('기장료');if(!c.adjFee)warns.push('조정료')}if(c.type==='2부'&&!c.extraFee)warns.push('기타수수료');return warns.length?'<br><span style="font-size:9px;color:#e53e3e;font-weight:600">⚠ '+warns.join(', ')+' 미입력</span>':''})()+'</td><td>'+(c.ownerName||'-')+'</td><td><span class="badge '+typeBadge(c.type)+'">'+c.type+'</span></td>'
     +'<td>'+c.entityType+'</td><td>'+bizLabel(c)+'</td><td>'+taxBadge(c)+'</td><td>'+vf+'</td>'
     +'<td>'+(c.manager||'-')+'</td><td style="text-align:right">'+fmt(c.fee)+'</td><td style="text-align:right">'+fmt(c.adjFee)+'</td>'
     +'<td style="text-align:right">'+(c.extraFee?fmt(c.extraFee):'-')+'</td>'
@@ -8341,14 +8389,14 @@ function renderOnboarding(){
   var receiving=pending.filter(function(c){return c.docStatus==='받는중'});
   // 파이프라인
   var pipe=document.getElementById('obPipeline');
-  pipe.innerHTML=(incomplete.length?'<div style="flex:1;text-align:center;padding:10px;background:#fed7e2;color:#97266d;border-radius:8px 0 0 0;font-weight:700"><div style="font-size:22px">'+incomplete.length+'</div><div style="font-size:11px">전환미완료</div></div><div style="width:2px;background:#e2e8f0"></div>':'')
-    +'<div style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#1A66FF;'+(incomplete.length?'':'border-radius:8px 0 0 8px;')+'font-weight:700"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
+  pipe.innerHTML=(incomplete.length?'<div onclick="obScrollTo(\'obIncomplete\')" style="flex:1;text-align:center;padding:10px;background:#fed7e2;color:#97266d;border-radius:8px 0 0 0;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+incomplete.length+'</div><div style="font-size:11px">전환미완료</div></div><div style="width:2px;background:#e2e8f0"></div>':'')
+    +'<div onclick="obScrollTo(\'obDocWaiting\')" style="flex:1;text-align:center;padding:10px;background:#bee3f8;color:#1A66FF;cursor:pointer;'+(incomplete.length?'':'border-radius:8px 0 0 8px;')+'font-weight:700" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+(pending.length+converted.length)+'</div><div style="font-size:11px">계약</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
-    +'<div style="flex:1;text-align:center;padding:10px;background:#fed7d7;color:#c53030;font-weight:700"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
+    +'<div onclick="obScrollTo(\'obDocWaiting\')" style="flex:1;text-align:center;padding:10px;background:#fed7d7;color:#c53030;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+docWaiting.length+'</div><div style="font-size:11px">자료미수령</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
-    +'<div style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700"><div style="font-size:22px">'+receiving.length+'</div><div style="font-size:11px">자료받는중</div></div>'
+    +'<div onclick="obScrollTo(\'obInfoEntering\')" style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+receiving.length+'</div><div style="font-size:11px">자료받는중</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
-    +'<div style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
+    +'<div onclick="obScrollTo(\'obConverted\')" style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
   // 전환미완료
   var h0='';
   if(incomplete.length){
