@@ -4880,8 +4880,9 @@ function renderDismissed(){
 
   document.getElementById('dismissedYearlyCard').innerHTML=`
     <div class="card-title">연도별 해임 집계</div>
-    <div class="TC2"><table>
-      <thead><tr><th>연도</th><th>총건수</th><th>이관</th><th>폐업/휴업/매출부진</th><th style="text-align:right">이관손실(월)</th><th style="text-align:right">기타손실(월)</th><th style="text-align:right">총 연매출손실</th><th style="width:50px"></th></tr></thead>
+    <div class="TC2"><table style="table-layout:fixed;width:100%">
+      <colgroup><col style="width:70px"><col style="width:65px"><col style="width:55px"><col style="width:130px"><col style="width:120px"><col style="width:120px"><col style="width:130px"><col style="width:60px"></colgroup>
+      <thead><tr><th>연도</th><th>총건수</th><th>이관</th><th>폐업/휴업/매출부진</th><th style="text-align:right">이관손실(월)</th><th style="text-align:right">기타손실(월)</th><th style="text-align:right">총 연매출손실</th><th></th></tr></thead>
       <tbody>${years.map(y=>{const d=yearMap[y];return`<tr style="cursor:pointer" onclick="toggleDismissMonth('${y}',this)"><td><strong>${y}</strong></td><td>${d.count}</td>
         <td style="color:#805ad5;font-weight:600">${d.transfer}</td>
         <td style="color:#e53e3e;font-weight:600">${d.other}</td>
