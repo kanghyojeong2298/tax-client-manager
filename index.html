@@ -163,8 +163,7 @@ tr:hover td{background:#f8fafc}
           <button class="btn btn-sm" data-role="edit" style="background:#38a169;color:#fff" onclick="toggleDropMenu('uploadMenu')">엑셀 일괄처리 ▾</button>
           <div id="uploadMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:160px;margin-top:4px">
             <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('excelUpload').click()">📋 업체 일괄등록</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('mgrExcelUpload').click()">🔄 담당자 일괄변경</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px;color:#e53e3e" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('dismissExcelUpload').click()">🚫 해임 일괄처리</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('uploadMenu');document.getElementById('mgrExcelUpload').click()">🔄 담당자 일괄변경</div>
           </div>
         </div>
         <input type="file" id="excelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this)">
@@ -174,8 +173,7 @@ tr:hover td{background:#f8fafc}
           <button class="btn btn-sm" onclick="toggleDropMenu('templateMenu')">양식 다운로드 ▾</button>
           <div id="templateMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;min-width:160px;margin-top:4px">
             <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadTemplate()">📋 업체등록 양식</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
-            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadDismissTemplate()">🚫 해임처리 양식</div>
+            <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
           </div>
         </div>
         <button class="btn btn-primary" data-role="edit" onclick="openClientModal()">+ 업체등록</button>
@@ -5045,7 +5043,8 @@ function downloadTemplate(){
     '유입경로(소개/외부소개/블로그/홈페이지/인스타그램/유튜브/세무서/기타)',
     '소개업체번호','외부소개유형(지인/가족/외부네트워크)',
     '최종상담자','1차상담자','1:1교육',
-    '2부연결업체번호','사업자번호(10자리)','사업장주소','업태','종목','이메일','비고'
+    '2부연결업체번호','사업자번호(10자리)','사업장주소','업태','종목','이메일','비고',
+    '상태(활성/해임)','해임사유(휴업/폐업/이관/매출부진/미수/법인전환/기타)','해임일(YYYY-MM)','폐업일(YYYY-MM-DD)'
   ];
   const example=[
     '테스트주식회사','홍길동','800115','2025-03-01',
@@ -5059,7 +5058,7 @@ function downloadTemplate(){
     '신규','',
     '소개','A001','',
     '김세무','이회계','박기장',
-    '','테스트'
+    '','테스트','','','활성','','',''
   ];
   if(typeof XLSX==='undefined'){toast('SheetJS 라이브러리 로딩 중... 잠시 후 다시 시도하세요.');return}
   const wb=XLSX.utils.book_new();
@@ -5183,7 +5182,10 @@ function handleExcelUpload(input){
             trainer:String(r['1:1교육']||'').trim(),
             linkedTo:type==='2부'?String(r['2부연결업체번호']||'').trim():'',
             bizNo:String(r['사업자번호(10자리)']||'').trim(),bizAddress:String(r['사업장주소']||'').trim(),bizType:String(r['업태']||'').trim(),bizItem:String(r['종목']||'').trim(),bizEmail:String(r['이메일']||'').trim(),notes:String(r['비고']||'').trim(),
-            status:'활성', dismissReason:'', dismissDate:'', closureDate:'',
+            status:(function(){var st=String(r['상태(활성/해임)']||'').trim();return st==='해임'?'해임':'활성'})(),
+            dismissReason:(function(){var dr=String(r['해임사유(휴업/폐업/이관/매출부진/미수/법인전환/기타)']||'').trim();return['휴업','폐업','이관','매출부진','미수','법인전환','기타'].indexOf(dr)>=0?dr:''})(),
+            dismissDate:String(r['해임일(YYYY-MM)']||'').trim(),
+            closureDate:String(r['폐업일(YYYY-MM-DD)']||'').trim(),
             deferredMonths:0,
             feeHistory:fee>0?[{fee:fee,startMonth:billingStart||startMonth||'',memo:'초기 기장료(일괄등록)',date:nowStr}]:[],
             managerHistory:String(r['담당자']||'').trim()?[{manager:String(r['담당자']||'').trim(),startMonth:billingStart||startMonth||'',memo:'초기 배정(일괄등록)',date:nowStr}]:[],
@@ -5207,6 +5209,14 @@ function handleExcelUpload(input){
             // entityType, businessType, taxType, vatFreq: 기존 값이 기본값이면 업데이트
             if(entity!=='개인'&&existing.entityType==='개인')existing.entityType=entity;
             if(biz!=='일반'&&existing.businessType==='일반')existing.businessType=biz;
+            // 해임 상태 처리: 엑셀에 해임으로 되어있으면 기존 업체도 해임 처리
+            if(cd.status==='해임'&&existing.status==='활성'){
+              existing.status='해임';
+              existing.dismissReason=cd.dismissReason||'기타';
+              existing.dismissDate=cd.dismissDate||nowStr.slice(0,7);
+              if(cd.closureDate)existing.closureDate=cd.closureDate;
+              addLog('해임',existing.id,existing.name,'사유: '+existing.dismissReason+' (엑셀 일괄)');
+            }
             existing.updatedAt=nowStr;
             updated++;
           }else{
@@ -8478,6 +8488,15 @@ function toggleObChecklist(clientId,key){
   if(!c)return;
   if(!c.onboardChecklist)c.onboardChecklist={};
   c.onboardChecklist[key]=!c.onboardChecklist[key];
+  // 자동 상태 변경: 체크리스트 진행도에 따라 docStatus 변경
+  var prog=getChecklistProgress(c);
+  if(prog.done>=prog.total){
+    c.docStatus='수령완료';
+  }else if(prog.done>0){
+    if(c.docStatus==='미수령')c.docStatus='받는중';
+  }else{
+    c.docStatus='미수령';
+  }
   saveData();renderOnboarding();
 }
 function renderOnboarding(){
