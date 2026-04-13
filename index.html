@@ -7516,7 +7516,7 @@ function renderBonus(){
   data.staff.filter(function(s){return isStaffActiveForMonth(s,ym)}).forEach(function(staff){
     var auto=calcAutoBonus(staff.name,year,month);
     var total=0;
-    sumFeeAutoIdsPreCalc.forEach(function(id){if(id==='bu2Fee'||(schedule.indexOf(id)!==-1))total+=(auto[id]||0);});
+    sumFeeAutoIdsPreCalc.forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(auto[id]||0);});
     total+=(auto.referral||0)+(auto.extReferral||0)+(auto.consultant||0)+(auto.firstConsultBonus||0)-(auto.firstConsultClawback||0)+(auto.instaBonus||0)+(auto.bizDevBonus||0)-(auto.bizDevClawback||0);
     var entry=getBonusEntry(staff.name,ym);
     manualAmountIdsPreCalc.forEach(function(id){if(schedule.indexOf(id)!==-1)total+=(entry[id]||0);});
@@ -8110,7 +8110,7 @@ function previewBonusReport(year,month){
 
     var total=0;
     var items=[];
-    sumFeeAutoIdsR.forEach(function(id){if(id==='bu2Fee'||(schedule.indexOf(id)!==-1)){var v=auto[id]||0;if(v>0){total+=v;items.push({name:BONUS_ITEMS[id].name,val:v});}}});
+    sumFeeAutoIdsR.forEach(function(id){if(schedule.indexOf(id)!==-1){var v=auto[id]||0;if(v>0){total+=v;items.push({name:BONUS_ITEMS[id].name,val:v});}}});
     if(auto.referral>0){total+=auto.referral;items.push({name:'소개왕',val:auto.referral});}
     if(auto.extReferral>0){total+=auto.extReferral;items.push({name:'외부소개',val:auto.extReferral});}
     if(auto.consultant>0){total+=auto.consultant;items.push({name:'최종상담',val:auto.consultant});}
