@@ -7177,16 +7177,12 @@ function calcAutoBonus(staffName,year,month){
   // 2부업체 수수료 인센티브 (세금계산서탭 업로드 기준, 세무팀 전용)
   // 해당월에 업로드된 2부업체 수수료 건이 있으면 인센티브 반영
   if(!staffObj||!staffObj.team||staffObj.team==='세무팀'){
-    var allBu2ForStaff=(data.extraInvoices||[]).filter(function(e){return e.type==='부가세신고수수료'&&e.staff===staffName});
-    console.log('[bu2Fee DEBUG] staff='+staffName+', team='+(staffObj?staffObj.team:'NO_OBJ')+', ym='+ym+', allBu2Count='+allBu2ForStaff.length);
-    allBu2ForStaff.forEach(function(e){console.log('  -> month='+e.month+', date='+(e.date||'none').substring(0,10)+', amount='+e.amount+', client='+e.client)});
     var bu2Extras=(data.extraInvoices||[]).filter(function(e){
       if(e.type!=='부가세신고수수료'||e.staff!==staffName)return false;
       // 업로드일(date) 기준으로 해당월에 업로드된 건 포함
       var uploadMonth=e.date?e.date.substring(0,7):'';
       return e.month===ym||uploadMonth===ym;
     });
-    console.log('[bu2Fee DEBUG] staff='+staffName+', filtered='+bu2Extras.length);
     // 중복 제거 (같은 건이 month와 uploadMonth 둘 다 매칭될 수 있음)
     var bu2Seen={};var bu2Unique=[];
     bu2Extras.forEach(function(e){
@@ -7194,7 +7190,6 @@ function calcAutoBonus(staffName,year,month){
       if(!bu2Seen[key]){bu2Seen[key]=true;bu2Unique.push(e)}
     });
     var bu2Sum=bu2Unique.reduce(function(s,e){return s+e.amount},0);
-    console.log('[bu2Fee DEBUG] staff='+staffName+', bu2Sum='+bu2Sum+', unique='+bu2Unique.length);
     if(bu2Sum>0){
       var bonus=0;
       if(bu2Sum<=300000)bonus=30000;
@@ -7208,26 +7203,61 @@ function calcAutoBonus(staffName,year,month){
       result.bu2FeeDetails=bu2Unique;
     }
   }
-  // 소개왕 자동 (3개월+12개월 각 50%)
+  // 소개왕 자동 (3개월 50% + 12개월 50%)
+  // 기장료 시작월(startMonth) 기준 월 카운트, 소급기장 시 계약월에 3개월 상여 지급
+  // 조건: 담당자 6개월 이상 근무, 해임 업체는 12개월 상여 미지급
   var refTotal=0;var refDetails=[];
-  ac.forEach(function(c){
-    if(!c.referredBy)return;
-    var refC=data.clients.find(function(rc){return rc.id===c.referredBy||rc.name===c.referredBy});
-    if(!refC)return;
-    var refMgr=getEffectiveManager(refC,ym);
-    if(refMgr!==staffName)return;
-    var fee=getCurrentFee(c);
-    var start=c.contractDate||c.startMonth||'';
-    if(!start)return;
-    var sd=new Date(start);
-    var m3ym=new Date(sd.getTime()+90*24*60*60*1000);
-    var m3key=m3ym.getFullYear()+'-'+(m3ym.getMonth()<9?'0':'')+(m3ym.getMonth()+1);
-    var m12ym=new Date(sd.getTime()+365*24*60*60*1000);
-    var m12key=m12ym.getFullYear()+'-'+(m12ym.getMonth()<9?'0':'')+(m12ym.getMonth()+1);
-    if(m3key===ym){var amt=Math.round(fee*0.5);refTotal+=amt;refDetails.push({client:c.name,fee:fee,amount:amt,reason:'3개월 유지 (50%)'});}
-    if(m12key===ym){var amt2=Math.round(fee*0.5);refTotal+=amt2;refDetails.push({client:c.name,fee:fee,amount:amt2,reason:'12개월 유지 (50%)'});}
-  });
-  result.referral=refTotal;result.referralDetails=refDetails;
+  // 담당자 6개월 근무 체크
+  var _staffJoin=staffObj?staffObj.joinDate:'';
+  var _staff6Mo=true;
+  if(_staffJoin){
+    var _jP=_staffJoin.split('-');var _jY=parseInt(_jP[0]);var _jM=parseInt(_jP[1]||((_jP.length>1)?_jP[1]:'1'));
+    var _j6M=_jM+5;var _j6Y=_jY;while(_j6M>12){_j6M-=12;_j6Y++;}
+    var _j6key=_j6Y+'-'+(_j6M<10?'0':'')+_j6M;
+    if(ym<_j6key)_staff6Mo=false;
+  }
+  if(_staff6Mo){
+    // 활성+해임 업체 모두 포함 (3개월 상여는 해임 후에도 지급 가능)
+    var _allRef=data.clients.filter(function(c){return c.status==='활성'||c.status==='해임'});
+    _allRef.forEach(function(c){
+      if(!c.referredBy)return;
+      var refC=data.clients.find(function(rc){return rc.id===c.referredBy||rc.name===c.referredBy});
+      if(!refC)return;
+      var refMgr=getEffectiveManager(refC,ym);
+      if(refMgr!==staffName)return;
+      var fee=getCurrentFee(c);
+      // 기장료 시작월 (소급기장 반영)
+      var billingYM=c.startMonth||c.billingStart||'';
+      var contractYM=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
+      if(!billingYM)return;
+      var _bP=billingYM.split('-');var _bY=parseInt(_bP[0]);var _bM=parseInt(_bP[1]);
+      // 3개월째 = billingStart + 2개월
+      var _m3M=_bM+2;var _m3Y=_bY;while(_m3M>12){_m3M-=12;_m3Y++;}
+      var m3key=_m3Y+'-'+(_m3M<10?'0':'')+_m3M;
+      // 소급기장: 3개월째가 계약월 이전이면 계약월에 지급
+      if(contractYM&&m3key<contractYM)m3key=contractYM;
+      // 12개월째 = billingStart + 11개월
+      var _m12M=_bM+11;var _m12Y=_bY;while(_m12M>12){_m12M-=12;_m12Y++;}
+      var m12key=_m12Y+'-'+(_m12M<10?'0':'')+_m12M;
+      // 해임일 확인
+      var dismissYM=c.dismissDate||'';
+      // 3개월 상여: 해임됐더라도 해임월이 3개월째 이후면 지급
+      if(m3key===ym){
+        var canPay3=true;
+        if(c.status==='해임'&&dismissYM&&dismissYM<m3key)canPay3=false;
+        if(canPay3){
+          var amt=Math.round(fee*0.5);refTotal+=amt;
+          refDetails.push({client:c.name,fee:fee,amount:amt,reason:'3개월 유지 (50%)',refClient:refC.name,billingStart:billingYM});
+        }
+      }
+      // 12개월 상여: 활성 업체만 (해임=미지급)
+      if(m12key===ym&&c.status==='활성'){
+        var amt2=Math.round(fee*0.5);refTotal+=amt2;
+        refDetails.push({client:c.name,fee:fee,amount:amt2,reason:'12개월 유지 (50%)',refClient:refC.name,billingStart:billingYM});
+      }
+    });
+  }
+  result.referral=refTotal;result.referralDetails=refDetails;result._staff6Mo=_staff6Mo;
   // 외부소개 상여: 지인/가족/외부네트워크 기장계약 시
   // 기장시작월(billingStart) 기준 3개월째/6개월째/9개월째에 각 1개월치 기장료 지급
   // 해임 시 미지급
@@ -7567,23 +7597,24 @@ function renderBonus(){
       var extVal=auto.extReferral||0;
       refTotal+=refVal;extTotal+=extVal;
       var hasDetails=(auto.referralDetails&&auto.referralDetails.length)||(auto.extRefDetails&&auto.extRefDetails.length);
+      var is6Mo=auto._staff6Mo!==false;
       var detId='refDet_'+refDetailIdx++;
-      refExtTable+='<tr><td style="font-weight:600">'+staff.name+'</td><td style="text-align:right;color:#38a169;font-weight:600">'+W(refVal)+'</td><td style="text-align:right;color:#dd6b20;font-weight:600">'+W(extVal)+'</td>';
+      refExtTable+='<tr><td style="font-weight:600">'+staff.name+(!is6Mo?' <span style="font-size:9px;color:#e53e3e;font-weight:400">(6개월 미만)</span>':'')+'</td><td style="text-align:right;color:#38a169;font-weight:600">'+W(refVal)+'</td><td style="text-align:right;color:#dd6b20;font-weight:600">'+W(extVal)+'</td>';
       refExtTable+='<td style="text-align:center">'+(hasDetails?'<span style="cursor:pointer;color:#667eea;font-size:11px" onclick="var d=document.getElementById(\''+detId+'\');d.style.display=d.style.display===\'none\'?\'table-row\':\'none\'">상세 ▶</span>':'')+'</td></tr>';
       if(hasDetails){
         refExtTable+='<tr id="'+detId+'" style="display:none"><td colspan="4" style="padding:4px 12px 8px 20px;background:#f7fafc">';
-        refExtTable+='<table style="width:100%;font-size:11px;border:none;margin:0"><thead><tr style="background:#e2e8f0"><th style="padding:3px 8px">구분</th><th style="padding:3px 8px">업체명</th><th style="padding:3px 8px;text-align:right">기장료</th><th style="padding:3px 8px;text-align:right">상여</th><th style="padding:3px 8px">사유</th></tr></thead><tbody>';
+        refExtTable+='<table style="width:100%;font-size:11px;border:none;margin:0"><thead><tr style="background:#e2e8f0"><th style="padding:3px 8px">구분</th><th style="padding:3px 8px">소개업체</th><th style="padding:3px 8px">신규업체</th><th style="padding:3px 8px">기장시작</th><th style="padding:3px 8px;text-align:right">기장료</th><th style="padding:3px 8px;text-align:right">상여</th><th style="padding:3px 8px">사유</th></tr></thead><tbody>';
         (auto.referralDetails||[]).forEach(function(d){
-          refExtTable+='<tr><td style="padding:2px 8px;color:#38a169;font-weight:600">소개왕</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
+          refExtTable+='<tr><td style="padding:2px 8px;color:#38a169;font-weight:600">소개왕</td><td style="padding:2px 8px">'+(d.refClient||'-')+'</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px">'+(d.billingStart||'-')+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
         });
         (auto.extRefDetails||[]).forEach(function(d){
-          refExtTable+='<tr><td style="padding:2px 8px;color:#dd6b20;font-weight:600">외부소개</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
+          refExtTable+='<tr><td style="padding:2px 8px;color:#dd6b20;font-weight:600">외부소개</td><td style="padding:2px 8px">-</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px">'+(d.billingStart||'-')+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
         });
         refExtTable+='</tbody></table></td></tr>';
       }
     });
     var refSubtext='';
-    if(schedule.indexOf('referral')!==-1)refSubtext+='소개왕: 3개월 50% + 12개월 50%  |  ';
+    if(schedule.indexOf('referral')!==-1)refSubtext+='소개왕: 기장시작월 기준 3개월째 50% + 12개월째 50% (소급기장 시 계약월 지급, 해임 시 12개월 미지급, 6개월 미만 근무자 제외)  |  ';
     if(schedule.indexOf('extReferral')!==-1)refSubtext+='외부소개: 기장시작월 기준 3·6·9개월째 각 1개월치 (해임 시 미지급)';
     refExtTable+='<tr style="background:#f0fff4;font-weight:700"><td>합계</td><td style="text-align:right;color:#38a169">'+W(refTotal)+'</td><td style="text-align:right;color:#dd6b20">'+W(extTotal)+'</td><td></td></tr>';
     refExtTable+='</tbody></table>';
