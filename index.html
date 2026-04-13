@@ -3518,6 +3518,9 @@ function toggleClientSort(){
 }
 // Render Clients table
 function renderClients(){
+  // 페이지 로드 시 선택 초기화
+  var saCb=document.getElementById('selectAllCb');if(saCb)saCb.checked=false;
+  selectedClients.clear();updateBulkBar();
   const s=document.getElementById('searchInput').value.toLowerCase();
   const ft=document.getElementById('filterType').value,fs=document.getElementById('filterStatus').value;
   const fm=document.getElementById('filterManager').value,fe=document.getElementById('filterEntity').value;
