@@ -7177,12 +7177,16 @@ function calcAutoBonus(staffName,year,month){
   // 2부업체 수수료 인센티브 (세금계산서탭 업로드 기준, 세무팀 전용)
   // 해당월에 업로드된 2부업체 수수료 건이 있으면 인센티브 반영
   if(!staffObj||!staffObj.team||staffObj.team==='세무팀'){
+    var allBu2ForStaff=(data.extraInvoices||[]).filter(function(e){return e.type==='부가세신고수수료'&&e.staff===staffName});
+    console.log('[bu2Fee DEBUG] staff='+staffName+', team='+(staffObj?staffObj.team:'NO_OBJ')+', ym='+ym+', allBu2Count='+allBu2ForStaff.length);
+    allBu2ForStaff.forEach(function(e){console.log('  -> month='+e.month+', date='+(e.date||'none').substring(0,10)+', amount='+e.amount+', client='+e.client)});
     var bu2Extras=(data.extraInvoices||[]).filter(function(e){
       if(e.type!=='부가세신고수수료'||e.staff!==staffName)return false;
       // 업로드일(date) 기준으로 해당월에 업로드된 건 포함
       var uploadMonth=e.date?e.date.substring(0,7):'';
       return e.month===ym||uploadMonth===ym;
     });
+    console.log('[bu2Fee DEBUG] staff='+staffName+', filtered='+bu2Extras.length);
     // 중복 제거 (같은 건이 month와 uploadMonth 둘 다 매칭될 수 있음)
     var bu2Seen={};var bu2Unique=[];
     bu2Extras.forEach(function(e){
@@ -7190,6 +7194,7 @@ function calcAutoBonus(staffName,year,month){
       if(!bu2Seen[key]){bu2Seen[key]=true;bu2Unique.push(e)}
     });
     var bu2Sum=bu2Unique.reduce(function(s,e){return s+e.amount},0);
+    console.log('[bu2Fee DEBUG] staff='+staffName+', bu2Sum='+bu2Sum+', unique='+bu2Unique.length);
     if(bu2Sum>0){
       var bonus=0;
       if(bu2Sum<=300000)bonus=30000;
