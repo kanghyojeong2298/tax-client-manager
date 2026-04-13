@@ -4245,7 +4245,7 @@ function renderInvoice(){
   if(retroMissing.length){
     retroNotice.innerHTML='<div style="background:#fffff0;border:1px solid #fefcbf;border-radius:6px;padding:8px 12px;font-size:11px">'
       +'<strong style="color:#d69e2e">⚠ 소급기장료 미반영 업체 ('+retroMissing.length+'건)</strong>'
-      +'<table style="width:100%;font-size:11px;margin-top:4px"><thead><tr style="background:#fefcbf"><th>업체</th><th style="text-align:right">소급기장료</th><th style="text-align:right">개월</th><th>발행월</th><th>미반영 사유</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:11px;margin-top:4px"><thead><tr style="background:#fefcbf"><th>업체</th><th style="text-align:right">소급기장료</th><th style="text-align:right">개월</th><th style="text-align:center">발행월</th><th>미반영 사유</th></tr></thead><tbody>'
       +retroMissing.map(function(r){return '<tr><td>'+r.id+' '+r.name+'</td><td style="text-align:right">'+W(r.retroFee)+'</td><td style="text-align:right">'+r.retroMonths+'</td><td style="text-align:center">'+(r.rbm||'<span style="color:#e53e3e">미설정</span>')+'</td><td style="color:#e53e3e">'+r.reason+'</td></tr>'}).join('')
       +'</tbody></table></div>';
   }else{retroNotice.innerHTML=''};
@@ -6231,6 +6231,14 @@ function renderMgrPerf(){
   var year=parseInt(sel.value)||curYear;
 
   var staff=data.staff;
+  // 담당자별 입사월 맵 (입사 전 성과 제외용)
+  var staffJoinYM={};
+  staff.forEach(function(s){
+    if(s.joinDate){
+      var jd=s.joinDate.split('-');
+      staffJoinYM[s.name]=parseInt(jd[0])+'-'+(parseInt(jd[1]||'1')<10?'0':'')+parseInt(jd[1]||'1');
+    }
+  });
   // 월별 담당자별 기장료 계산
   var mgrMonthly={};// {managerName: [m1fee, m2fee, ... m12fee]}
   var mgrYearTotal={};// {managerName: totalFee}
@@ -6250,6 +6258,8 @@ function renderMgrPerf(){
       if(fee<=0)return;
       // 해당 월의 담당자
       var mgr=getEffectiveManager(c,ym)||'미배정';
+      // 담당자 입사 전이면 미배정 처리
+      if(mgr!=='미배정'&&staffJoinYM[mgr]&&ym<staffJoinYM[mgr]){mgr='미배정'}
       if(!mgrMonthly[mgr]){mgrMonthly[mgr]=new Array(12).fill(0);mgrYearTotal[mgr]=0}
       mgrMonthly[mgr][m-1]+=fee;
       mgrYearTotal[mgr]+=fee;
@@ -6263,12 +6273,15 @@ function renderMgrPerf(){
     var target=s.targetRevenue||0;
     var pct=target?Math.round(total/target*100):0;
     var color=gColor(s.name);
-    summaryHTML+='<div class="SC" style="border-left:4px solid '+color+'">'
-      +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+s.name+'</div>'
-      +'<div style="font-size:18px;font-weight:700;margin:4px 0">'+W(total)+'</div>'
+    // 입사연도 체크: 조회연도보다 입사가 늦으면 미입사 표시
+    var joinY=s.joinDate?parseInt(s.joinDate.split('-')[0]):0;
+    var notJoined=joinY&&joinY>year;
+    summaryHTML+='<div class="SC" style="border-left:4px solid '+color+';'+(notJoined?'opacity:0.4':'')+'">'
+      +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+s.name+(notJoined?' <span style="font-size:9px;color:#a0aec0;font-weight:400">('+joinY+'년 입사)</span>':'')+'</div>'
+      +(notJoined?'<div style="font-size:14px;color:#a0aec0;margin:4px 0">미입사</div>':'<div style="font-size:18px;font-weight:700;margin:4px 0">'+W(total)+'</div>'
       +'<div style="font-size:10px;color:#64748b">연간 기장료 합계</div>'
       +(target?'<div style="margin-top:4px;background:#edf2f7;border-radius:10px;height:8px;overflow:hidden"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+color+';border-radius:10px"></div></div>'
-      +'<div style="font-size:9px;color:#64748b;margin-top:2px">목표 대비 '+pct+'% ('+W(target)+')</div>':'')
+      +'<div style="font-size:9px;color:#64748b;margin-top:2px">목표 대비 '+pct+'% ('+W(target)+')</div>':''))
       +'</div>';
   });
   summaryHTML+='</div>';
@@ -6288,9 +6301,11 @@ function renderMgrPerf(){
     body+='<tr><td class="RL2"><strong>'+m+'월</strong></td>';
     var rowTotal=0;
     staff.forEach(function(s){
+      var ymChk=year+'-'+(m<10?'0':'')+m;
+      var beforeJoin=staffJoinYM[s.name]&&ymChk<staffJoinYM[s.name];
       var v=mgrMonthly[s.name]?mgrMonthly[s.name][m-1]:0;
       colTotals[s.name]+=v;rowTotal+=v;
-      body+='<td class="NC">'+(v?W(v):'')+'</td>';
+      body+='<td class="NC" '+(beforeJoin?'style="color:#cbd5e0"':'')+'>'+( beforeJoin?'-':(v?W(v):''))+'</td>';
     });
     var uv=mgrMonthly['미배정']?mgrMonthly['미배정'][m-1]:0;
     colTotals['미배정']+=uv;rowTotal+=uv;grandTotal+=rowTotal;
