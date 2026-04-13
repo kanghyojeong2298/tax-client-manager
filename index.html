@@ -2403,6 +2403,10 @@ function clickMainTab(key){
 
 function activateMainTab(key){
   activeMainTab=key;
+  // 탭 전환 시 업체 선택 초기화
+  selectedClients.clear();
+  var saCb=document.getElementById('selectAllCb');if(saCb)saCb.checked=false;
+  var bar=document.getElementById('bulkBar');if(bar)bar.style.display='none';
   document.querySelectorAll('.TC').forEach(function(x){x.classList.remove('active')});
   if(key==='tax'){
     var el=document.getElementById('tab-'+activeTaxSub);
@@ -3518,9 +3522,6 @@ function toggleClientSort(){
 }
 // Render Clients table
 function renderClients(){
-  // 페이지 로드 시 선택 초기화
-  var saCb=document.getElementById('selectAllCb');if(saCb)saCb.checked=false;
-  selectedClients.clear();updateBulkBar();
   const s=document.getElementById('searchInput').value.toLowerCase();
   const ft=document.getElementById('filterType').value,fs=document.getElementById('filterStatus').value;
   const fm=document.getElementById('filterManager').value,fe=document.getElementById('filterEntity').value;
@@ -6985,6 +6986,8 @@ function renderBu2Fee(){
   if(!month){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#a0aec0">조회월 선택</td></tr>';return}
   var bu2List=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type==='부가세신고수수료'});
   if(!bu2List.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#a0aec0">해당월 2부업체 수수료 없음</td></tr>';return}
+  // 담당자 → 2부업체명 순 정렬
+  bu2List.sort(function(a,b){var sa=a.staff||'',sb=b.staff||'';if(sa!==sb)return sa.localeCompare(sb,'ko');return(a.bu2Client||'').localeCompare(b.bu2Client||'','ko')});
   tb.innerHTML=bu2List.map(function(e,i){
     var realIdx=data.extraInvoices.indexOf(e);
     var dateStr=new Date(e.date).toLocaleDateString('ko-KR');
@@ -7006,16 +7009,25 @@ function checkBu2Missing(){
   var mm=parseInt(month.split('-')[1]);
   // 활성 2부업체
   var bu2Clients=data.clients.filter(function(c){return c.type==='2부'&&c.status==='활성'});
-  // 이번 월에 업로드된 2부업체명 목록 (정규화)
-  var uploadedRaw=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type==='부가세신고수수료'}).map(function(e){return e.bu2Client||e.client});
-  var uploadedNorm=uploadedRaw.map(function(n){return normalizeName(n)});
+  // 이번 월에 업로드된 2부업체명 목록 (정규화) - bu2Client와 client 양쪽 모두 수집
+  var bu2Invoices=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type==='부가세신고수수료'});
+  var uploadedNorm=[];
+  bu2Invoices.forEach(function(e){
+    if(e.bu2Client)uploadedNorm.push(normalizeName(e.bu2Client));
+    if(e.client)uploadedNorm.push(normalizeName(e.client));
+  });
 
   var warnings=[];
+
+  function isBu2Uploaded(clientName){
+    var norm=normalizeName(clientName);
+    return uploadedNorm.indexOf(norm)>=0;
+  }
 
   // 부가세 신고대상: 1월, 7월 발행 필요
   if(mm===1||mm===7){
     var vatBu2=bu2Clients.filter(function(c){return c.taxType==='부가세신고대상'});
-    var missingVat=vatBu2.filter(function(c){return uploadedNorm.indexOf(normalizeName(c.name))===-1});
+    var missingVat=vatBu2.filter(function(c){return !isBu2Uploaded(c.name)});
     if(missingVat.length){
       warnings.push({
         title:'부가세 신고대상 2부업체 누락 ('+mm+'월 발행 필수)',
@@ -7028,7 +7040,7 @@ function checkBu2Missing(){
   // 면세 신고대상: 2월 발행 필요
   if(mm===2){
     var exemptBu2=bu2Clients.filter(function(c){return c.taxType==='면세신고대상'});
-    var missingExempt=exemptBu2.filter(function(c){return uploadedNorm.indexOf(normalizeName(c.name))===-1});
+    var missingExempt=exemptBu2.filter(function(c){return !isBu2Uploaded(c.name)});
     if(missingExempt.length){
       warnings.push({
         title:'면세 신고대상 2부업체 누락 (2월 발행 필수)',
@@ -8505,15 +8517,13 @@ function toggleObChecklist(clientId,key){
 function renderOnboarding(){
   var ym=document.getElementById('obMonth').value;
   var mgrF=document.getElementById('obMgrFilter').value;
-  // 신규수임 대상: 임시/미정 업체 + 자료미수령 + 자료받는중 업체
+  // 신규수임 대상: 해당 월 계약 업체 중 자료미수령/자료받는중 (이전달은 전환미완료에서 표시)
   var pending=data.clients.filter(function(c){
     if(c.status!=='활성')return false;
-    var nm=c.name||'';
-    var isPending=nm.indexOf('임시')!==-1||nm.indexOf('미정')!==-1;
     var ds=c.docStatus||'미수령';
-    if(!isPending&&ds!=='미수령'&&ds!=='받는중')return false;
+    if(ds!=='미수령'&&ds!=='받는중')return false;
     var cMonth=c.contractDate?(c.contractDate.slice(0,7)):(c.billingStart||c.startMonth||'');
-    if(ym&&cMonth&&cMonth>ym)return false;
+    if(cMonth&&cMonth!==ym)return false;// 계약일 있으면 해당 월만, 없으면 항상 표시
     if(mgrF&&c.manager!==mgrF)return false;
     return true;
   });
@@ -8560,11 +8570,14 @@ function renderOnboarding(){
     +'<div onclick="obScrollTo(\'obInfoEntering\')" style="flex:1;text-align:center;padding:10px;background:#fefcbf;color:#975a16;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+receiving.length+'</div><div style="font-size:11px">자료받는중</div></div>'
     +'<div style="width:2px;background:#e2e8f0"></div>'
     +'<div onclick="obScrollTo(\'obConverted\')" style="flex:1;text-align:center;padding:10px;background:#e9d8fd;color:#553c9a;border-radius:0 8px 8px 0;font-weight:700;cursor:pointer" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"><div style="font-size:22px">'+converted.length+'</div><div style="font-size:11px">전환완료</div></div>';
-  // 전환미완료
+  // 전환미완료 (접기/펼치기)
   var h0='';
   if(incomplete.length){
-    h0+='<div style="font-size:13px;font-weight:700;color:#97266d;padding:8px 0;border-bottom:2px solid #fed7e2;margin-bottom:8px">⚠️ 전환미완료 (이전달) <span style="background:#fed7e2;color:#97266d;padding:2px 8px;border-radius:10px;font-size:11px">'+incomplete.length+'건</span></div>';
-    incomplete.forEach(function(c){
+    var isCollapsed=window._obIncompleteCollapsed;
+    h0+='<div onclick="window._obIncompleteCollapsed=!window._obIncompleteCollapsed;renderOnboarding()" style="font-size:13px;font-weight:700;color:#97266d;padding:8px 0;border-bottom:2px solid #fed7e2;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">'
+      +'<div>⚠️ 전환미완료 (이전달) <span style="background:#fed7e2;color:#97266d;padding:2px 8px;border-radius:10px;font-size:11px">'+incomplete.length+'건</span></div>'
+      +'<span style="font-size:16px;transition:transform .2s;display:inline-block;transform:rotate('+(isCollapsed?'0':'180')+'deg)">▲</span></div>';
+    if(!isCollapsed) incomplete.forEach(function(c){
       var prog=getChecklistProgress(c);
       var pct=prog.total?Math.round(prog.done/prog.total*100):0;
       var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
