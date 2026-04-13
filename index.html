@@ -496,7 +496,7 @@ tr:hover td{background:#f8fafc}
     <div id="invSecRetro" style="display:none">
       <div id="retroInvoiceCard">
         <div class="TC2"><table>
-          <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:right">소급기장료(월)</th><th style="text-align:right">개월수</th><th style="text-align:right">합계</th><th>발행월</th><th>상태</th></tr></thead>
+          <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:right">소급기장료(월)</th><th style="text-align:center">개월수</th><th style="text-align:right">합계</th><th style="text-align:center">발행월</th><th style="text-align:center">상태</th></tr></thead>
           <tbody id="retroInvoiceTable"></tbody>
         </table></div>
       </div>
@@ -4246,7 +4246,7 @@ function renderInvoice(){
     retroNotice.innerHTML='<div style="background:#fffff0;border:1px solid #fefcbf;border-radius:6px;padding:8px 12px;font-size:11px">'
       +'<strong style="color:#d69e2e">⚠ 소급기장료 미반영 업체 ('+retroMissing.length+'건)</strong>'
       +'<table style="width:100%;font-size:11px;margin-top:4px"><thead><tr style="background:#fefcbf"><th>업체</th><th style="text-align:right">소급기장료</th><th style="text-align:right">개월</th><th>발행월</th><th>미반영 사유</th></tr></thead><tbody>'
-      +retroMissing.map(function(r){return '<tr><td>'+r.id+' '+r.name+'</td><td style="text-align:right">'+W(r.retroFee)+'</td><td>'+r.retroMonths+'</td><td>'+(r.rbm||'<span style="color:#e53e3e">미설정</span>')+'</td><td style="color:#e53e3e">'+r.reason+'</td></tr>'}).join('')
+      +retroMissing.map(function(r){return '<tr><td>'+r.id+' '+r.name+'</td><td style="text-align:right">'+W(r.retroFee)+'</td><td style="text-align:right">'+r.retroMonths+'</td><td style="text-align:center">'+(r.rbm||'<span style="color:#e53e3e">미설정</span>')+'</td><td style="color:#e53e3e">'+r.reason+'</td></tr>'}).join('')
       +'</tbody></table></div>';
   }else{retroNotice.innerHTML=''};
   // 미정/임시 업체 미발행 안내 + 이월 로직
