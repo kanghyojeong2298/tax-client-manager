@@ -7876,8 +7876,16 @@ function renderBonus(){
     if(bizDevBonus>0)bizDevDetails.push({name:'계약 보너스 (다음달 기장료)',val:bizDevBonus});
     if(bizDevClawback>0)bizDevDetails.push({name:'환수 (12개월 미유지 50%)',val:-bizDevClawback});
     var specialDetails=[];
-    if(refVal>0)specialDetails.push({cat:'소개왕',name:'소개수수료 (3개월/12개월)',val:refVal});
-    if(extRefVal>0)specialDetails.push({cat:'외부소개',name:'외부소개 상여 (3/6/9개월차)',val:extRefVal});
+    if(autoCalc.referralDetails&&autoCalc.referralDetails.length){
+      autoCalc.referralDetails.forEach(function(rd){
+        specialDetails.push({cat:'소개왕',name:'소개수수료 '+rd.reason+' - '+(rd.refClient||'?')+'→'+rd.client,val:rd.amount});
+      });
+    }
+    if(autoCalc.extRefDetails&&autoCalc.extRefDetails.length){
+      autoCalc.extRefDetails.forEach(function(rd){
+        specialDetails.push({cat:'외부소개',name:'외부소개 '+rd.reason+' - '+rd.client,val:rd.amount});
+      });
+    }
     if(conVal>0)specialDetails.push({cat:'최종상담',name:'최종상담자 상여',val:conVal});
     if(fcBonus>0)specialDetails.push({cat:'1차상담',name:'계약건수 보너스 ('+autoCalc.firstConsultCount+'건)',val:fcBonus});
     if(fcClawback>0)specialDetails.push({cat:'1차상담',name:'환수 (1년 미만 해임)',val:-fcClawback});
@@ -7906,7 +7914,7 @@ function renderBonus(){
     +' <span id="monthSummaryArrow" style="font-size:12px;color:#64748b;margin-left:6px">▶</span></div>'
     +'<div id="monthSummaryBody" style="display:none">'
     +'<div style="font-size:11px;color:#64748b;margin-bottom:8px">총 '+(taxStaff.length+bizStaff.length)+'명 (세무팀 '+taxStaff.length+'명, 경영지원팀 '+bizStaff.length+'명)</div>'
-    +'<div class="TC2"><table><thead><tr><th>담당자</th><th>자동계산</th><th>소개왕</th><th>외부소개</th><th>최종상담</th><th>1차상담</th><th>수동입력</th><th>건별수수료</th><th>진도율</th><th>경영지원</th><th>합계</th><th></th></tr></thead><tbody>';
+    +'<div class="TC2"><table><thead><tr><th>담당자</th><th style="text-align:right">자동계산</th><th style="text-align:right">소개왕</th><th style="text-align:right">외부소개</th><th style="text-align:right">최종상담</th><th style="text-align:right">1차상담</th><th style="text-align:right">수동입력</th><th style="text-align:right">건별수수료</th><th style="text-align:right">진도율</th><th style="text-align:right">경영지원</th><th style="text-align:right">합계</th><th></th></tr></thead><tbody>';
 
   // 세무팀 합계
   summaryTable+='<tr style="background:#ebf8ff;cursor:pointer" onclick="toggleTeamGroup(\'tax\')">'
