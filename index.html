@@ -331,7 +331,7 @@ tr:hover td{background:#f8fafc}
       <span id="vatDeadline" style="font-weight:600;color:#e53e3e;font-size:12px;margin-left:8px"></span>
     </div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>주기</th><th>담당</th><th>기장료</th><th>사유</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>주기</th><th>담당</th><th style="text-align:right">기장료</th><th>사유</th></tr></thead>
       <tbody id="vatTable"></tbody>
     </table></div>
   </div>
@@ -350,7 +350,7 @@ tr:hover td{background:#f8fafc}
       <select id="exemptFilterManager" onchange="renderExemptList()"><option value="">전체담당</option></select>
     </div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th>기장료</th><th>상태</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th style="text-align:right">기장료</th><th>상태</th></tr></thead>
       <tbody id="exemptTable"></tbody>
     </table></div>
   </div>
@@ -370,7 +370,7 @@ tr:hover td{background:#f8fafc}
     </div>
     <div id="corpSummary" style="margin:8px 0;font-size:12px"></div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>법인명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th>기장료</th><th>조정료</th><th>결산</th><th>상태</th><th>알림</th></tr></thead>
+      <thead><tr><th>번호</th><th>법인명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>담당</th><th style="text-align:right">기장료</th><th style="text-align:right">조정료</th><th>결산</th><th>상태</th><th>알림</th></tr></thead>
       <tbody id="corpTable"></tbody>
     </table></div>
   </div>
@@ -434,7 +434,7 @@ tr:hover td{background:#f8fafc}
       <select id="sincereFilterManager" onchange="renderSincereList()"><option value="">전체담당</option></select>
     </div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>신고</th><th>담당</th><th>기장료</th><th>조정료</th><th>상태</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>업종</th><th>신고</th><th>담당</th><th style="text-align:right">기장료</th><th style="text-align:right">조정료</th><th>상태</th></tr></thead>
       <tbody id="sincereTable"></tbody>
     </table></div>
   </div>
@@ -633,7 +633,7 @@ tr:hover td{background:#f8fafc}
     </div>
     <div id="closingAlert" style="margin-bottom:8px"></div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>결산</th><th>담당</th><th>기장료</th><th>결재완료</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>결산</th><th>담당</th><th style="text-align:right">기장료</th><th style="text-align:center">결재완료</th></tr></thead>
       <tbody id="closingTable"></tbody>
     </table></div>
   </div>
@@ -653,7 +653,7 @@ tr:hover td{background:#f8fafc}
       <select id="dismissedFilterManager" onchange="renderDismissed()"><option value="">전체담당</option></select>
     </div>
     <div class="TC2"><table>
-      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th>기장료</th><th>조정료</th><th>해임사유</th><th>해임월</th><th>폐업/휴업일</th><th>거래기간</th></tr></thead>
+      <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>유형</th><th>구분</th><th>담당</th><th style="text-align:right">기장료</th><th style="text-align:right">조정료</th><th>해임사유</th><th>해임월</th><th>폐업/휴업일</th><th>거래기간</th></tr></thead>
       <tbody id="dismissedTable"></tbody>
     </table></div>
   </div>
@@ -4881,7 +4881,7 @@ function renderDismissed(){
   document.getElementById('dismissedYearlyCard').innerHTML=`
     <div class="card-title">연도별 해임 집계</div>
     <div class="TC2"><table>
-      <thead><tr><th>연도</th><th>총건수</th><th>이관</th><th>폐업/휴업/매출부진</th><th>이관손실(월)</th><th>기타손실(월)</th><th>총 연매출손실</th><th style="width:50px"></th></tr></thead>
+      <thead><tr><th>연도</th><th>총건수</th><th>이관</th><th>폐업/휴업/매출부진</th><th style="text-align:right">이관손실(월)</th><th style="text-align:right">기타손실(월)</th><th style="text-align:right">총 연매출손실</th><th style="width:50px"></th></tr></thead>
       <tbody>${years.map(y=>{const d=yearMap[y];return`<tr style="cursor:pointer" onclick="toggleDismissMonth('${y}',this)"><td><strong>${y}</strong></td><td>${d.count}</td>
         <td style="color:#805ad5;font-weight:600">${d.transfer}</td>
         <td style="color:#e53e3e;font-weight:600">${d.other}</td>
