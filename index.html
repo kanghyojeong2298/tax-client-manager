@@ -7176,7 +7176,7 @@ function calcAutoBonus(staffName,year,month){
   }
   // 2부업체 수수료 인센티브 (세금계산서탭 업로드 기준, 세무팀 전용)
   // 해당월에 업로드된 2부업체 수수료 건이 있으면 인센티브 반영
-  if(!staffObj||staffObj.team==='세무팀'){
+  if(!staffObj||!staffObj.team||staffObj.team==='세무팀'){
     var bu2Extras=(data.extraInvoices||[]).filter(function(e){
       if(e.type!=='부가세신고수수료'||e.staff!==staffName)return false;
       // 업로드일(date) 기준으로 해당월에 업로드된 건 포함
@@ -8604,8 +8604,11 @@ function renderOnboarding(){
   // 자료 미수령
   var h1='';
   if(docWaiting.length){
-    h1+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px">📄 자료 미수령 <span style="background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px;font-size:11px">'+docWaiting.length+'건</span></div>';
-    docWaiting.forEach(function(c){
+    var isDocWaitCollapsed=window._obDocWaitCollapsed;
+    h1+='<div onclick="window._obDocWaitCollapsed=!window._obDocWaitCollapsed;renderOnboarding()" style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">'
+      +'<div>📄 자료 미수령 <span style="background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px;font-size:11px">'+docWaiting.length+'건</span></div>'
+      +'<span style="font-size:16px;transition:transform .2s;display:inline-block;transform:rotate('+(isDocWaitCollapsed?'0':'180')+'deg)">▲</span></div>';
+    if(!isDocWaitCollapsed) docWaiting.forEach(function(c){
       var days=c.contractDate?Math.floor((new Date()-new Date(c.contractDate))/(86400000)):0;
       var dayBadge=days>=7?'background:#fed7d7;color:#c53030':'background:#fefcbf;color:#975a16';
       var prog=getChecklistProgress(c);
@@ -8633,8 +8636,11 @@ function renderOnboarding(){
   // 자료 받는중 (경영지원 체크리스트 포함)
   var h2='';
   if(receiving.length){
-    h2+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">📝 자료받는중 / 진행중 <span style="background:#fefcbf;color:#975a16;padding:2px 8px;border-radius:10px;font-size:11px">'+receiving.length+'건</span></div>';
-    receiving.forEach(function(c){
+    var isReceivingCollapsed=window._obReceivingCollapsed;
+    h2+='<div onclick="window._obReceivingCollapsed=!window._obReceivingCollapsed;renderOnboarding()" style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">'
+      +'<div>📝 자료받는중 / 진행중 <span style="background:#fefcbf;color:#975a16;padding:2px 8px;border-radius:10px;font-size:11px">'+receiving.length+'건</span></div>'
+      +'<span style="font-size:16px;transition:transform .2s;display:inline-block;transform:rotate('+(isReceivingCollapsed?'0':'180')+'deg)">▲</span></div>';
+    if(!isReceivingCollapsed) receiving.forEach(function(c){
       var prog=getChecklistProgress(c);
       var pct=prog.total?Math.round(prog.done/prog.total*100):0;
       var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
@@ -8662,8 +8668,11 @@ function renderOnboarding(){
   // 전환완료
   var h3='';
   if(converted.length){
-    h3+='<div style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px">✅ 이번달 전환 완료 <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:11px">'+converted.length+'건</span></div>';
-    converted.forEach(function(c){
+    var isConvertedCollapsed=window._obConvertedCollapsed;
+    h3+='<div onclick="window._obConvertedCollapsed=!window._obConvertedCollapsed;renderOnboarding()" style="font-size:13px;font-weight:700;color:#4a5568;padding:8px 0;border-bottom:2px solid #e2e8f0;margin-bottom:8px;margin-top:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">'
+      +'<div>✅ 이번달 전환 완료 <span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;font-size:11px">'+converted.length+'건</span></div>'
+      +'<span style="font-size:16px;transition:transform .2s;display:inline-block;transform:rotate('+(isConvertedCollapsed?'0':'180')+'deg)">▲</span></div>';
+    if(!isConvertedCollapsed) converted.forEach(function(c){
       var prog=getChecklistProgress(c);
       var pct=prog.total?Math.round(prog.done/prog.total*100):0;
       var barColor=pct===100?'#38a169':pct>=50?'#d69e2e':'#e53e3e';
