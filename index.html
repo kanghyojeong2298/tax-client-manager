@@ -4881,19 +4881,19 @@ function renderDismissed(){
   document.getElementById('dismissedYearlyCard').innerHTML=`
     <div class="card-title">연도별 해임 집계</div>
     <div class="TC2"><table style="table-layout:fixed;width:100%">
-      <colgroup><col style="width:70px"><col style="width:65px"><col style="width:55px"><col style="width:130px"><col style="width:120px"><col style="width:120px"><col style="width:130px"><col style="width:60px"></colgroup>
-      <thead><tr><th>연도</th><th>총건수</th><th>이관</th><th>폐업/휴업/매출부진</th><th style="text-align:right">이관손실(월)</th><th style="text-align:right">기타손실(월)</th><th style="text-align:right">총 연매출손실</th><th></th></tr></thead>
-      <tbody>${years.map(y=>{const d=yearMap[y];return`<tr style="cursor:pointer" onclick="toggleDismissMonth('${y}',this)"><td><strong>${y}</strong></td><td>${d.count}</td>
-        <td style="color:#805ad5;font-weight:600">${d.transfer}</td>
-        <td style="color:#e53e3e;font-weight:600">${d.other}</td>
-        <td style="text-align:right;color:#805ad5">${W(d.trFee)}</td>
-        <td style="text-align:right;color:#e53e3e">${W(d.otFee)}</td>
-        <td style="text-align:right;color:#e53e3e;font-weight:600">${W(d.fee*12+d.adj)}</td>
+      <colgroup><col style="width:60px"><col style="width:60px"><col style="width:50px"><col style="width:120px"><col style="width:110px"><col style="width:110px"><col style="width:120px"><col style="width:55px"></colgroup>
+      <thead><tr><th style="text-align:center">연도</th><th style="text-align:center">총건수</th><th style="text-align:center">이관</th><th style="text-align:center">폐업/휴업/매출부진</th><th style="text-align:center">이관손실(월)</th><th style="text-align:center">기타손실(월)</th><th style="text-align:center">총 연매출손실</th><th></th></tr></thead>
+      <tbody>${years.map(y=>{const d=yearMap[y];return`<tr style="cursor:pointer" onclick="toggleDismissMonth('${y}',this)"><td style="text-align:center"><strong>${y}</strong></td><td style="text-align:center">${d.count}</td>
+        <td style="text-align:center;color:#805ad5;font-weight:600">${d.transfer}</td>
+        <td style="text-align:center;color:#e53e3e;font-weight:600">${d.other}</td>
+        <td style="text-align:center;color:#805ad5">${W(d.trFee)}</td>
+        <td style="text-align:center;color:#e53e3e">${W(d.otFee)}</td>
+        <td style="text-align:center;color:#e53e3e;font-weight:600">${W(d.fee*12+d.adj)}</td>
         <td style="text-align:center"><span class="dismiss-toggle-${y}" style="font-size:11px;color:#667eea;cursor:pointer">▶ 상세</span></td></tr>`+buildMonthlyDetail(y)}).join('')}
-      <tr style="background:#edf2f7;font-weight:700"><td>합계</td><td>${total}</td>
-        <td style="color:#805ad5">${transfer.length}</td><td style="color:#e53e3e">${others.length}</td>
-        <td style="text-align:right;color:#805ad5">${W(trFee)}</td><td style="text-align:right;color:#e53e3e">${W(otFee)}</td>
-        <td style="text-align:right;color:#e53e3e">${W(lostAnnual)}</td><td></td></tr>
+      <tr style="background:#edf2f7;font-weight:700"><td style="text-align:center">합계</td><td style="text-align:center">${total}</td>
+        <td style="text-align:center;color:#805ad5">${transfer.length}</td><td style="text-align:center;color:#e53e3e">${others.length}</td>
+        <td style="text-align:center;color:#805ad5">${W(trFee)}</td><td style="text-align:center;color:#e53e3e">${W(otFee)}</td>
+        <td style="text-align:center;color:#e53e3e">${W(lostAnnual)}</td><td></td></tr>
       </tbody></table></div>`;
 
   // Filtered list
