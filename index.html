@@ -495,9 +495,8 @@ tr:hover td{background:#f8fafc}
     </div>
     <div id="invSecRetro" style="display:none">
       <div id="retroInvoiceCard">
-        <div class="TC2"><table style="table-layout:fixed;width:100%">
-          <colgroup><col style="width:40px"><col><col style="width:65px"><col style="width:55px"><col style="width:95px"><col style="width:60px"><col style="width:95px"><col style="width:75px"><col style="width:75px"></colgroup>
-          <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:center">소급기장료(월)</th><th style="text-align:center">개월수</th><th style="text-align:center">합계</th><th style="text-align:center">발행월</th><th style="text-align:center">상태</th></tr></thead>
+        <div class="TC2"><table>
+          <thead><tr><th>번호</th><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:right">소급기장료(월)</th><th style="text-align:center">개월수</th><th style="text-align:right">합계</th><th style="text-align:center">발행월</th><th style="text-align:center">상태</th></tr></thead>
           <tbody id="retroInvoiceTable"></tbody>
         </table></div>
       </div>
@@ -6988,9 +6987,9 @@ function renderRetroInvoices(monthParam){
       +'<td style="cursor:pointer;color:#3182ce;font-weight:600" onclick="showDetail(\''+c.id+'\')">'+c.name+'</td>'
       +'<td>'+(c.ownerName||'-')+'</td>'
       +'<td>'+(c.manager||'-')+'</td>'
-      +'<td style="text-align:center">'+W(fee)+'</td>'
+      +'<td style="text-align:right">'+W(fee)+'</td>'
       +'<td style="text-align:center">'+months+'개월</td>'
-      +'<td style="text-align:center;font-weight:600">'+W(total)+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+W(total)+'</td>'
       +'<td style="text-align:center">'+(rbm||'-')+'</td>'
       +'<td style="text-align:center">'+statusBadge+'</td></tr>';
   });
