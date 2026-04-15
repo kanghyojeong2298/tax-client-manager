@@ -4468,9 +4468,9 @@ function renderInvoice(){
       r.total=r.mFee+r.retro;
     }
   });
-  // 기존 rows에 없는 추가발행 업체 → 별도 행 추가 (정규화로 한번 더 확인)
+  // 기존 rows에 없는 추가발행 업체 → data.clients에서 찾아보고 있으면 업체정보 포함 행 생성
   Object.keys(extrasByClient).forEach(function(name){
-    // 이미 같은 정규화 이름이 rows에 있는지 마지막 확인
+    // 1) 이미 같은 정규화 이름이 rows에 있는지 확인
     var nn=normalizeName(name);
     var existing=rows.find(function(r){return normalizeName(r.name)===nn});
     if(existing){
@@ -4478,6 +4478,27 @@ function renderInvoice(){
       existing.total=existing.mFee+existing.retro+existing.extraAmt;
       return;
     }
+    // 2) data.clients 전체에서 찾기 (해당 월에 기장료 없어서 rows에 없는 업체)
+    var matchedClient=data.clients.find(function(c){return c.name===name});
+    if(!matchedClient&&nn){
+      matchedClient=data.clients.find(function(c){return normalizeName(c.name)===nn});
+    }
+    if(matchedClient){
+      rows.push({
+        id:matchedClient.id,
+        name:matchedClient.name,
+        ownerName:matchedClient.ownerName||'',
+        type:matchedClient.type||'',
+        entityType:matchedClient.entityType||'',
+        manager:matchedClient.manager||'',
+        mFee:0,retro:0,
+        extraAmt:extrasByClient[name],
+        total:extrasByClient[name],
+        rNote:'추가발행만('+(matchedClient.status==='해임'?'해임업체':'기장료없음')+')'
+      });
+      return;
+    }
+    // 3) 진짜 등록되지 않은 업체
     rows.push({id:'-',name:name,ownerName:'',type:'',manager:'',mFee:0,retro:0,extraAmt:extrasByClient[name],total:extrasByClient[name],rNote:'추가발행만(미매칭)'});
   });
 
