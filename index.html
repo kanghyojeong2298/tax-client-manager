@@ -4440,22 +4440,45 @@ function renderInvoice(){
 
   compEl.innerHTML=compHTML;
 
-  // 추가발행 데이터를 월별목록에 반영 (업체별 합산)
-  var extrasByClient={};
+  // 추가발행 데이터를 월별목록에 반영 (업체별 합산, 정규화 매칭)
+  var extrasByClient={};// {originalName: amount}
+  var extrasByNorm={};// {normalizedName: originalName}
   (data.extraInvoices||[]).filter(function(e){return e.month===month}).forEach(function(e){
     var key=e.client||'기타';
     if(!extrasByClient[key])extrasByClient[key]=0;
     extrasByClient[key]+=e.amount;
+    var nk=normalizeName(key);
+    if(nk&&!extrasByNorm[nk])extrasByNorm[nk]=key;
   });
-  // rows에 추가발행 금액 매핑
+  // rows에 추가발행 금액 매핑 (정확일치 → 정규화 일치)
   rows.forEach(function(r){
-    r.extraAmt=extrasByClient[r.name]||0;
-    r.total=r.mFee+r.retro+r.extraAmt;
-    if(r.extraAmt)delete extrasByClient[r.name];
+    var matchKey=null;
+    if(extrasByClient[r.name]!==undefined){matchKey=r.name;}
+    else{
+      var rn=normalizeName(r.name);
+      if(rn&&extrasByNorm[rn])matchKey=extrasByNorm[rn];
+    }
+    if(matchKey){
+      r.extraAmt=extrasByClient[matchKey];
+      r.total=r.mFee+r.retro+r.extraAmt;
+      delete extrasByClient[matchKey];
+      delete extrasByNorm[normalizeName(matchKey)];
+    }else{
+      r.extraAmt=0;
+      r.total=r.mFee+r.retro;
+    }
   });
-  // 기존 rows에 없는 추가발행 업체 → 별도 행 추가
+  // 기존 rows에 없는 추가발행 업체 → 별도 행 추가 (정규화로 한번 더 확인)
   Object.keys(extrasByClient).forEach(function(name){
-    rows.push({id:'-',name:name,ownerName:'',type:'',manager:'',mFee:0,retro:0,extraAmt:extrasByClient[name],total:extrasByClient[name],rNote:'추가발행만'});
+    // 이미 같은 정규화 이름이 rows에 있는지 마지막 확인
+    var nn=normalizeName(name);
+    var existing=rows.find(function(r){return normalizeName(r.name)===nn});
+    if(existing){
+      existing.extraAmt=(existing.extraAmt||0)+extrasByClient[name];
+      existing.total=existing.mFee+existing.retro+existing.extraAmt;
+      return;
+    }
+    rows.push({id:'-',name:name,ownerName:'',type:'',manager:'',mFee:0,retro:0,extraAmt:extrasByClient[name],total:extrasByClient[name],rNote:'추가발행만(미매칭)'});
   });
 
   const ge=rows.reduce((s,r)=>s+(r.extraAmt||0),0);
