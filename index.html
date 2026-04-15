@@ -561,7 +561,7 @@ tr:hover td{background:#f8fafc}
   <div class="MB">
     <div class="FG">
       <div class="FGI"><label>유형 *</label><select id="ei_type"><option value="경정청구">경정청구</option><option value="수정신고">수정신고</option><option value="법인전환">법인전환</option><option value="재산세">재산세</option><option value="해명자료대응">해명자료대응</option><option value="기한후신고">기한후신고</option><option value="부가세신고수수료">부가세신고수수료</option><option value="조정료">조정료</option><option value="면세현황신고">면세현황신고</option><option value="양도세신고수수료">양도세신고수수료</option></select></div>
-      <div class="FGI"><label>업체명</label><input id="ei_client"></div>
+      <div class="FGI"><label>업체명</label><input id="ei_client" list="ei_clientList" autocomplete="off" placeholder="업체명 검색..."><datalist id="ei_clientList"></datalist></div>
       <div class="FGI"><label>담당자 *</label><select id="ei_staff"></select></div>
       <div class="FGI"><label>입금액 (원)</label><input id="ei_amount" type="number" min="0" step="10000"></div>
       <div class="FGI"><label>해당월</label><input id="ei_month" type="month"></div>
@@ -1264,7 +1264,7 @@ tr:hover td{background:#f8fafc}
     <div class="FG">
       <div class="FGI"><label>담당자 *</label><select id="rb_staff"></select></div>
       <div class="FGI"><label>유형 *</label><select id="rb_type"><option value="법인전환">법인전환(20%)</option><option value="수정신고">수정신고(20%)</option><option value="경정청구(업무지시)">경정청구-업무지시(20%)</option><option value="경정청구(본인발견)">경정청구-본인발견(30%)</option><option value="재산세">재산세(20%)</option><option value="해명자료대응">해명자료대응(10%)</option></select></div>
-      <div class="FGI"><label>업체명</label><input id="rb_client"></div>
+      <div class="FGI"><label>업체명</label><input id="rb_client" list="rb_clientList" autocomplete="off" placeholder="업체명 검색..."><datalist id="rb_clientList"></datalist></div>
       <div class="FGI"><label>수수료 금액 (원)</label><input id="rb_amount" type="number" min="0" step="10000"></div>
       <div class="FGI"><label>입금월</label><input id="rb_month" type="month"></div>
     </div>
@@ -6884,6 +6884,13 @@ function openExtraInvoiceModal(){
   // 담당자 드롭다운 채우기
   var staffSel=document.getElementById('ei_staff');
   staffSel.innerHTML=data.staff.map(function(s){return '<option value="'+s.name+'">'+s.name+'</option>'}).join('');
+  // 업체명 자동완성 datalist 채우기 (활성+해임 모두 포함)
+  var cList=document.getElementById('ei_clientList');
+  if(cList){
+    cList.innerHTML=(data.clients||[]).map(function(c){
+      return '<option value="'+(c.name||'').replace(/"/g,'&quot;')+'">'+(c.ownerName?c.ownerName+' · ':'')+(c.manager||'-')+' · '+(c.type||'')+'</option>';
+    }).join('');
+  }
   document.getElementById('extraInvoiceModal').classList.add('show');
 }
 function closeExtraInvoiceModal(){
@@ -8320,6 +8327,13 @@ function openRedModalFor(itemId,staff,ym){
   // 유형 자동선택
   var typeMap={corpConvert:'법인전환',correction:'수정신고',rectify:'경정청구(업무지시)',property:'재산세',explain:'해명자료대응'};
   if(typeMap[itemId])document.getElementById('rb_type').value=typeMap[itemId];
+  // 업체명 자동완성 datalist 채우기
+  var cList=document.getElementById('rb_clientList');
+  if(cList){
+    cList.innerHTML=(data.clients||[]).map(function(c){
+      return '<option value="'+(c.name||'').replace(/"/g,'&quot;')+'">'+(c.ownerName?c.ownerName+' · ':'')+(c.manager||'-')+' · '+(c.type||'')+'</option>';
+    }).join('');
+  }
   document.getElementById('redBonusModal').classList.add('show');
 }
 function closeRedModal(){document.getElementById('redBonusModal').classList.remove('show')}
