@@ -480,9 +480,8 @@ tr:hover td{background:#f8fafc}
       </div>
     </div>
     <div id="invSecExtra" style="display:none">
-      <div class="TC2"><table style="table-layout:fixed;width:100%">
-        <colgroup><col style="width:100px"><col><col style="width:80px"><col style="width:110px"><col style="width:110px"><col style="width:90px"><col style="width:95px"><col style="width:55px"></colgroup>
-        <thead><tr><th>유형</th><th>업체명</th><th>담당자</th><th style="text-align:right">입금액</th><th style="text-align:right">상여(20%)</th><th style="text-align:center">입금</th><th style="text-align:center">등록일</th><th></th></tr></thead>
+      <div class="TC2"><table style="width:100%">
+        <thead><tr><th>유형</th><th>업체명</th><th style="text-align:center">담당자</th><th style="text-align:center">입금액</th><th style="text-align:center">상여(20%)</th><th style="text-align:center">입금</th><th style="text-align:center">등록일</th><th></th></tr></thead>
         <tbody id="extraInvoiceTable"></tbody>
       </table></div>
     </div>
@@ -6962,7 +6961,7 @@ function renderExtraInvoices(monthParam){
       +'<option value="Y" '+(isPaid?'selected':'')+'>입금완료</option>'
       +'<option value="N" '+(isUnpaid?'selected':'')+'>미입금</option></select>';
     var bonusText=isPaid?W(bonus):'<span style="color:#a0aec0;text-decoration:line-through">'+W(bonus)+'</span>';
-    return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td>'+e.staff+'</td><td style="text-align:right">'+W(e.amount)+'</td><td style="text-align:right">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
+    return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td style="text-align:center">'+e.staff+'</td><td style="text-align:center">'+W(e.amount)+'</td><td style="text-align:center">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
   }).join('');
 }
 
