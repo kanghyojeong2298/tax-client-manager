@@ -4385,7 +4385,7 @@ function renderInvoice(){
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       +'<strong style="color:#38a169;font-size:11px">신규 수임 '+newClients.length+'건 (+'+W(newRevenue)+')</strong>'
       +'<button class="btn btn-xs btn-secondary" onclick="toggleInvDetail(\'invDetailNew\')" style="padding:1px 6px;font-size:10px">닫기</button></div>'
-      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#c6f6d5"><th>업체명</th><th>대표자</th><th>유형</th><th>담당</th><th>기장료</th><th>시작</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#c6f6d5"><th>업체명</th><th>대표자</th><th>유형</th><th>담당</th><th style="text-align:right">기장료</th><th style="text-align:center">시작</th></tr></thead><tbody>'
       +newClients.map(function(r){return '<tr><td>'+r.name+'</td><td>'+(r.ownerName||'-')+'</td><td>'+r.type+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right;font-weight:600">'+W(r.mFee)+'</td><td>'+(r.billingStart||r.startMonth||'-')+'</td></tr>'}).join('')
       +'</tbody></table></div></div>';
   }
@@ -4397,7 +4397,7 @@ function renderInvoice(){
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       +'<strong style="color:#e53e3e;font-size:11px">해임 '+lostClients.length+'건 (-'+W(lostRevenue)+')</strong>'
       +'<button class="btn btn-xs btn-secondary" onclick="toggleInvDetail(\'invDetailLost\')" style="padding:1px 6px;font-size:10px">닫기</button></div>'
-      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fed7d7"><th>업체명</th><th>대표자</th><th>담당</th><th>기장료</th><th>사유</th><th>해임월</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fed7d7"><th>업체명</th><th>대표자</th><th>담당</th><th style="text-align:right">기장료</th><th>사유</th><th style="text-align:center">해임월</th></tr></thead><tbody>'
       +lostClients.map(function(r){return '<tr><td>'+r.name+'</td><td>'+(r.ownerName||'-')+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right;font-weight:600">'+W(r.fee)+'</td><td>'+(r.dismissReason||'-')+'</td><td>'+(r.dismissDate||'-')+'</td></tr>'}).join('')
       +'</tbody></table></div></div>';
   }
@@ -4409,7 +4409,7 @@ function renderInvoice(){
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       +'<strong style="color:#d69e2e;font-size:11px">기장료 변경 '+feeChanges.length+'건</strong>'
       +'<button class="btn btn-xs btn-secondary" onclick="toggleInvDetail(\'invDetailFee\')" style="padding:1px 6px;font-size:10px">닫기</button></div>'
-      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fefcbf"><th>업체명</th><th>담당</th><th>전월</th><th>당월</th><th>증감</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fefcbf"><th>업체명</th><th>담당</th><th style="text-align:right">전월</th><th style="text-align:right">당월</th><th style="text-align:right">증감</th></tr></thead><tbody>'
       +feeChanges.map(function(r){var dc=r.diff>0?'#38a169':'#e53e3e';var ds=r.diff>0?'+':'';return '<tr><td>'+r.name+'</td><td>'+(r.manager||'-')+'</td><td style="text-align:right">'+W(r.prevFee)+'</td><td style="text-align:right;font-weight:600">'+W(r.mFee)+'</td><td style="text-align:right;font-weight:600;color:'+dc+'">'+ds+W(r.diff)+'</td></tr>'}).join('')
       +'</tbody></table></div></div>';
   }
@@ -4421,7 +4421,7 @@ function renderInvoice(){
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       +'<strong style="color:#e53e3e;font-size:11px">소급기장료 '+retroClients.length+'건 (+'+W(retroThisMonth)+')</strong>'
       +'<button class="btn btn-xs btn-secondary" onclick="toggleInvDetail(\'invDetailRetro\')" style="padding:1px 6px;font-size:10px">닫기</button></div>'
-      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fed7d7"><th>업체명</th><th>담당</th><th>월액</th><th>개월</th><th>합계</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#fed7d7"><th>업체명</th><th>담당</th><th style="text-align:right">월액</th><th style="text-align:center">개월</th><th style="text-align:right">합계</th></tr></thead><tbody>'
       +retroClients.map(function(r){return '<tr><td>'+r.name+'</td><td>'+r.manager+'</td><td style="text-align:right">'+W(r.retroFee)+'</td><td style="text-align:center">'+r.retroMonths+'</td><td style="text-align:right;font-weight:600">'+W(r.total)+'</td></tr>'}).join('')
       +'</tbody></table></div></div>';
   }
@@ -4433,7 +4433,7 @@ function renderInvoice(){
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       +'<strong style="color:#805ad5;font-size:11px">추가발행 '+extraThisMonth.length+'건 (+'+W(extraTotal)+')</strong>'
       +'<button class="btn btn-xs btn-secondary" onclick="toggleInvDetail(\'invDetailExtra\')" style="padding:1px 6px;font-size:10px">닫기</button></div>'
-      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#e9d8fd"><th>유형</th><th>업체명</th><th>담당</th><th>금액</th></tr></thead><tbody>'
+      +'<table style="width:100%;font-size:10px"><thead><tr style="background:#e9d8fd"><th>유형</th><th>업체명</th><th>담당</th><th style="text-align:right">금액</th></tr></thead><tbody>'
       +extraThisMonth.map(function(e){return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td>'+e.staff+'</td><td style="text-align:right;font-weight:600">'+W(e.amount)+'</td></tr>'}).join('')
       +'</tbody></table></div></div>';
   }
