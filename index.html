@@ -4443,12 +4443,15 @@ function renderInvoice(){
   // 추가발행 데이터를 월별목록에 반영 (업체별 합산, 정규화 매칭)
   var extrasByClient={};// {originalName: amount}
   var extrasByNorm={};// {normalizedName: originalName}
+  var extrasTypesByClient={};// {originalName: [type1, type2, ...]} 유형 목록
   (data.extraInvoices||[]).filter(function(e){return e.month===month}).forEach(function(e){
     var key=e.client||'기타';
     if(!extrasByClient[key])extrasByClient[key]=0;
     extrasByClient[key]+=e.amount;
     var nk=normalizeName(key);
     if(nk&&!extrasByNorm[nk])extrasByNorm[nk]=key;
+    if(!extrasTypesByClient[key])extrasTypesByClient[key]=[];
+    if(extrasTypesByClient[key].indexOf(e.type)===-1)extrasTypesByClient[key].push(e.type);
   });
   // rows에 추가발행 금액 매핑 (정확일치 → 정규화 일치)
   rows.forEach(function(r){
@@ -4483,7 +4486,11 @@ function renderInvoice(){
     if(!matchedClient&&nn){
       matchedClient=data.clients.find(function(c){return normalizeName(c.name)===nn});
     }
+    // 유형 판정: 부가세신고수수료만 있으면 '2부업체 수수료', 아니면 기존 표시
+    var types=extrasTypesByClient[name]||[];
+    var onlyBu2=types.length>0&&types.every(function(t){return t==='부가세신고수수료'});
     if(matchedClient){
+      var noteLabel=onlyBu2?'2부업체 수수료':'추가발행만('+(matchedClient.status==='해임'?'해임업체':'기장료없음')+')';
       rows.push({
         id:matchedClient.id,
         name:matchedClient.name,
@@ -4494,12 +4501,13 @@ function renderInvoice(){
         mFee:0,retro:0,
         extraAmt:extrasByClient[name],
         total:extrasByClient[name],
-        rNote:'추가발행만('+(matchedClient.status==='해임'?'해임업체':'기장료없음')+')'
+        rNote:noteLabel
       });
       return;
     }
     // 3) 진짜 등록되지 않은 업체
-    rows.push({id:'-',name:name,ownerName:'',type:'',manager:'',mFee:0,retro:0,extraAmt:extrasByClient[name],total:extrasByClient[name],rNote:'추가발행만(미매칭)'});
+    var unmatchedNote=onlyBu2?'2부업체 수수료(미매칭)':'추가발행만(미매칭)';
+    rows.push({id:'-',name:name,ownerName:'',type:'',manager:'',mFee:0,retro:0,extraAmt:extrasByClient[name],total:extrasByClient[name],rNote:unmatchedNote});
   });
 
   const ge=rows.reduce((s,r)=>s+(r.extraAmt||0),0);
