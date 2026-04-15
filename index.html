@@ -722,7 +722,7 @@ tr:hover td{background:#f8fafc}
   <div class="card">
     <div class="card-title">월별 상세 데이터</div>
     <div class="TC2"><table>
-      <thead><tr><th>월</th><th>업체수</th><th>신규</th><th>해임</th><th>기장료합</th><th>조정료합</th><th>월매출</th><th>전월대비</th><th>누적매출</th></tr></thead>
+      <thead><tr><th style="text-align:center">월</th><th style="text-align:center">업체수</th><th style="text-align:center">신규</th><th style="text-align:center">해임</th><th style="text-align:right">기장료합</th><th style="text-align:right">조정료합</th><th style="text-align:right">월매출</th><th style="text-align:right">전월대비</th><th style="text-align:right">누적매출</th></tr></thead>
       <tbody id="perfDetailTable"></tbody>
     </table></div>
   </div>
@@ -6063,16 +6063,16 @@ function renderPerformance(){
   dtb.innerHTML=monthlyDetails.map(function(d){
     var diffColor=d.diff>0?'#38a169':d.diff<0?'#e53e3e':'#64748b';
     var diffSign=d.diff>0?'+':'';
-    return '<tr><td><strong>'+d.month+'</strong></td><td>'+d.count+'</td>'
-      +'<td style="color:#38a169;font-weight:'+(d.newC?'600':'400')+'">+'+(d.newC)+'</td>'
-      +'<td style="color:#e53e3e;font-weight:'+(d.lostC?'600':'400')+'">-'+(d.lostC)+'</td>'
+    return '<tr><td style="text-align:center"><strong>'+d.month+'</strong></td><td style="text-align:center">'+d.count+'</td>'
+      +'<td style="text-align:center;color:#38a169;font-weight:'+(d.newC?'600':'400')+'">+'+(d.newC)+'</td>'
+      +'<td style="text-align:center;color:#e53e3e;font-weight:'+(d.lostC?'600':'400')+'">-'+(d.lostC)+'</td>'
       +'<td style="text-align:right">'+W(d.fee)+'</td>'
       +'<td style="text-align:right">'+W(d.adj)+'</td>'
       +'<td style="text-align:right;font-weight:600">'+W(d.total)+'</td>'
       +'<td style="text-align:right;color:'+diffColor+';font-weight:600">'+diffSign+W(d.diff)+'</td>'
       +'<td style="text-align:right;color:#1A66FF;font-weight:600">'+W(d.cum)+'</td></tr>'
   }).join('')
-  +'<tr style="background:#edf2f7;font-weight:700"><td>합계</td><td></td><td></td><td></td>'
+  +'<tr style="background:#edf2f7;font-weight:700"><td style="text-align:center">합계</td><td></td><td></td><td></td>'
   +'<td style="text-align:right">'+W(annualFee)+'</td><td></td>'
   +'<td style="text-align:right">'+W(annualFee)+'</td><td></td>'
   +'<td style="text-align:right;color:#1A66FF">'+W(annualFee)+'</td></tr>';
