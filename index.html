@@ -8102,7 +8102,7 @@ function renderBonus(){
       ['schedule','closeProg','errorShare','vatProgress','corpProgress','incomeProgress'].forEach(function(id){if(ym2Schedule.indexOf(id)!==-1&&(e2[id]||0)>0)monthSum+=({schedule:100000,closeProg:100000,errorShare:100000,vatProgress:200000,corpProgress:100000,incomeProgress:100000}[id]||0);});
     });
     yearGrand+=monthSum;
-    yearlyTable+='<td style="text-align:right;'+(ym2===month?'background:#ebf8ff;':'');+';font-weight:700">'+W(monthSum)+'</td>';
+    yearlyTable+='<td style="text-align:right;'+(ym2===month?'background:#ebf8ff;':'')+'font-weight:700">'+W(monthSum)+'</td>';
   }
   yearlyTable+='<td style="text-align:right;font-weight:700;color:#1A66FF">'+W(yearGrand)+'</td></tr>';
   yearlyTable+='</tbody></table></div>';
