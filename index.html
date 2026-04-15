@@ -6828,6 +6828,7 @@ function confirmBu2Match(){
 // ===== 2부업체 건별등록 =====
 var _bu2InvSame=true;
 function openBu2AddModal(){
+  _bu2EditIdx=-1;
   document.getElementById('bu2a_bu2client').value='';
   document.getElementById('bu2a_invclient').value='';
   document.getElementById('bu2a_amount').value='';
@@ -6836,6 +6837,8 @@ function openBu2AddModal(){
   var staffSel=document.getElementById('bu2a_staff');
   staffSel.innerHTML=data.staff.map(function(s){return '<option value="'+s.name+'">'+s.name+'</option>'}).join('');
   setBu2InvSame(true);
+  var mh=document.querySelector('#bu2AddModal .MH h2');
+  if(mh)mh.textContent='2부업체 수수료 등록';
   document.getElementById('bu2AddModal').classList.add('show');
 }
 function setBu2InvSame(same){
@@ -6854,7 +6857,7 @@ function setBu2InvSame(same){
     document.getElementById('bu2a_invclient').focus();
   }
 }
-function closeBu2AddModal(){document.getElementById('bu2AddModal').classList.remove('show')}
+function closeBu2AddModal(){_bu2EditIdx=-1;document.getElementById('bu2AddModal').classList.remove('show')}
 function bu2aSearchClient(keyword,dropId,inputId){
   var drop=document.getElementById(dropId);
   if(!keyword||keyword.length<1){drop.style.display='none';return}
@@ -6888,12 +6891,30 @@ function saveBu2Add(){
   if(!month){toast('해당월을 선택하세요');return}
   if(!data.extraInvoices)data.extraInvoices=[];
   if(!data.bonusData.redItems)data.bonusData.redItems=[];
-  var inv={type:'부가세신고수수료',client:invClient,staff:staff,amount:amount,month:month,paid:'N',date:new Date().toISOString(),bu2Client:bu2Client};
-  data.extraInvoices.push(inv);
-  data.bonusData.redItems.push({staff:staff,type:'부가세신고수수료',client:invClient,amount:amount,month:month,paid:'N',date:inv.date});
-  saveData();renderInvoice();renderBu2Fee();
-  closeBu2AddModal();
-  toast('2부업체 수수료 등록 완료');
+  if(_bu2EditIdx>=0){
+    // 수정 모드
+    var old=data.extraInvoices[_bu2EditIdx];
+    if(!old){toast('항목을 찾을 수 없습니다');return}
+    var oldDate=old.date;
+    old.staff=staff;old.client=invClient;old.amount=amount;old.month=month;old.bu2Client=bu2Client;
+    // redItems에서도 동일한 항목 찾아 업데이트
+    (data.bonusData.redItems||[]).forEach(function(r){
+      if(r.date===oldDate&&r.type==='부가세신고수수료'){
+        r.staff=staff;r.client=invClient;r.amount=amount;r.month=month;
+      }
+    });
+    saveData();renderInvoice();renderBu2Fee();
+    closeBu2AddModal();
+    toast('2부업체 수수료 수정 완료');
+  }else{
+    // 등록 모드
+    var inv={type:'부가세신고수수료',client:invClient,staff:staff,amount:amount,month:month,paid:'N',date:new Date().toISOString(),bu2Client:bu2Client};
+    data.extraInvoices.push(inv);
+    data.bonusData.redItems.push({staff:staff,type:'부가세신고수수료',client:invClient,amount:amount,month:month,paid:'N',date:inv.date});
+    saveData();renderInvoice();renderBu2Fee();
+    closeBu2AddModal();
+    toast('2부업체 수수료 등록 완료');
+  }
   // 섹션 열기
   var sec=document.getElementById('invSecBu2');
   if(sec&&sec.style.display==='none')toggleInvSection('invSecBu2');
@@ -7047,8 +7068,35 @@ function renderBu2Fee(){
       +'<option value="" '+(!isPaid&&!isUnpaid?'selected':'')+'>미구분</option>'
       +'<option value="Y" '+(isPaid?'selected':'')+'>입금완료</option>'
       +'<option value="N" '+(isUnpaid?'selected':'')+'>미입금</option></select>';
-    return '<tr><td>'+(i+1)+'</td><td>'+e.staff+'</td><td>'+(e.bu2Client||'-')+'</td><td style="text-align:right">'+W(e.amount)+'</td><td>'+e.client+'</td><td style="text-align:center">'+paidBadge+'</td><td>'+dateStr+'</td><td><button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+');renderBu2Fee()">삭제</button></td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+e.staff+'</td><td>'+(e.bu2Client||'-')+'</td><td style="text-align:right">'+W(e.amount)+'</td><td>'+e.client+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td style="white-space:nowrap"><button class="btn btn-xs btn-primary" onclick="editBu2Fee('+realIdx+')" style="margin-right:3px">수정</button><button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+');renderBu2Fee()">삭제</button></td></tr>';
   }).join('');
+}
+
+// 2부업체 수수료 수정
+var _bu2EditIdx=-1;
+function editBu2Fee(idx){
+  if(!canEdit()){toast('🔒 수정 권한이 없습니다');return}
+  var e=data.extraInvoices[idx];
+  if(!e){toast('항목을 찾을 수 없습니다');return}
+  _bu2EditIdx=idx;
+  // 담당자 드롭다운 채우기
+  var staffSel=document.getElementById('bu2a_staff');
+  staffSel.innerHTML=data.staff.map(function(s){return '<option value="'+s.name+'">'+s.name+'</option>'}).join('');
+  staffSel.value=e.staff||'';
+  document.getElementById('bu2a_bu2client').value=e.bu2Client||'';
+  document.getElementById('bu2a_amount').value=e.amount||0;
+  document.getElementById('bu2a_month').value=e.month||'';
+  // 세금계산서 발행업체 (2부업체명과 다른 경우)
+  if(e.client&&e.client!==e.bu2Client){
+    setBu2InvSame(false);
+    document.getElementById('bu2a_invclient').value=e.client;
+  }else{
+    setBu2InvSame(true);
+  }
+  // 모달 제목 변경
+  var mh=document.querySelector('#bu2AddModal .MH h2');
+  if(mh)mh.textContent='2부업체 수수료 수정';
+  document.getElementById('bu2AddModal').classList.add('show');
 }
 
 // 2부업체 누락 확인
