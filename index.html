@@ -6978,18 +6978,21 @@ function renderRetroInvoices(monthParam){
   if(!month){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#a0aec0">조회월 선택</td></tr>';return}
   var active=data.clients.filter(function(c){return c.retroFee&&c.retroMonths&&(c.retroApply==='해당'||(c.retroFee>0&&c.retroMonths>0&&!c.retroApply))});
   if(!active.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#a0aec0">소급기장료 대상 없음</td></tr>';return}
-  var totalAmt=0;var matchCount=0;
-  var rows=active.map(function(c,i){
+  // 조회월에 해당하는 업체만 필터링
+  var monthOnly=active.filter(function(c){
+    var rbm=(c.retroBillingMonth&&c.retroBillingMonth.trim())||(c.billingStart&&c.billingStart.trim())||(c.startMonth&&c.startMonth.trim())||'';
+    return rbm===month;
+  });
+  if(!monthOnly.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#a0aec0">'+month+' 해당 소급기장료 없음</td></tr>';return}
+  var totalAmt=0;
+  var rows=monthOnly.map(function(c,i){
     var fee=Number(c.retroFee)||0;
     var months=Number(c.retroMonths)||0;
     var total=fee*months;
     var rbm=(c.retroBillingMonth&&c.retroBillingMonth.trim())||(c.billingStart&&c.billingStart.trim())||(c.startMonth&&c.startMonth.trim())||'';
-    var isMatch=rbm===month;
-    if(isMatch){totalAmt+=total;matchCount++}
-    var statusBadge=isMatch
-      ?'<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#c6f6d5;color:#276749">반영</span>'
-      :'<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#e2e8f0;color:#718096">'+(rbm?rbm:'미지정')+'</span>';
-    return '<tr style="'+(isMatch?'background:#fffff0':'')+'">'
+    totalAmt+=total;
+    var statusBadge='<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#c6f6d5;color:#276749">반영</span>';
+    return '<tr style="background:#fffff0">'
       +'<td>'+(i+1)+'</td>'
       +'<td style="cursor:pointer;color:#3182ce;font-weight:600" onclick="showDetail(\''+c.id+'\')">'+c.name+'</td>'
       +'<td>'+(c.ownerName||'-')+'</td>'
