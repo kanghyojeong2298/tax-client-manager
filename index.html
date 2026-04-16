@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script async src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script id="jspdfScript" async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -1739,12 +1740,18 @@ function saveData(){
 function _autoBackupToFirestore(){
   var now=new Date();
   var docId=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0');
-  db.collection('backups').doc(docId).set({
-    data:JSON.stringify(data),
+  var rawJson=JSON.stringify(data);
+  var compressed=_compressData(data);
+  var useCompressed=compressed&&compressed.length<rawJson.length;
+  var payload={
     createdAt:firebase.firestore.FieldValue.serverTimestamp(),
     createdBy:auth.currentUser?auth.currentUser.email:'',
-    clientCount:data.clients?data.clients.length:0
-  }).then(function(){
+    clientCount:data.clients?data.clients.length:0,
+    compressed:useCompressed
+  };
+  if(useCompressed){payload.dataZ=compressed;}
+  else{payload.data=rawJson;}
+  db.collection('backups').doc(docId).set(payload).then(function(){
     console.log('자동 백업 저장: backups/'+docId);
     // 7일 이전 백업 자동 삭제 (최근 168개 유지)
     _cleanOldBackups();
@@ -1757,15 +1764,35 @@ function _cleanOldBackups(){
     if(snap.size>0)console.log('오래된 백업 '+snap.size+'건 삭제');
   }).catch(function(e){console.error('백업 정리 실패:',e)});
 }
+function _compressData(obj){
+  try{
+    if(typeof LZString==='undefined')return null;
+    return LZString.compressToUTF16(JSON.stringify(obj));
+  }catch(e){return null}
+}
+function _decompressData(str){
+  try{
+    if(typeof LZString==='undefined')return null;
+    var json=LZString.decompressFromUTF16(str);
+    if(!json)return null;
+    return JSON.parse(json);
+  }catch(e){return null}
+}
 function _saveToFirestore(attempt){
   var maxRetry=3;
-  db.collection('shared').doc('main').set({
-    data: JSON.stringify(data),
+  var rawJson=JSON.stringify(data);
+  var compressed=_compressData(data);
+  var useCompressed=compressed&&compressed.length<rawJson.length;
+  var payload={
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy: auth.currentUser?auth.currentUser.email:'',
     localTimestamp: _lastLocalSave,
-    sessionId: _sessionId
-  }).then(function(){
+    sessionId: _sessionId,
+    compressed: useCompressed
+  };
+  if(useCompressed){payload.dataZ=compressed;}
+  else{payload.data=rawJson;}
+  db.collection('shared').doc('main').set(payload).then(function(){
     if(attempt>0)toast('✅ 클라우드 저장 성공 (재시도 '+attempt+'회)');
     // 저장 완료 후 2초 뒤 suppress 해제 (그 전에 오는 snapshot은 내 저장 반영 이벤트)
     setTimeout(function(){_suppressRemote=false},2000);
@@ -1787,12 +1814,14 @@ function setupRealtimeSync(){
   _realtimeUnsub=db.collection('shared').doc('main').onSnapshot(function(doc){
     if(!doc.exists)return;
     var dd=doc.data();
-    if(!dd||!dd.data)return;
+    if(!dd||(!dd.data&&!dd.dataZ))return;
     // 내가 방금 저장한 이벤트면 무시
     if(dd.sessionId===_sessionId)return;
     if(_suppressRemote)return;
     try{
-      var remote=JSON.parse(dd.data);
+      var remote;
+      if(dd.compressed&&dd.dataZ){remote=_decompressData(dd.dataZ);}
+      else if(dd.data){remote=JSON.parse(dd.data);}
       if(!remote||!remote.clients)return;
       // 원격 타임스탬프가 현재 로컬보다 낮으면 무시 (구버전 덮어쓰기 방지)
       var remoteTs=dd.localTimestamp||0;
@@ -2137,16 +2166,34 @@ async function loadFromFirestore(){
   try{
     var sharedDoc = await db.collection('shared').doc('main').get();
     if(sharedDoc.exists){
-      var d = JSON.parse(sharedDoc.data().data);
+      var sd=sharedDoc.data();
+      var d;
+      if(sd.compressed&&sd.dataZ){d=_decompressData(sd.dataZ);}
+      else if(sd.data){d=JSON.parse(sd.data);}
+      if(!d){throw new Error('원격 데이터 파싱 실패')}
       if(d && d.clients){
         // localStorage가 Firestore보다 최신이면 Firestore를 업데이트하고 로컬 유지
         var localTs=data._localTimestamp||0;
         var remoteTs=sharedDoc.data().localTimestamp||0;
-        if(localTs>remoteTs && data.clients && data.clients.length>0){
-          console.log('로컬 데이터가 더 최신입니다 (local:'+localTs+' > remote:'+remoteTs+'). Firestore에 로컬 데이터 저장.');
+        var localCnt=(data.clients&&data.clients.length)||0;
+        var remoteCnt=(d.clients&&d.clients.length)||0;
+        // 데이터 손실 방지: 로컬이 더 최신이더라도 원격 대비 clients가 절반 미만이면 원격 사용
+        if(localTs>remoteTs && localCnt>0 && localCnt>=remoteCnt*0.5){
+          console.log('로컬 데이터가 더 최신입니다 (local:'+localTs+'/'+localCnt+'건 > remote:'+remoteTs+'/'+remoteCnt+'건). Firestore에 로컬 데이터 저장.');
           _saveToFirestore(0);
           refreshAll();
           toast('로컬 데이터가 더 최신 → 클라우드에 동기화');
+        }else if(localTs>remoteTs && localCnt<remoteCnt*0.5){
+          console.warn('⚠️ 로컬 타임스탬프가 더 크지만 업체수 현저히 적음 (local:'+localCnt+' vs remote:'+remoteCnt+') — 원격 데이터 사용');
+          toast('⚠️ 로컬 데이터 이상 감지 — 클라우드 데이터로 복구','error');
+          data=migrate(d);
+          if(!data.closingData)data.closingData={};
+          if(!data.activityLog)data.activityLog=[];
+          if(!data.consultations)data.consultations=[];
+          if(!data.emailRoles)data.emailRoles={};
+          runChecklistMigration();runChecklistMigration2();runChecklistMigration3();runChecklistMigration4();
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+          refreshAll();
         }else{
           data = migrate(d);
           if(!data.closingData) data.closingData={};
@@ -2189,14 +2236,25 @@ async function loadFromFirestore(){
           toast('기존 데이터를 공유 저장소로 이전 완료!');
         }
       } else {
-        // 어디에도 없으면 현재 localStorage 저장
-        saveData();
-        toast('로컬 데이터를 클라우드에 저장했습니다');
+        // 어디에도 없으면 현재 localStorage 저장 — 단, 로컬이 비어있으면 빈 데이터로 덮어쓰지 않음
+        if(data.clients&&data.clients.length>0){
+          saveData();
+          toast('로컬 데이터를 클라우드에 저장했습니다');
+        }else{
+          toast('⚠️ 원격에 데이터 없음 — 관리자에게 문의하세요','error');
+        }
       }
     }
     // 초기 로드 후 실시간 동기화 활성화
     setupRealtimeSync();
-  }catch(e){console.error('Firestore load error:',e);toast('⚠️ 데이터 로드 실패: '+e.message)}
+  }catch(e){
+    console.error('Firestore load error:',e);
+    if(e.code==='permission-denied'||/permission/i.test(e.message||'')){
+      toast('⚠️ 데이터 접근 권한 없음 — 관리자에게 계정 권한 확인 요청','error');
+    }else{
+      toast('⚠️ 데이터 로드 실패: '+e.message,'error');
+    }
+  }
 }
 
 // 허용된 이메일 목록 (Firestore 공용 컬렉션 + 로컬 기본값)
