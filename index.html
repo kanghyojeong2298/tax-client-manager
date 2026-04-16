@@ -1717,12 +1717,17 @@ function loadData(){
 var _lastLocalSave=0;
 var _lastAutoBackup=0;
 var AUTO_BACKUP_INTERVAL=60*60*1000; // 1시간
+// 실시간 동기화용 세션 ID (탭마다 고유)
+var _sessionId=(Math.random().toString(36).slice(2)+Date.now().toString(36));
+var _realtimeUnsub=null;// onSnapshot 해제 함수
+var _suppressRemote=false;// 내가 방금 저장한 직후 자기 자신의 원격 이벤트 무시
 function saveData(){
   _lastLocalSave=Date.now();
   data._localTimestamp=_lastLocalSave;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   // Also save to Firestore (shared for all users) with retry
   if(auth.currentUser){
+    _suppressRemote=true;
     _saveToFirestore(0);
     // 1시간마다 자동 백업 스냅샷
     if(_lastLocalSave-_lastAutoBackup>AUTO_BACKUP_INTERVAL && data.clients && data.clients.length>0){
@@ -1758,17 +1763,53 @@ function _saveToFirestore(attempt){
     data: JSON.stringify(data),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy: auth.currentUser?auth.currentUser.email:'',
-    localTimestamp: _lastLocalSave
+    localTimestamp: _lastLocalSave,
+    sessionId: _sessionId
   }).then(function(){
     if(attempt>0)toast('✅ 클라우드 저장 성공 (재시도 '+attempt+'회)');
+    // 저장 완료 후 2초 뒤 suppress 해제 (그 전에 오는 snapshot은 내 저장 반영 이벤트)
+    setTimeout(function(){_suppressRemote=false},2000);
   }).catch(function(e){
     console.error('Firestore save error (attempt '+(attempt+1)+'):',e);
+    _suppressRemote=false;
     if(attempt<maxRetry-1){
       setTimeout(function(){_saveToFirestore(attempt+1)},2000*(attempt+1));
     }else{
       toast('⚠️ 클라우드 저장 실패 (3회 시도) — 네트워크 확인 후 수동 저장 필요','error');
     }
   });
+}
+
+// 실시간 동기화: 다른 탭/브라우저의 변경사항을 감지
+function setupRealtimeSync(){
+  if(_realtimeUnsub){try{_realtimeUnsub()}catch(e){}}
+  if(!auth.currentUser){_realtimeUnsub=null;return}
+  _realtimeUnsub=db.collection('shared').doc('main').onSnapshot(function(doc){
+    if(!doc.exists)return;
+    var dd=doc.data();
+    if(!dd||!dd.data)return;
+    // 내가 방금 저장한 이벤트면 무시
+    if(dd.sessionId===_sessionId)return;
+    if(_suppressRemote)return;
+    try{
+      var remote=JSON.parse(dd.data);
+      if(!remote||!remote.clients)return;
+      // 원격 타임스탬프가 현재 로컬보다 낮으면 무시 (구버전 덮어쓰기 방지)
+      var remoteTs=dd.localTimestamp||0;
+      var localTs=data._localTimestamp||0;
+      if(remoteTs<=localTs)return;
+      // 변경 적용
+      data=migrate(remote);
+      if(!data.closingData)data.closingData={};
+      if(!data.activityLog)data.activityLog=[];
+      if(!data.consultations)data.consultations=[];
+      if(!data.emailRoles)data.emailRoles={};
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+      refreshAll();
+      var who=dd.updatedBy||'다른 사용자';
+      toast('🔄 '+who+'의 변경사항 동기화됨');
+    }catch(e){console.error('실시간 동기화 오류:',e)}
+  },function(e){console.error('실시간 동기화 리스너 오류:',e)});
 }
 let data=loadData();
 if(!data.activityLog)data.activityLog=[];
@@ -2153,6 +2194,8 @@ async function loadFromFirestore(){
         toast('로컬 데이터를 클라우드에 저장했습니다');
       }
     }
+    // 초기 로드 후 실시간 동기화 활성화
+    setupRealtimeSync();
   }catch(e){console.error('Firestore load error:',e);toast('⚠️ 데이터 로드 실패: '+e.message)}
 }
 
@@ -2242,6 +2285,7 @@ function doResetPassword(){
 }
 
 function doLogout(){
+  if(_realtimeUnsub){try{_realtimeUnsub()}catch(e){}_realtimeUnsub=null;}
   auth.signOut();
 }
 
