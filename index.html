@@ -1637,6 +1637,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// WebSocket/WebChannel이 차단되는 네트워크 환경에서 HTTP 롱폴링으로 자동 전환
+try{db.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){console.warn('Firestore long-polling 설정 실패:',e)}
 
 const STORAGE_KEY='taxfirm_v5';
 
@@ -1816,10 +1818,13 @@ function _saveToFirestore(attempt){
 }
 
 // 실시간 동기화: 다른 탭/브라우저의 변경사항을 감지
+var _realtimeErrorCount=0;
 function setupRealtimeSync(){
   if(_realtimeUnsub){try{_realtimeUnsub()}catch(e){}}
   if(!auth.currentUser){_realtimeUnsub=null;return}
+  _realtimeErrorCount=0;
   _realtimeUnsub=db.collection('shared').doc('main').onSnapshot(function(doc){
+    _realtimeErrorCount=0;// 성공 시 카운터 리셋
     if(!doc.exists)return;
     var dd=doc.data();
     if(!dd||(!dd.data&&!dd.dataZ))return;
@@ -1846,7 +1851,19 @@ function setupRealtimeSync(){
       var who=dd.updatedBy||'다른 사용자';
       toast('🔄 '+who+'의 변경사항 동기화됨');
     }catch(e){console.error('실시간 동기화 오류:',e)}
-  },function(e){console.error('실시간 동기화 리스너 오류:',e)});
+  },function(e){
+    _realtimeErrorCount++;
+    // 연속 3회 이상 실패하면 실시간 동기화 자동 비활성화 (네트워크 불안정 대응)
+    if(_realtimeErrorCount>=3){
+      console.warn('실시간 동기화 연속 실패 — 비활성화. 저장/로드는 여전히 동작합니다.');
+      if(_realtimeUnsub){try{_realtimeUnsub()}catch(er){}_realtimeUnsub=null;}
+      toast('⚠️ 실시간 동기화 비활성화 (네트워크 불안정) — 저장은 정상','error');
+      // 30초 후 재시도
+      setTimeout(function(){if(auth.currentUser)setupRealtimeSync()},30000);
+    }else{
+      console.log('실시간 동기화 일시 오류 ('+_realtimeErrorCount+'/3):',e.message);
+    }
+  });
 }
 let data=loadData();
 if(!data.activityLog)data.activityLog=[];
