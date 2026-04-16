@@ -1755,14 +1755,22 @@ function _autoBackupToFirestore(){
     console.log('자동 백업 저장: backups/'+docId);
     // 7일 이전 백업 자동 삭제 (최근 168개 유지)
     _cleanOldBackups();
-  }).catch(function(e){console.error('자동 백업 실패:',e)});
+  }).catch(function(e){
+    if(e.code==='permission-denied'||/permission/i.test(e.message||'')){
+      console.log('자동 백업 건너뜀 — Firestore backups 컬렉션 권한 미설정 (선택 기능)');
+    }else{
+      console.error('자동 백업 실패:',e);
+    }
+  });
 }
 function _cleanOldBackups(){
   var cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);
   db.collection('backups').where('createdAt','<',cutoff).get().then(function(snap){
     snap.forEach(function(doc){doc.ref.delete()});
     if(snap.size>0)console.log('오래된 백업 '+snap.size+'건 삭제');
-  }).catch(function(e){console.error('백업 정리 실패:',e)});
+  }).catch(function(e){
+    if(!/permission/i.test(e.message||''))console.error('백업 정리 실패:',e);
+  });
 }
 function _compressData(obj){
   try{
