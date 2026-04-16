@@ -2208,8 +2208,10 @@ var sharedAdminEmails=null;
 var sharedEmailRoles=null;
 
 // 페이지 로드 시 공용 허용 이메일 목록 불러오기
+var _emailsUnsub=null;// 이메일 설정 실시간 리스너
 function loadSharedEmails(){
-  return db.collection('config').doc('allowedEmails').get().then(function(doc){
+  // 초기 한 번 로드
+  var p=db.collection('config').doc('allowedEmails').get().then(function(doc){
     if(doc.exists){
       var d=doc.data();
       if(d.emails&&d.emails.length)sharedAllowedEmails=d.emails;
@@ -2217,6 +2219,39 @@ function loadSharedEmails(){
       if(d.roles)sharedEmailRoles=d.roles;
     }
   }).catch(function(e){console.log('공용 이메일 목록 로드 실패 (초기 세팅 필요):',e.message)});
+  // 실시간 리스너 설정 (이미 있으면 건너뜀)
+  if(!_emailsUnsub){
+    _emailsUnsub=db.collection('config').doc('allowedEmails').onSnapshot(function(doc){
+      if(!doc.exists)return;
+      var d=doc.data();
+      var changed=false;
+      if(d.emails&&d.emails.length){
+        var prev=JSON.stringify(sharedAllowedEmails||[]);
+        if(prev!==JSON.stringify(d.emails)){sharedAllowedEmails=d.emails;changed=true;}
+      }
+      if(d.admins&&d.admins.length){
+        var prevA=JSON.stringify(sharedAdminEmails||[]);
+        if(prevA!==JSON.stringify(d.admins)){sharedAdminEmails=d.admins;changed=true;}
+      }
+      if(d.roles){
+        var prevR=JSON.stringify(sharedEmailRoles||{});
+        if(prevR!==JSON.stringify(d.roles)){sharedEmailRoles=d.roles;changed=true;}
+      }
+      // 현재 로그인 상태이고 이메일 관리 화면이 열려있으면 목록 다시 렌더
+      if(changed&&auth.currentUser){
+        if(typeof renderAllowedEmails==='function'){
+          try{renderAllowedEmails()}catch(e){}
+        }
+        // data.allowedEmails/adminEmails/emailRoles도 최신으로 동기화 (저장은 안 함)
+        if(data){
+          if(sharedAllowedEmails)data.allowedEmails=sharedAllowedEmails.slice();
+          if(sharedAdminEmails)data.adminEmails=sharedAdminEmails.slice();
+          if(sharedEmailRoles)data.emailRoles=JSON.parse(JSON.stringify(sharedEmailRoles));
+        }
+      }
+    },function(e){console.error('이메일 목록 실시간 동기화 오류:',e)});
+  }
+  return p;
 }
 // 공용 허용 이메일 저장 (관리자만)
 function saveSharedEmails(){
@@ -2286,6 +2321,7 @@ function doResetPassword(){
 
 function doLogout(){
   if(_realtimeUnsub){try{_realtimeUnsub()}catch(e){}_realtimeUnsub=null;}
+  if(_emailsUnsub){try{_emailsUnsub()}catch(e){}_emailsUnsub=null;}
   auth.signOut();
 }
 
