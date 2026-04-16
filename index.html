@@ -1637,8 +1637,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-// WebSocket/WebChannel이 차단되는 네트워크 환경에서 HTTP 롱폴링으로 자동 전환
-try{db.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){console.warn('Firestore long-polling 설정 실패:',e)}
+// WebSocket/WebChannel이 차단되는 네트워크 환경에서 HTTP 롱폴링 강제
+// 일반 HTTP 요청으로 동작 → 대부분의 방화벽/프록시 통과 가능
+try{db.settings({experimentalForceLongPolling:true,merge:true});console.log('Firestore long-polling 모드 활성화');}catch(e){console.warn('Firestore long-polling 설정 실패:',e)}
 
 const STORAGE_KEY='taxfirm_v5';
 
