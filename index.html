@@ -5644,7 +5644,48 @@ function bulkDeleteClients(){
     var idx=data.clients.findIndex(function(x){return x.id===id});
     if(idx>=0)data.clients.splice(idx,1);
   });
+  reindexClientIds();
   saveData();selectedClients.clear();updateBulkBar();refreshAll();toast(names.length+'개 업체 삭제 완료');
+}
+
+// 업체 삭제 후 번호 재정렬 (1부→1-1,1-2..., 2부→2-1,2-2..., 3부→3-1,3-2...)
+function reindexClientIds(){
+  var prefixMap={'1부':'1','2부':'2','3부':'3'};
+  var counters={'1부':0,'2부':0,'3부':0};
+  // 유형별로 현재 순서대로 재번호
+  data.clients.forEach(function(c){
+    var t=c.type||'1부';
+    var prefix=prefixMap[t]||'1';
+    counters[t]=(counters[t]||0)+1;
+    var oldId=c.id;
+    var newId=prefix+'-'+counters[t];
+    if(oldId!==newId){
+      // closingData 키 업데이트
+      if(data.closingData){
+        var cdKeys=Object.keys(data.closingData);
+        cdKeys.forEach(function(k){
+          if(k.indexOf(oldId+'_')===0){
+            var newKey=newId+k.slice(oldId.length);
+            data.closingData[newKey]=data.closingData[k];
+            delete data.closingData[k];
+          }
+        });
+      }
+      // activityLog clientId 업데이트
+      if(data.activityLog){
+        data.activityLog.forEach(function(l){if(l.clientId===oldId)l.clientId=newId});
+      }
+      // referrals clientId 업데이트
+      if(data.referrals){
+        data.referrals.forEach(function(r){if(r.clientId===oldId)r.clientId=newId});
+      }
+      c.id=newId;
+    }
+  });
+  // counters 동기화
+  data.counters['1부']=counters['1부'];
+  data.counters['2부']=counters['2부'];
+  data.counters['3부']=counters['3부'];
 }
 function bulkChangeManager(){
   if(!canEdit()){toast('🔒 권한이 없습니다');return}
