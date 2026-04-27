@@ -7430,8 +7430,8 @@ var BONUS_ITEMS={
   incomeProgress:{name:'소득세진도율',lv:'blue',basis:'진도율',auto:false},
   referral:{name:'소개왕',lv:'blue',basis:'유지',auto:true},
   extReferral:{name:'외부소개 상여',lv:'orange',basis:'3/6/9개월차',auto:true},
-  consultant:{name:'최종상담자 상여',lv:'black',basis:'분기',auto:true},
-  firstConsultBonus:{name:'1차상담 계약건수',lv:'purple',basis:'분기(10건당10만)',auto:true},
+  consultant:{name:'2차상담자 상여',lv:'black',basis:'계약월',auto:true},
+  firstConsultBonus:{name:'1차상담 보너스(2차:강효정)',lv:'purple',basis:'분기(10건당10만)',auto:true},
   firstConsultClawback:{name:'1차상담 환수(1년미만)',lv:'purple',basis:'분기',auto:true},
   instaBonus:{name:'인스타출연 보너스',lv:'pink',basis:'조회수',auto:true}
 };
@@ -7618,74 +7618,118 @@ function calcAutoBonus(staffName,year,month){
     });
   });
   result.extReferral=extRefTotal;result.extRefDetails=extRefDetails;
-  // 최종상담자 상여 (분기말 월) - 경영지원팀 전용
-  var consultantDetails=[];
-  if([3,6,9,12].indexOf(month)!==-1&&staffObj&&staffObj.team==='경영지원팀'){
-    var cTotal=0;
-    ac.filter(function(c){return c.finalConsultant===staffName}).forEach(function(c){
-      var bs=c.billingStart||c.startMonth||'';
-      if(!bs||bs>ym)return;
-      var fee=getEffectiveFee(c,ym);
-      var reason='기장료 '+W(fee);
-      if(c.status!=='활성'){
-        var sm=c.contractDate||c.startMonth||'';var dm=c.dismissDate||'';
-        if(sm&&dm){var sd2=new Date(sm);var dd2=new Date(dm);if((dd2-sd2)<365*24*60*60*1000){var origFee=fee;fee=Math.round(fee*0.5);reason='기장료 '+W(origFee)+' → 1년미만 50% 적용';}}
-      }
-      cTotal+=fee;
-      consultantDetails.push({client:c.name,fee:getCurrentFee(c),amount:fee,reason:reason});
-    });
-    result.consultant=cTotal;
-  }
-  result.consultantDetails=consultantDetails;
-  // 1차 상담자 보너스 (분기말: 3,6,9,12월)
-  // 해당 분기 신규 계약건 중 firstConsultant가 staffName인 건수 → 10건당 100,000원
+  // 2차상담자 상여 — 상담관리에서 계약완료(Y)된 건의 2차상담자에게 1개월 기장료, 계약월에 반영
   // 1년 미만 해임 시 50% 환수
+  var consultantDetails=[];
+  var conBonusTotal=0;var conClawbackTotal=0;
+  if(staffObj&&staffObj.team==='경영지원팀'){
+    var consultations=data.consultations||[];
+    // 계약완료된 상담 중 2차상담자가 staffName인 건
+    consultations.filter(function(cs){
+      return cs.contracted==='Y'&&cs.counselor2===staffName;
+    }).forEach(function(cs){
+      var contractYM=(cs.contractDate||'').slice(0,7);
+      if(!contractYM||contractYM!==ym)return;
+      // 매칭되는 업체 찾기 (성함 기준)
+      var matched=data.clients.find(function(c){return normalizeName(c.ownerName)===normalizeName(cs.name)||normalizeName(c.name)===normalizeName(cs.name)});
+      var fee=matched?getCurrentFee(matched):(cs.expectedFee||0);
+      var amount=fee;
+      var reason='계약월 '+contractYM+' · 기장료 '+W(fee);
+      // 해임 체크: 1년 미만 해임 시 50% 환수
+      if(matched&&matched.status==='해임'){
+        var sm=matched.contractDate||matched.startMonth||cs.contractDate||'';
+        var dm=matched.dismissDate||'';
+        if(sm&&dm){
+          var sd2=new Date(sm);var dd2=new Date(dm);
+          if((dd2-sd2)<365*24*60*60*1000){
+            var clawbackAmt=Math.round(fee*0.5);
+            conClawbackTotal+=clawbackAmt;
+            var months=Math.round((dd2-sd2)/(30*24*60*60*1000));
+            consultantDetails.push({client:cs.name+(matched?' ('+matched.name+')':''),fee:fee,amount:-clawbackAmt,reason:'환수: 1년미만 해임 ('+months+'개월 유지, 해임 '+(dm||'-')+')',isClawback:true});
+          }
+        }
+      }
+      conBonusTotal+=amount;
+      consultantDetails.push({client:cs.name+(matched?' ('+matched.name+')':''),fee:fee,amount:amount,reason:reason,isClawback:false});
+    });
+    // 이전 계약건 중 이번 월에 해임된 건도 환수 체크 (계약월이 아닌 해임월에 환수 반영)
+    consultations.filter(function(cs){
+      return cs.contracted==='Y'&&cs.counselor2===staffName;
+    }).forEach(function(cs){
+      var contractYM=(cs.contractDate||'').slice(0,7);
+      if(!contractYM||contractYM===ym)return; // 이번달 계약건은 위에서 이미 처리
+      var matched=data.clients.find(function(c){return normalizeName(c.ownerName)===normalizeName(cs.name)||normalizeName(c.name)===normalizeName(cs.name)});
+      if(!matched||matched.status!=='해임')return;
+      var dm=(matched.dismissDate||'').slice(0,7);
+      if(dm!==ym)return; // 해임월이 이번달이 아니면 스킵
+      var sm=matched.contractDate||matched.startMonth||cs.contractDate||'';
+      if(!sm)return;
+      var sd2=new Date(sm);var dd2=new Date(matched.dismissDate);
+      if((dd2-sd2)<365*24*60*60*1000){
+        var fee=matched?getCurrentFee(matched):(cs.expectedFee||0);
+        var clawbackAmt=Math.round(fee*0.5);
+        conClawbackTotal+=clawbackAmt;
+        var months=Math.round((dd2-sd2)/(30*24*60*60*1000));
+        consultantDetails.push({client:cs.name+(matched?' ('+matched.name+')':''),fee:fee,amount:-clawbackAmt,reason:'환수: 1년미만 해임 ('+months+'개월 유지, 계약 '+contractYM+', 해임 '+dm+')',isClawback:true});
+      }
+    });
+  }
+  result.consultant=conBonusTotal;
+  result.consultantClawback=conClawbackTotal;
+  result.consultantNet=conBonusTotal-conClawbackTotal;
+  result.consultantDetails=consultantDetails;
+
+  // 1차 상담자 보너스 (분기말: 3,6,9,12월) — 경영지원팀 전용
+  // 2차상담자가 '강효정'인 계약완료 건에서, 1차상담자가 staffName인 건수 → 10건당 100,000원
   var firstConsultBonus=0;var firstConsultClawback=0;var fcContractDetails=[];var fcClawbackDetails=[];
+  var firstConsultCount=0;
   if([3,6,9,12].indexOf(month)!==-1&&staffObj&&staffObj.team==='경영지원팀'){
     var qStartM=month-2;var qStartY=year;
     if(qStartM<=0){qStartM+=12;qStartY--;}
     var qStart=qStartY+'-'+(qStartM<10?'0'+qStartM:qStartM);
     var qEnd=ym;
-    var qContracts=data.clients.filter(function(c){
-      if(c.firstConsultant!==staffName)return false;
-      var cd=c.contractDate||c.startMonth||'';
-      return cd>=qStart&&cd<=qEnd+'-31';
+    var consultations=data.consultations||[];
+    // 해당 분기 계약완료 + 2차상담자가 강효정 + 1차상담자가 staffName
+    var qContracts=consultations.filter(function(cs){
+      if(cs.contracted!=='Y')return false;
+      if(cs.counselor1!==staffName)return false;
+      if(cs.counselor2!=='강효정')return false;
+      var cd=(cs.contractDate||'').slice(0,7);
+      return cd>=qStart&&cd<=qEnd;
     });
-    var contractCount=qContracts.length;
-    firstConsultBonus=Math.floor(contractCount/10)*100000;
-    qContracts.forEach(function(c){
-      fcContractDetails.push({client:c.name,fee:getCurrentFee(c),reason:'계약일 '+(c.contractDate||c.startMonth||'-')});
+    firstConsultCount=qContracts.length;
+    firstConsultBonus=Math.floor(firstConsultCount/10)*100000;
+    qContracts.forEach(function(cs){
+      var matched=data.clients.find(function(c){return normalizeName(c.ownerName)===normalizeName(cs.name)||normalizeName(c.name)===normalizeName(cs.name)});
+      fcContractDetails.push({client:cs.name,fee:matched?getCurrentFee(matched):(cs.expectedFee||0),reason:'계약일 '+(cs.contractDate||'-')+' (2차: 강효정)'});
     });
-    data.clients.filter(function(c){
-      return c.status==='해임'&&c.firstConsultant===staffName;
-    }).forEach(function(c){
-      var cd=c.contractDate||c.startMonth||'';var dd=c.dismissDate||'';
+    // 환수: 해당 분기에 해임된 건 중 1년미만 + 1차상담자가 staffName + 2차가 강효정
+    consultations.filter(function(cs){
+      if(cs.contracted!=='Y')return false;
+      if(cs.counselor1!==staffName)return false;
+      if(cs.counselor2!=='강효정')return false;
+      var matched=data.clients.find(function(c){return normalizeName(c.ownerName)===normalizeName(cs.name)||normalizeName(c.name)===normalizeName(cs.name)});
+      if(!matched||matched.status!=='해임')return false;
+      var dm=(matched.dismissDate||'').slice(0,7);
+      return dm>=qStart&&dm<=qEnd;
+    }).forEach(function(cs){
+      var matched=data.clients.find(function(c){return normalizeName(c.ownerName)===normalizeName(cs.name)||normalizeName(c.name)===normalizeName(cs.name)});
+      var cd=matched.contractDate||matched.startMonth||cs.contractDate||'';
+      var dd=matched.dismissDate||'';
       if(!cd||!dd)return;
-      var dym=dd.slice(0,7);
-      if(dym>=qStart&&dym<=qEnd){
-        var startD=new Date(cd);var dismissD=new Date(dd);
-        if(dismissD-startD<365*24*60*60*1000){
-          firstConsultClawback+=5000;
-          var months=Math.round((dismissD-startD)/(30*24*60*60*1000));
-          fcClawbackDetails.push({client:c.name,fee:getCurrentFee(c),amount:-5000,reason:'1년미만 해임 ('+months+'개월 유지, 해임월 '+dd+')'});
-        }
+      var startD=new Date(cd);var dismissD=new Date(dd);
+      if(dismissD-startD<365*24*60*60*1000){
+        var clawAmt=Math.round(100000/10*0.5); // 건당 1만원의 50% = 5천원
+        firstConsultClawback+=clawAmt;
+        var months=Math.round((dismissD-startD)/(30*24*60*60*1000));
+        fcClawbackDetails.push({client:cs.name,fee:matched?getCurrentFee(matched):0,amount:-clawAmt,reason:'1년미만 해임 ('+months+'개월 유지, 해임 '+dd+')'});
       }
     });
   }
   result.firstConsultBonus=firstConsultBonus;
   result.firstConsultClawback=firstConsultClawback;
   result.fcContractDetails=fcContractDetails;result.fcClawbackDetails=fcClawbackDetails;
-  result.firstConsultCount=([3,6,9,12].indexOf(month)!==-1&&staffObj&&staffObj.team==='경영지원팀')?(function(){
-    var qStartM=month-2;var qStartY=year;
-    if(qStartM<=0){qStartM+=12;qStartY--;}
-    var qStart=qStartY+'-'+(qStartM<10?'0'+qStartM:qStartM);
-    var qEnd=ym;
-    return data.clients.filter(function(c){
-      if(c.firstConsultant!==staffName)return false;
-      var cd=c.contractDate||c.startMonth||'';
-      return cd>=qStart&&cd<=qEnd+'-31';
-    }).length;
-  })():0;
+  result.firstConsultCount=firstConsultCount;
   // 인스타출연 보너스 (경영지원팀 전용 - bonusData에서 수동입력)
   var instaBonus=0;
   if(staffObj&&staffObj.team==='경영지원팀'&&staffObj.instaCreator){
@@ -7954,17 +7998,17 @@ function renderBonus(){
     refExtTable+='</tbody></table>';
     itemsHTML+=makeSection('소개 상여 통합','#38a169','<div style="font-size:11px;color:#64748b;margin-bottom:8px">'+refSubtext+'</div><div class="TC2">'+refExtTable+'</div>',false);
   }
-  // 그룹 1-3/1-4: 최종상담자 + 1차상담자 (경영지원팀만, 통합)
+  // 그룹 1-3/1-4: 2차상담자 상여 + 1차상담자 보너스 (경영지원팀만, 통합)
   var bizStaffConsult=data.staff.filter(function(s){return s.team==='경영지원팀'&&isStaffActiveForMonth(s,ym)});
   if(bizStaffConsult.length && (schedule.indexOf('consultant')!==-1 || schedule.indexOf('firstConsultBonus')!==-1)){
     var hasCon=schedule.indexOf('consultant')!==-1;
     var hasFC=schedule.indexOf('firstConsultBonus')!==-1;
-    var colCount=1+(hasCon?1:0)+(hasFC?4:0)+1;
+    var colCount=1+(hasCon?3:0)+(hasFC?4:0)+1;
     var conTable='<table><thead><tr><th>담당자</th>';
-    if(hasCon)conTable+='<th style="text-align:right">최종상담자 상여</th>';
+    if(hasCon)conTable+='<th style="text-align:right">2차상담 상여</th><th style="text-align:right">환수</th><th style="text-align:right">순지급</th>';
     if(hasFC)conTable+='<th style="text-align:right">1차상담 건수</th><th style="text-align:right">1차상담 보너스</th><th style="text-align:right">환수</th><th style="text-align:right">순지급</th>';
     conTable+='<th></th></tr></thead><tbody>';
-    var conTotal=0,fcCnt=0,fcBonus=0,fcClawback=0;
+    var conBonusSum=0,conClawSum=0,fcCnt=0,fcBonus=0,fcClawback=0;
     var conDetailIdx=0;
     bizStaffConsult.forEach(function(staff){
       var auto=calcAutoBonus(staff.name,year,month);
@@ -7972,40 +8016,48 @@ function renderBonus(){
       var hasDetails=(auto.consultantDetails&&auto.consultantDetails.length)||(auto.fcContractDetails&&auto.fcContractDetails.length)||(auto.fcClawbackDetails&&auto.fcClawbackDetails.length);
       conTable+='<tr><td style="font-weight:600">'+staff.name+'</td>';
       if(hasCon){
-        var conVal=auto.consultant||0;conTotal+=conVal;
-        conTable+='<td style="text-align:right;color:#1E293B;font-weight:600">'+W(conVal)+'</td>';
+        var bonus=auto.consultant||0;conBonusSum+=bonus;
+        var claw=auto.consultantClawback||0;conClawSum+=claw;
+        var net=bonus-claw;
+        conTable+='<td style="text-align:right;color:#1A66FF;font-weight:600">'+W(bonus)+'</td>';
+        conTable+='<td style="text-align:right;color:#e53e3e">'+(claw?'-'+W(claw):'-')+'</td>';
+        conTable+='<td style="text-align:right;font-weight:700;color:'+(net>=0?'#1A66FF':'#e53e3e')+'">'+W(net)+'</td>';
       }
       if(hasFC){
         var cnt=auto.firstConsultCount||0;fcCnt+=cnt;
-        var bonus=auto.firstConsultBonus||0;fcBonus+=bonus;
-        var clawback=auto.firstConsultClawback||0;fcClawback+=clawback;
-        var net=bonus-clawback;
-        conTable+='<td style="text-align:right">'+cnt+'건</td><td style="text-align:right;color:#805ad5">'+W(bonus)+'</td><td style="text-align:right;color:#e53e3e">'+(clawback?'-'+W(clawback):'0')+'</td><td style="text-align:right;font-weight:700;color:'+(net>=0?'#805ad5':'#e53e3e')+'">'+W(net)+'</td>';
+        var fcB=auto.firstConsultBonus||0;fcBonus+=fcB;
+        var fcC=auto.firstConsultClawback||0;fcClawback+=fcC;
+        var fcNet=fcB-fcC;
+        conTable+='<td style="text-align:right">'+cnt+'건</td><td style="text-align:right;color:#805ad5">'+W(fcB)+'</td><td style="text-align:right;color:#e53e3e">'+(fcC?'-'+W(fcC):'-')+'</td><td style="text-align:right;font-weight:700;color:'+(fcNet>=0?'#805ad5':'#e53e3e')+'">'+W(fcNet)+'</td>';
       }
       conTable+='<td style="text-align:center">'+(hasDetails?'<span style="cursor:pointer;color:#667eea;font-size:11px" onclick="var d=document.getElementById(\''+detId+'\');d.style.display=d.style.display===\'none\'?\'table-row\':\'none\'">상세 ▶</span>':'')+'</td></tr>';
       if(hasDetails){
         conTable+='<tr id="'+detId+'" style="display:none"><td colspan="'+colCount+'" style="padding:4px 12px 8px 20px;background:#f7fafc">';
-        conTable+='<table style="width:100%;font-size:11px;border:none;margin:0"><thead><tr style="background:#e2e8f0"><th style="padding:3px 8px">구분</th><th style="padding:3px 8px">업체명</th><th style="padding:3px 8px;text-align:right">기장료</th><th style="padding:3px 8px;text-align:right">상여/환수</th><th style="padding:3px 8px">사유</th></tr></thead><tbody>';
+        conTable+='<table style="width:100%;font-size:11px;border:none;margin:0"><thead><tr style="background:#e2e8f0"><th style="padding:3px 8px">구분</th><th style="padding:3px 8px">상담고객/업체</th><th style="padding:3px 8px;text-align:right">기장료</th><th style="padding:3px 8px;text-align:right">상여/환수</th><th style="padding:3px 8px">근거</th></tr></thead><tbody>';
         (auto.consultantDetails||[]).forEach(function(d){
-          conTable+='<tr><td style="padding:2px 8px;color:#1E293B;font-weight:600">최종상담</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
+          if(d.isClawback){
+            conTable+='<tr style="background:#fff5f5"><td style="padding:2px 8px;color:#e53e3e;font-weight:600">2차상담 환수</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;color:#e53e3e;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#e53e3e">'+d.reason+'</td></tr>';
+          }else{
+            conTable+='<tr><td style="padding:2px 8px;color:#1A66FF;font-weight:600">2차상담 상여</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;font-weight:600;color:#1A66FF">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
+          }
         });
         (auto.fcContractDetails||[]).forEach(function(d){
           conTable+='<tr><td style="padding:2px 8px;color:#805ad5;font-weight:600">1차상담</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right"></td><td style="padding:2px 8px;color:#64748b">'+d.reason+'</td></tr>';
         });
         (auto.fcClawbackDetails||[]).forEach(function(d){
-          conTable+='<tr style="background:#fff5f5"><td style="padding:2px 8px;color:#e53e3e;font-weight:600">환수</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;color:#e53e3e;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#e53e3e">'+d.reason+'</td></tr>';
+          conTable+='<tr style="background:#fff5f5"><td style="padding:2px 8px;color:#e53e3e;font-weight:600">1차 환수</td><td style="padding:2px 8px">'+d.client+'</td><td style="padding:2px 8px;text-align:right">'+W(d.fee)+'</td><td style="padding:2px 8px;text-align:right;color:#e53e3e;font-weight:600">'+W(d.amount)+'</td><td style="padding:2px 8px;color:#e53e3e">'+d.reason+'</td></tr>';
         });
         conTable+='</tbody></table></td></tr>';
       }
     });
     conTable+='<tr style="background:#f0fff4;font-weight:700"><td>합계</td>';
-    if(hasCon)conTable+='<td style="text-align:right;color:#1E293B">'+W(conTotal)+'</td>';
-    if(hasFC)conTable+='<td style="text-align:right">'+fcCnt+'건</td><td style="text-align:right;color:#805ad5">'+W(fcBonus)+'</td><td style="text-align:right;color:#e53e3e">'+W(fcClawback)+'</td><td style="text-align:right;color:'+(fcBonus-fcClawback>=0?'#805ad5':'#e53e3e')+'">'+W(fcBonus-fcClawback)+'</td>';
+    if(hasCon)conTable+='<td style="text-align:right;color:#1A66FF">'+W(conBonusSum)+'</td><td style="text-align:right;color:#e53e3e">'+(conClawSum?'-'+W(conClawSum):'-')+'</td><td style="text-align:right;color:'+(conBonusSum-conClawSum>=0?'#1A66FF':'#e53e3e')+'">'+W(conBonusSum-conClawSum)+'</td>';
+    if(hasFC)conTable+='<td style="text-align:right">'+fcCnt+'건</td><td style="text-align:right;color:#805ad5">'+W(fcBonus)+'</td><td style="text-align:right;color:#e53e3e">'+(fcClawback?'-'+W(fcClawback):'-')+'</td><td style="text-align:right;color:'+(fcBonus-fcClawback>=0?'#805ad5':'#e53e3e')+'">'+W(fcBonus-fcClawback)+'</td>';
     conTable+='<td></td></tr>';
     conTable+='</tbody></table>';
     var conSubtext='경영지원팀 전용 | ';
-    if(hasCon)conSubtext+='최종상담자 상여: 분기말  |  ';
-    if(hasFC)conSubtext+='1차상담: 분기 신규계약 10건당 10만원, 1년 미만 해임 시 환수';
+    if(hasCon)conSubtext+='2차상담자 상여: 계약완료 시 1개월 기장료 (계약월 반영), 1년 미만 해임 시 50% 환수  |  ';
+    if(hasFC)conSubtext+='1차상담: 2차상담자가 강효정인 경우, 분기 계약 10건당 10만원, 1년 미만 해임 시 환수';
     itemsHTML+=makeSection('상담 관련 상여 (경영지원팀)','#1A66FF','<div style="font-size:11px;color:#64748b;margin-bottom:8px">'+conSubtext+'</div><div class="TC2">'+conTable+'</div>',false);
   }
   // 그룹 1-5: 인스타출연 보너스 (경영지원팀)
@@ -8220,11 +8272,14 @@ function renderBonus(){
         specialDetails.push({cat:'외부소개',name:'외부소개 '+rd.reason+' - '+rd.client,val:rd.amount});
       });
     }
-    if(conVal>0)specialDetails.push({cat:'최종상담',name:'최종상담자 상여',val:conVal});
-    if(fcBonus>0)specialDetails.push({cat:'1차상담',name:'계약건수 보너스 ('+autoCalc.firstConsultCount+'건)',val:fcBonus});
-    if(fcClawback>0)specialDetails.push({cat:'1차상담',name:'환수 (1년 미만 해임)',val:-fcClawback});
+    var conClaw=autoCalc.consultantClawback||0;
+    var conNet=conVal-conClaw;
+    if(conVal>0)specialDetails.push({cat:'2차상담',name:'2차상담자 상여 (1개월 기장료)',val:conVal});
+    if(conClaw>0)specialDetails.push({cat:'2차상담',name:'2차상담 환수 (1년 미만 해임 50%)',val:-conClaw});
+    if(fcBonus>0)specialDetails.push({cat:'1차상담',name:'계약건수 보너스 ('+autoCalc.firstConsultCount+'건, 2차:강효정)',val:fcBonus});
+    if(fcClawback>0)specialDetails.push({cat:'1차상담',name:'1차상담 환수 (1년 미만 해임)',val:-fcClawback});
     if(instaVal>0)specialDetails.push({cat:'인스타',name:'인스타출연 조회수 보너스',val:instaVal});
-    var grand=autoTotal+refVal+extRefVal+conVal+fcNet+manualTotal+redTotal+checkTotal+bizDevNet+instaVal;
+    var grand=autoTotal+refVal+extRefVal+conNet+fcNet+manualTotal+redTotal+checkTotal+bizDevNet+instaVal;
     var allDetails=[].concat(
       autoDetails.map(function(d){return{cat:'자동',name:d.name,val:d.val}}),
       specialDetails,
@@ -8451,9 +8506,10 @@ function previewBonusReport(year,month){
     sumFeeAutoIdsR.forEach(function(id){if(schedule.indexOf(id)!==-1){var v=auto[id]||0;if(v>0){total+=v;items.push({name:BONUS_ITEMS[id].name,val:v});}}});
     if(auto.referral>0){total+=auto.referral;items.push({name:'소개왕',val:auto.referral});}
     if(auto.extReferral>0){total+=auto.extReferral;items.push({name:'외부소개',val:auto.extReferral});}
-    if(auto.consultant>0){total+=auto.consultant;items.push({name:'최종상담',val:auto.consultant});}
+    var conNet2=(auto.consultant||0)-(auto.consultantClawback||0);
+    if(conNet2!==0){total+=conNet2;items.push({name:'2차상담 상여',val:conNet2});}
     var fcNet=(auto.firstConsultBonus||0)-(auto.firstConsultClawback||0);
-    if(fcNet!==0){total+=fcNet;items.push({name:'1차상담',val:fcNet});}
+    if(fcNet!==0){total+=fcNet;items.push({name:'1차상담(2차:강효정)',val:fcNet});}
     if(auto.instaBonus>0){total+=auto.instaBonus;items.push({name:'인스타',val:auto.instaBonus});}
     var bdNet=(auto.bizDevBonus||0)-(auto.bizDevClawback||0);
     if(bdNet!==0){total+=bdNet;items.push({name:'경영지원 계약보너스',val:bdNet});}
