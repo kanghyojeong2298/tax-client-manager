@@ -5157,7 +5157,7 @@ function renderDismissed(){
 
 // ===== 담당자현황 매트릭스 =====
 function renderManagers(){
-  const ac=AC(),sl=data.staff,t=document.getElementById('managerMatrix');
+  const ac=AC(),sl=data.staff.filter(function(s){return !s.leaveDate}),t=document.getElementById('managerMatrix');
   let h='<thead><tr><th class="RL2"></th>';
   sl.forEach(s=>{var tl=s.team==='경영지원팀'?'<br><span style="font-size:8px;opacity:.8">경영지원</span>':'';h+=`<th class="CH" style="background:${gColor(s.name)};color:#fff">${s.name}${tl}</th>`});
   h+='<th class="CH" style="background:#e53e3e;color:#fff">미배정</th><th class="CH" style="background:#1A66FF;color:#fff">합계</th></tr></thead><tbody>';
