@@ -177,7 +177,7 @@ tr:hover td{background:#f8fafc}
             <div style="padding:8px 14px;cursor:pointer;font-size:12px" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background=''" onclick="toggleDropMenu('templateMenu');downloadMgrTemplate()">🔄 담당자변경 양식</div>
           </div>
         </div>
-        <button class="btn btn-primary" data-role="edit" onclick="openClientModal()">+ 업체등록</button>
+        <button class="btn btn-primary" onclick="openClientModal()">+ 업체등록</button>
       </div>
     </div>
     <!-- 일괄처리 바 -->
@@ -276,7 +276,7 @@ tr:hover td{background:#f8fafc}
   <div class="FG">
     <div class="FGI"><label>상담일</label><input id="cs_date" type="date"></div>
     <div class="FGI"><label>성함</label><input id="cs_name" type="text" placeholder="성함"></div>
-    <div class="FGI"><label>연락처</label><input id="cs_phone" type="tel" placeholder="010-0000-0000"></div>
+    <div class="FGI"><label>연락처</label><input id="cs_phone" type="tel" placeholder="010-0000-0000" oninput="autoHyphenPhone(this)"></div>
     <div class="FGI"><label>개인/법인</label><select id="cs_entity"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option></select></div>
     <div class="FGI"><label>업종</label><select id="cs_biz"><option value="">선택</option><option value="전자상거래(통합)">전자상거래(통합)</option><option value="전자상거래(국내)">전자상거래(국내)</option><option value="전자상거래(해외)">전자상거래(해외)</option><option value="스타트업">스타트업</option><option value="기타">기타</option></select></div>
     <div class="FGI"><label>매출 (원)</label><input id="cs_revenue" type="number" placeholder="연매출"></div>
@@ -2435,6 +2435,7 @@ function W(n){return'\u20A9'+Number(n||0).toLocaleString('ko-KR')}
 function fmt(n){return n?W(n):'-'}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 function genId(t){data.counters[t]=(data.counters[t]||0)+1;return(t==='1부'?'1':t==='2부'?'2':'3')+'-'+data.counters[t]}
+function autoHyphenPhone(el){var v=el.value.replace(/[^0-9]/g,'');if(v.length<=3)el.value=v;else if(v.length<=7)el.value=v.slice(0,3)+'-'+v.slice(3);else if(v.length<=11)el.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7);else el.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11)}
 function AC(){return data.clients.filter(c=>c.status==='활성')}
 function nowMonth(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')}
 function typeBadge(t){return t==='1부'?'badge-1':t==='2부'?'badge-2':'badge-3'}
@@ -2802,7 +2803,6 @@ function toggleSourceChannel(){
 
 // Client Modal
 function openClientModal(ec){
-  if(!ec&&!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   document.getElementById('clientModal').classList.add('show');popDropdowns();popLinked();popReferredBy();
   if(ec){
     document.getElementById('clientModalTitle').textContent='업체 수정';
@@ -2938,7 +2938,8 @@ function popConvertedCorp(){
 }
 
 function saveClient(){
-  if(!canEdit()){toast('🔒 등록/수정 권한이 없습니다');return}
+  var isEditMode=!!document.getElementById('editId').value;
+  if(isEditMode&&!canEdit()){toast('🔒 수정 권한이 없습니다');return}
   const name=document.getElementById('f_name').value.trim();if(!name){toast('업체명 입력');return}
   var warnings=[];
   if(!document.getElementById('f_owner').value.trim())warnings.push('대표자명');
@@ -5291,7 +5292,6 @@ function downloadTemplate(){
 }
 
 function handleExcelUpload(input){
-  if(!canEdit()){toast('🔒 등록 권한이 없습니다');input.value='';return}
   if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요.');return}
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
