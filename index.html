@@ -235,6 +235,7 @@ tr:hover td{background:#f8fafc}
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-sm" style="background:#38a169;color:#fff" data-role="edit" onclick="downloadConsultTemplate()">📥 양식 다운로드</button>
         <button class="btn btn-sm" style="background:#1A66FF;color:#fff" data-role="edit" onclick="document.getElementById('consultExcelUpload').click()">📤 엑셀 업로드</button>
+        <button class="btn btn-sm" style="background:#805ad5;color:#fff" onclick="downloadConsultData()">📊 엑셀 저장</button>
         <input type="file" id="consultExcelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleConsultExcelUpload(this)">
         <button class="btn btn-primary btn-sm" data-role="edit" onclick="openConsultModal()">+ 상담등록</button>
         <button class="btn btn-sm" style="background:#4a5568;color:#fff" id="csSortBtn" onclick="toggleConsultSort()">▲ 역순</button>
@@ -9543,6 +9544,24 @@ function downloadConsultTemplate(){
   XLSX.utils.book_append_sheet(wb,ws,'상담내역양식');
   XLSX.writeFile(wb,'상담내역_업로드양식.xlsx');
   toast('양식 다운로드 완료');
+}
+
+function downloadConsultData(){
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도하세요.');return}
+  if(!data.consultations||!data.consultations.length){toast('저장된 상담 내역이 없습니다.');return}
+  var headers=['번호','상담일','성함','연락처','개인/법인','업종','매출','예상기장료','특이사항','1차상담자','2차상담자','계약여부','계약일','유입경로','상담내역'];
+  var rows=[headers];
+  var sorted=data.consultations.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+  sorted.forEach(function(c,i){
+    rows.push([i+1,c.date||'',c.name||'',c.phone||'',c.entity||'',c.biz||'',c.revenue||'',c.expectedFee||'',c.notes||'',c.counselor1||'',c.counselor2||'',c.contracted==='Y'?'계약완료':(c.contracted==='P'?'진행중':(c.contracted==='X'?'부재중':'미계약')),c.contractDate||'',c.source||'',c.detail||'']);
+  });
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:12},{wch:10},{wch:14},{wch:10},{wch:18},{wch:14},{wch:14},{wch:20},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws,'상담내역');
+  var today=new Date();var fn='상담내역_'+today.getFullYear()+('0'+(today.getMonth()+1)).slice(-2)+('0'+today.getDate()).slice(-2)+'.xlsx';
+  XLSX.writeFile(wb,fn);
+  toast('📊 상담내역 엑셀 저장 완료 ('+sorted.length+'건)');
 }
 
 function handleConsultExcelUpload(input){
