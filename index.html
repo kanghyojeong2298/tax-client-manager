@@ -1351,7 +1351,7 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>자료수령 상태</label><select id="f_docStatus"><option value="미수령">미수령</option><option value="받는중">받는중</option><option value="수령완료">수령완료</option></select></div>
       <div class="FGI"><label>자료수령 메모</label><input id="f_docMemo" placeholder="자료수령 관련 특이사항"></div>
     </div>
-    <div class="ST">경영지원 체크리스트</div>
+    <div class="ST" style="display:flex;align-items:center;justify-content:space-between">경영지원 체크리스트<div style="display:flex;gap:4px"><button type="button" class="btn btn-xs btn-secondary" onclick="toggleAllObChecklist(true)">전체선택</button><button type="button" class="btn btn-xs btn-secondary" onclick="toggleAllObChecklist(false)">전체해제</button></div></div>
     <div id="obChecklistSection" style="display:flex;flex-wrap:wrap;gap:6px 12px;padding:6px 0">
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_katalk"> 카톡채널</label>
       <label style="font-size:11px;display:flex;align-items:center;gap:3px"><input type="checkbox" id="f_chk_hometax"> 홈택스수임등록</label>
@@ -8942,6 +8942,12 @@ function getChecklistProgress(c){
   var cl=c.onboardChecklist||{};
   var done=0;OB_CHECKLIST_ITEMS.forEach(function(it){if(cl[it.key])done++});
   return {done:done,total:OB_CHECKLIST_ITEMS.length};
+}
+function toggleAllObChecklist(checked){
+  var section=document.getElementById('obChecklistSection');
+  if(!section)return;
+  var boxes=section.querySelectorAll('input[type="checkbox"]');
+  for(var i=0;i<boxes.length;i++)boxes[i].checked=checked;
 }
 function toggleObChecklist(clientId,key){
   var c=data.clients.find(function(x){return x.id===clientId});
