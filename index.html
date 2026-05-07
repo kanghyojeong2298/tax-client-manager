@@ -1293,7 +1293,7 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>종목</label><input id="f_bizItem" placeholder="세무대리"></div>
       <div class="FGI"><label>이메일</label><input id="f_bizEmail" type="email" placeholder="example@email.com"></div>
       <div class="FGI"><label>업체유형 *</label><select id="f_type" onchange="onTypeChange()"><option value="1부">1부업체</option><option value="2부">2부업체</option><option value="3부">3부업체</option></select></div>
-      <div class="FGI" id="linkedGroup" style="display:none"><label>연관 1부업체</label><select id="f_linked"><option value="">선택</option></select></div>
+      <div class="FGI" id="linkedGroup" style="display:none"><label>연관 1부업체</label><input id="f_linked" list="f_linkedList" autocomplete="off" placeholder="업체명 검색..."><datalist id="f_linkedList"></datalist></div>
       <div class="FGI"><label>개인/법인 *</label><select id="f_entity" onchange="onEntityChange()"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select></div>
       <div class="FGI"><label>업종 *</label><select id="f_biz" onchange="onBizChange()"><option value="일반">일반</option><option value="스타트업">스타트업</option><option value="전자상거래">전자상거래</option></select></div>
       <div class="FGI" id="ecomGroup" style="display:none"><label>전자상거래 세부</label><select id="f_ecom"><option value="국내">국내</option><option value="해외(큐텐,쇼피)">해외(큐텐,쇼피)</option><option value="국내+해외">국내+해외</option><option value="구매대행">구매대행</option></select></div>
@@ -2779,7 +2779,7 @@ function popDropdowns(){
     data.staff.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;el.appendChild(o)});el.value=v;
   });
 }
-function popLinked(){const el=document.getElementById('f_linked');const v=el.value;el.innerHTML='<option value="">선택</option>';data.clients.filter(c=>c.type==='1부'&&c.status==='활성').forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.id+' '+c.name;el.appendChild(o)});el.value=v}
+function popLinked(){var el=document.getElementById('f_linked');var dl=document.getElementById('f_linkedList');dl.innerHTML='';data.clients.filter(function(c){return c.type==='1부'&&c.status==='활성'}).forEach(function(c){var o=document.createElement('option');o.value=c.id+' '+c.name;o.setAttribute('data-id',c.id);dl.appendChild(o)})}
 function popReferredBy(){/* deprecated - using search now */}
 function searchReferredBy(q){
   var box=document.getElementById('referredByResults');
@@ -2808,8 +2808,9 @@ function openClientModal(ec){
   if(ec){
     document.getElementById('clientModalTitle').textContent='업체 수정';
     document.getElementById('editId').value=ec.id;
-    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_linked:'linkedTo',f_bizRegDate:'bizRegDate',f_bizNo:'bizNo',f_bizAddress:'bizAddress',f_bizType:'bizType',f_bizItem:'bizItem',f_bizEmail:'bizEmail'};
+    const fields={f_name:'name',f_owner:'ownerName',f_type:'type',f_entity:'entityType',f_biz:'businessType',f_ecom:'ecommerceDetail',f_tax:'taxType',f_vatFreq:'vatFreq',f_manager:'manager',f_finalConsultant:'finalConsultant',f_firstConsultant:'firstConsultant',f_trainer:'trainer',f_notes:'notes',f_dismissReason:'dismissReason',f_bizRegDate:'bizRegDate',f_bizNo:'bizNo',f_bizAddress:'bizAddress',f_bizType:'bizType',f_bizItem:'bizItem',f_bizEmail:'bizEmail'};
     Object.entries(fields).forEach(([fid,key])=>{const el=document.getElementById(fid);if(el)el.value=ec[key]||''});
+    if(ec.linkedTo){var lc=data.clients.find(function(x){return x.id===ec.linkedTo});document.getElementById('f_linked').value=lc?(ec.linkedTo+' '+lc.name):ec.linkedTo;}else{document.getElementById('f_linked').value='';}
     ['f_fee','f_adjFee'].forEach(id=>document.getElementById(id).value=ec[id.replace('f_','')]||'');
     document.getElementById('f_fee').value=ec.fee||'';document.getElementById('f_adjFee').value=ec.adjFee||'';document.getElementById('f_extraFee').value=ec.extraFee||'';
     document.getElementById('f_startMonth').value=ec.startMonth||'';document.getElementById('f_billingStart').value=ec.billingStart||'';
@@ -2857,7 +2858,8 @@ function openClientModal(ec){
     document.getElementById('f_retroApply').value='';
     toggleRetroFields();
     document.getElementById('f_convertedCorp').value='';document.getElementById('f_transferOffice').value='';document.getElementById('f_referredBy').value='';
-    ['f_type','f_entity','f_biz','f_tax','f_vatFreq','f_manager','f_finalConsultant','f_firstConsultant','f_trainer','f_dismissReason','f_linked','f_extReferral','f_sourceChannel'].forEach(id=>document.getElementById(id).selectedIndex=0);
+    ['f_type','f_entity','f_biz','f_tax','f_vatFreq','f_manager','f_finalConsultant','f_firstConsultant','f_trainer','f_dismissReason','f_extReferral','f_sourceChannel'].forEach(id=>document.getElementById(id).selectedIndex=0);
+    document.getElementById('f_linked').value='';
     document.getElementById('f_closingType').selectedIndex=0;
     document.getElementById('f_closingChangeDate').value='';
     document.getElementById('f_invoiceCarry').value='N';
@@ -3000,7 +3002,7 @@ function saveClient(){
     closureDate:isDismissed?document.getElementById('f_closureDate').value:'',
     convertedCorp:isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'?document.getElementById('f_convertedCorp').value:'',
     transferOffice:isDismissed&&document.getElementById('f_dismissReason').value==='이관'?document.getElementById('f_transferOffice').value.trim():'',
-    linkedTo:type==='2부'?document.getElementById('f_linked').value:(editId?(data.clients.find(function(x){return x.id===editId})||{}).linkedTo||'':''),
+    linkedTo:type==='2부'?(function(){var v=document.getElementById('f_linked').value.trim();if(!v)return '';var sp=v.split(' ');return sp[0]||v})():(editId?(data.clients.find(function(x){return x.id===editId})||{}).linkedTo||'':''),
     sourceChannel:document.getElementById('f_sourceChannel').value,
     referredBy:document.getElementById('f_referredBy').value,
     extReferral:document.getElementById('f_extReferral').value,
