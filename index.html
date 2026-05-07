@@ -195,10 +195,10 @@ tr:hover td{background:#f8fafc}
       <button class="btn btn-sm" style="background:#2d3748;color:#fff" onclick="bulkChangeDocStatus()">변경</button>
       <span style="color:rgba(255,255,255,.5);margin-left:8px">|</span>
       <label style="font-size:11px;margin-left:4px">해임:</label>
-      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="법인전환">법인전환</option></select>
+      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="법인전환">법인전환</option><option value="기타">기타</option></select>
       <input type="month" id="bulkDismissMonth" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px">
       <input type="date" id="bulkClosureDate" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px" placeholder="폐업/휴업일">
-      <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
+      <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(r==='기타'){var ot=prompt('기타 해임사유를 입력하세요:');if(!ot)return;r='기타: '+ot.trim();}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
@@ -1383,7 +1383,8 @@ tr:hover td{background:#f8fafc}
     </div>
     <div class="ST" id="dismissSection" style="display:none">해임/폐업/휴업</div>
     <div class="FG" id="dismissFields" style="display:none">
-      <div class="FGI"><label>해임 사유</label><select id="f_dismissReason" onchange="toggleConvertedCorp()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option></select></div>
+      <div class="FGI"><label>해임 사유</label><select id="f_dismissReason" onchange="toggleConvertedCorp();toggleDismissOther()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="기타">기타</option></select></div>
+      <div class="FGI" id="dismissOtherGroup" style="display:none"><label>기타 사유</label><input id="f_dismissOther" placeholder="사유를 입력하세요 (ex. 기장료 장기미납)"></div>
       <div class="FGI"><label>해임월</label><input id="f_dismissDate" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="f_closureDate" type="date"></div>
       <div class="FGI" id="convertedCorpGroup" style="display:none"><label>전환된 법인 (검색)</label>
@@ -2826,6 +2827,8 @@ function openClientModal(ec){
     document.getElementById('f_feeChangeCustom').value='';toggleFeeChangeCustom();
     document.getElementById('f_dismissed').checked=ec.status==='해임';
     document.getElementById('f_dismissDate').value=ec.dismissDate||'';document.getElementById('f_closureDate').value=ec.closureDate||'';
+    if(ec.dismissReason&&ec.dismissReason.indexOf('기타:')===0){document.getElementById('f_dismissReason').value='기타';document.getElementById('f_dismissOther').value=ec.dismissReason.slice(4).trim();}
+    toggleDismissOther();
     document.getElementById('f_convertedCorp').value=ec.convertedCorp||'';
     document.getElementById('f_transferOffice').value=ec.transferOffice||'';
     document.getElementById('f_sourceChannel').value=ec.sourceChannel||'';
@@ -2859,7 +2862,7 @@ function openClientModal(ec){
     toggleRetroFields();
     document.getElementById('f_convertedCorp').value='';document.getElementById('f_transferOffice').value='';document.getElementById('f_referredBy').value='';
     ['f_type','f_entity','f_biz','f_tax','f_vatFreq','f_manager','f_finalConsultant','f_firstConsultant','f_trainer','f_dismissReason','f_extReferral','f_sourceChannel'].forEach(id=>document.getElementById(id).selectedIndex=0);
-    document.getElementById('f_linked').value='';
+    document.getElementById('f_linked').value='';document.getElementById('f_dismissOther').value='';document.getElementById('dismissOtherGroup').style.display='none';
     document.getElementById('f_closingType').selectedIndex=0;
     document.getElementById('f_closingChangeDate').value='';
     document.getElementById('f_invoiceCarry').value='N';
@@ -2931,6 +2934,11 @@ function toggleConvertedCorp(){
   if(show)popConvertedCorp();
   document.getElementById('transferOfficeGroup').style.display=r==='이관'?'':'none';
 }
+function toggleDismissOther(){
+  var r=document.getElementById('f_dismissReason').value;
+  document.getElementById('dismissOtherGroup').style.display=r==='기타'?'':'none';
+  if(r!=='기타')document.getElementById('f_dismissOther').value='';
+}
 function popConvertedCorp(){
   var el=document.getElementById('f_convertedCorp');var v=el.value;
   el.innerHTML='<option value="">선택</option>';
@@ -2997,7 +3005,7 @@ function saveClient(){
     retroFee:Number(document.getElementById('f_retroFee').value)||0,retroMonths:Number(document.getElementById('f_retroMonths').value)||0,
     retroBillingMonth:document.getElementById('f_retroBillingMonth').value,
     status:isDismissed?'해임':'활성',
-    dismissReason:isDismissed?document.getElementById('f_dismissReason').value:'',
+    dismissReason:isDismissed?(document.getElementById('f_dismissReason').value==='기타'?('기타: '+(document.getElementById('f_dismissOther').value.trim()||'기타')):document.getElementById('f_dismissReason').value):'',
     dismissDate:isDismissed?document.getElementById('f_dismissDate').value:'',
     closureDate:isDismissed?document.getElementById('f_closureDate').value:'',
     convertedCorp:isDismissed&&document.getElementById('f_dismissReason').value==='법인전환'?document.getElementById('f_convertedCorp').value:'',
