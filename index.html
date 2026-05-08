@@ -195,10 +195,11 @@ tr:hover td{background:#f8fafc}
       <button class="btn btn-sm" style="background:#2d3748;color:#fff" onclick="bulkChangeDocStatus()">변경</button>
       <span style="color:rgba(255,255,255,.5);margin-left:8px">|</span>
       <label style="font-size:11px;margin-left:4px">해임:</label>
-      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="법인전환">법인전환</option><option value="기타">기타</option></select>
+      <select id="bulkDismissReason" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px" onchange="document.getElementById('bulkDismissOther').style.display=this.value==='기타'?'inline-block':'none'"><option value="">사유선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="법인전환">법인전환</option><option value="기타">기타</option></select>
+      <input id="bulkDismissOther" style="display:none;padding:3px 6px;border:none;border-radius:4px;font-size:11px;width:140px" placeholder="기타 사유 입력">
       <input type="month" id="bulkDismissMonth" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px">
       <input type="date" id="bulkClosureDate" style="padding:3px 6px;border:none;border-radius:4px;font-size:11px" placeholder="폐업/휴업일">
-      <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(r==='기타'){var ot=prompt('기타 해임사유를 입력하세요:');if(!ot)return;r='기타: '+ot.trim();}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
+      <button class="btn btn-sm" style="background:#e53e3e;color:#fff" onclick="var r=document.getElementById('bulkDismissReason').value;if(!r){toast('해임사유를 선택하세요');return}if(r==='기타'){var ot=document.getElementById('bulkDismissOther').value.trim();if(!ot){toast('기타 사유를 입력하세요');return}r='기타: '+ot;}if(!confirm(selectedClients.size+'개 업체를 ['+r+'] 처리하시겠습니까?'))return;bulkDismiss(r)">해임처리</button>
       <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;margin-left:auto" onclick="selectedClients.clear();updateBulkBar();renderClients()">선택해제</button>
     </div>
     <div class="TC2"><table><thead><tr>
@@ -559,7 +560,7 @@ tr:hover td{background:#f8fafc}
 <!-- 추가발행 입력 모달 -->
 <div class="MO" id="extraInvoiceModal">
 <div class="MD" style="max-width:500px">
-  <div class="MH"><h2>추가발행 등록</h2><button class="MC" onclick="closeExtraInvoiceModal()">&times;</button></div>
+  <div class="MH"><h2 id="eiModalTitle">추가발행 등록</h2><button class="MC" onclick="closeExtraInvoiceModal()">&times;</button></div>
   <div class="MB">
     <div class="FG">
       <div class="FGI"><label>유형 *</label><select id="ei_type"><option value="경정청구">경정청구</option><option value="수정신고">수정신고</option><option value="법인전환">법인전환</option><option value="재산세">재산세</option><option value="해명자료대응">해명자료대응</option><option value="기한후신고">기한후신고</option><option value="부가세신고수수료">부가세신고수수료</option><option value="조정료">조정료</option><option value="면세현황신고">면세현황신고</option><option value="양도세신고수수료">양도세신고수수료</option><option value="원천 소급신고">원천 소급신고</option><option value="부가세 분기신고">부가세 분기신고</option><option value="원천법인수정수수료">원천법인수정수수료</option><option value="소득세 검토 수수료">소득세 검토 수수료</option></select></div>
@@ -1516,7 +1517,8 @@ tr:hover td{background:#f8fafc}
   <div class="MB" style="padding:16px">
     <div id="dismissMiniInfo" style="margin-bottom:12px;font-size:12px;color:#64748b"></div>
     <div class="FG" style="gap:10px">
-      <div class="FGI"><label>해임 사유 *</label><select id="dm_reason" onchange="toggleDmConvert()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option></select></div>
+      <div class="FGI"><label>해임 사유 *</label><select id="dm_reason" onchange="toggleDmConvert();toggleDmOther()"><option value="">선택</option><option value="휴업">휴업</option><option value="폐업">폐업</option><option value="법인전환">법인전환</option><option value="이관">이관</option><option value="매출부진">매출부진</option><option value="미수">미수</option><option value="기타">기타</option></select></div>
+      <div class="FGI" id="dmOtherGroup" style="display:none"><label>기타 사유</label><input id="dm_other" placeholder="사유를 입력하세요 (ex. 기장료 장기미납)"></div>
       <div class="FGI"><label>해임월 *</label><input id="dm_date" type="month"></div>
       <div class="FGI"><label>폐업/휴업일</label><input id="dm_closure" type="date"></div>
       <div class="FGI" id="dmConvertGroup" style="display:none"><label>전환된 법인 (검색)</label>
@@ -3821,6 +3823,7 @@ function openDismissMini(c,nowYM){
   document.getElementById('dismissMiniTitle').textContent=c.id+' '+c.name+' 해임 처리';
   document.getElementById('dismissMiniInfo').innerHTML='현재 담당: <strong>'+(c.manager||'-')+'</strong> · 기장료: <strong>'+W(c.fee)+'</strong>';
   document.getElementById('dm_reason').selectedIndex=0;
+  document.getElementById('dm_other').value='';document.getElementById('dmOtherGroup').style.display='none';
   document.getElementById('dm_date').value=nowYM;
   document.getElementById('dm_closure').value='';
   document.getElementById('dm_transferOffice').value='';
@@ -3836,6 +3839,11 @@ function toggleDmConvert(){
   var r=document.getElementById('dm_reason').value;
   document.getElementById('dmConvertGroup').style.display=r==='법인전환'?'':'none';
   document.getElementById('dmTransferGroup').style.display=r==='이관'?'':'none';
+}
+function toggleDmOther(){
+  var r=document.getElementById('dm_reason').value;
+  document.getElementById('dmOtherGroup').style.display=r==='기타'?'':'none';
+  if(r!=='기타')document.getElementById('dm_other').value='';
 }
 // 법인전환 법인 검색 (해임 미니모달)
 function searchDmConvert(q){
@@ -3877,9 +3885,14 @@ function confirmDismissMini(){
   var c=data.clients.find(function(x){return x.id===_editActionClientId});if(!c)return;
   var reason=document.getElementById('dm_reason').value;
   if(!reason){toast('해임 사유를 선택하세요');return}
+  if(reason==='기타'){
+    var otherText=document.getElementById('dm_other').value.trim();
+    if(!otherText){toast('기타 사유를 입력하세요');return}
+    reason='기타: '+otherText;
+  }
   var dDate=document.getElementById('dm_date').value;
   if(!dDate){toast('해임월을 입력하세요');return}
-  if(reason==='법인전환'&&!document.getElementById('dm_convertedCorp').value){toast('전환된 법인을 선택하세요');return}
+  if(document.getElementById('dm_reason').value==='법인전환'&&!document.getElementById('dm_convertedCorp').value){toast('전환된 법인을 선택하세요');return}
   // 거래 1년 미만 경고
   var startYM=c.billingStart||c.startMonth||'';
   var months=calcDealMonths(startYM,dDate);
@@ -7163,12 +7176,15 @@ function saveBu2Add(){
   var sec=document.getElementById('invSecBu2');
   if(sec&&sec.style.display==='none')toggleInvSection('invSecBu2');
 }
+var _eiEditIdx=-1;
 function openExtraInvoiceModal(){
+  _eiEditIdx=-1;
   document.getElementById('ei_client').value='';
   document.getElementById('ei_amount').value='';
   var curMonth=document.getElementById('extraInvoiceMonth').value||document.getElementById('invoiceMonth').value;
   document.getElementById('ei_month').value=curMonth;
   document.getElementById('ei_type').value='경정청구';
+  document.getElementById('eiModalTitle').textContent='추가발행 등록';
   // 담당자 드롭다운 채우기
   var staffSel=document.getElementById('ei_staff');
   staffSel.innerHTML=data.staff.map(function(s){return '<option value="'+s.name+'">'+s.name+'</option>'}).join('');
@@ -7180,6 +7196,18 @@ function openExtraInvoiceModal(){
     }).join('');
   }
   document.getElementById('extraInvoiceModal').classList.add('show');
+}
+function editExtraInvoice(realIdx){
+  openExtraInvoiceModal();
+  _eiEditIdx=realIdx;
+  var e=data.extraInvoices[realIdx];
+  if(!e)return;
+  document.getElementById('eiModalTitle').textContent='추가발행 수정';
+  document.getElementById('ei_type').value=e.type||'';
+  document.getElementById('ei_client').value=e.client||'';
+  document.getElementById('ei_staff').value=e.staff||'';
+  document.getElementById('ei_amount').value=e.amount||'';
+  document.getElementById('ei_month').value=e.month||'';
 }
 function closeExtraInvoiceModal(){
   document.getElementById('extraInvoiceModal').classList.remove('show');
@@ -7193,12 +7221,26 @@ function saveExtraInvoice(){
   var month=document.getElementById('ei_month').value;
   if(!staff||!month||!amount){toast('담당자, 해당월, 입금액을 입력하세요');return}
   if(!data.extraInvoices)data.extraInvoices=[];
-  var extraInvoice={type:type,client:client,staff:staff,amount:amount,month:month,paid:'N',date:new Date().toISOString()};
-  data.extraInvoices.push(extraInvoice);
-  // bonusData.redItems에도 추가 (paid:'N')
-  if(!data.bonusData.redItems)data.bonusData.redItems=[];
-  data.bonusData.redItems.push({staff:staff,type:type,client:client,amount:amount,month:month,paid:'N',date:extraInvoice.date});
-  saveData();closeExtraInvoiceModal();renderInvoice();renderExtraInvoices();toast('추가발행 등록됨');
+  if(_eiEditIdx>=0&&_eiEditIdx<data.extraInvoices.length){
+    // 수정 모드: 기존 redItems에서 이전 값 제거 후 새 값 추가
+    var old=data.extraInvoices[_eiEditIdx];
+    if(data.bonusData&&data.bonusData.redItems){
+      data.bonusData.redItems=data.bonusData.redItems.filter(function(r){
+        return !(r.staff===old.staff&&r.type===old.type&&r.client===old.client&&r.amount===old.amount&&r.month===old.month);
+      });
+    }
+    old.type=type;old.client=client;old.staff=staff;old.amount=amount;old.month=month;
+    if(!data.bonusData.redItems)data.bonusData.redItems=[];
+    data.bonusData.redItems.push({staff:staff,type:type,client:client,amount:amount,month:month,paid:old.paid||'N',date:old.date});
+    _eiEditIdx=-1;
+    saveData();closeExtraInvoiceModal();renderInvoice();renderExtraInvoices();renderBu2Fee();toast('추가발행 수정됨');
+  }else{
+    var extraInvoice={type:type,client:client,staff:staff,amount:amount,month:month,paid:'N',date:new Date().toISOString()};
+    data.extraInvoices.push(extraInvoice);
+    if(!data.bonusData.redItems)data.bonusData.redItems=[];
+    data.bonusData.redItems.push({staff:staff,type:type,client:client,amount:amount,month:month,paid:'N',date:extraInvoice.date});
+    saveData();closeExtraInvoiceModal();renderInvoice();renderExtraInvoices();toast('추가발행 등록됨');
+  }
 }
 function delExtraInvoice(idx){
   if(idx<0||idx>=data.extraInvoices.length)return;
@@ -7256,7 +7298,7 @@ function renderExtraInvoices(monthParam){
       +'<option value="Y" '+(isPaid?'selected':'')+'>입금완료</option>'
       +'<option value="N" '+(isUnpaid?'selected':'')+'>미입금</option></select>';
     var bonusText=isPaid?W(bonus):'<span style="color:#a0aec0;text-decoration:line-through">'+W(bonus)+'</span>';
-    return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td style="text-align:center">'+e.staff+'</td><td style="text-align:center">'+W(e.amount)+'</td><td style="text-align:center">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
+    return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td style="text-align:center">'+e.staff+'</td><td style="text-align:center">'+W(e.amount)+'</td><td style="text-align:center">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-secondary" onclick="editExtraInvoice('+realIdx+')">수정</button> <button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
   }).join('');
 }
 
