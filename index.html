@@ -1291,12 +1291,12 @@ tr:hover td{background:#f8fafc}
       <div class="FGI"><label>사업자번호 <span style="font-weight:400;font-size:10px;color:#64748b">(-없이 10자리)</span></label><input id="f_bizNo" maxlength="10" placeholder="1234567890" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"></div>
       <div class="FGI"><label>사업장주소</label><input id="f_bizAddress" placeholder="서울시 강남구..."></div>
       <div class="FGI"><label>업태</label><input id="f_bizType" placeholder="서비스업"></div>
-      <div class="FGI"><label>종목</label><input id="f_bizItem" placeholder="세무대리"></div>
+      <div class="FGI"><label>업종</label><input id="f_bizItem" placeholder="세무대리"></div>
       <div class="FGI"><label>이메일</label><input id="f_bizEmail" type="email" placeholder="example@email.com"></div>
       <div class="FGI"><label>업체유형 *</label><select id="f_type" onchange="onTypeChange()"><option value="1부">1부업체</option><option value="2부">2부업체</option><option value="3부">3부업체</option></select></div>
       <div class="FGI" id="linkedGroup" style="display:none"><label>연관 1부업체</label><input id="f_linked" list="f_linkedList" autocomplete="off" placeholder="업체명 검색..."><datalist id="f_linkedList"></datalist></div>
       <div class="FGI"><label>개인/법인 *</label><select id="f_entity" onchange="onEntityChange()"><option value="개인">개인</option><option value="법인">법인</option><option value="간이">간이</option><option value="성실개인">성실개인</option><option value="성실법인">성실법인</option></select></div>
-      <div class="FGI"><label>업종 *</label><select id="f_biz" onchange="onBizChange()"><option value="일반">일반</option><option value="스타트업">스타트업</option><option value="전자상거래">전자상거래</option></select></div>
+      <div class="FGI"><label>종목 *</label><select id="f_biz" onchange="onBizChange()"><option value="일반">일반</option><option value="스타트업">스타트업</option><option value="전자상거래">전자상거래</option></select></div>
       <div class="FGI" id="ecomGroup" style="display:none"><label>전자상거래 세부</label><select id="f_ecom"><option value="국내">국내</option><option value="해외(큐텐,쇼피)">해외(큐텐,쇼피)</option><option value="국내+해외">국내+해외</option><option value="구매대행">구매대행</option></select></div>
       <div class="FGI"><label>신고대상 *</label><select id="f_tax" onchange="onTaxChange()"><option value="부가세신고대상">부가세신고대상</option><option value="면세신고대상">면세신고대상</option><option value="해당없음">해당없음</option></select></div>
       <div class="FGI" id="vatFreqGroup"><label>부가세 신고주기</label><select id="f_vatFreq"><option value="auto">자동(개인2회/법인4회)</option><option value="2">연 2회</option><option value="4">연 4회</option><option value="12">월별</option></select></div>
@@ -1728,12 +1728,18 @@ var AUTO_BACKUP_INTERVAL=60*60*1000; // 1시간
 var _sessionId=(Math.random().toString(36).slice(2)+Date.now().toString(36));
 var _realtimeUnsub=null;// onSnapshot 해제 함수
 var _suppressRemote=false;// 내가 방금 저장한 직후 자기 자신의 원격 이벤트 무시
+var _firestoreLoaded=false;// Firestore 초기 로드 완료 여부
 function saveData(){
   _lastLocalSave=Date.now();
   data._localTimestamp=_lastLocalSave;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   // Also save to Firestore (shared for all users) with retry
-  if(auth.currentUser){
+  // 안전장치: Firestore 초기 로드 전이거나 clients가 비어있으면 원격 저장 차단
+  if(auth.currentUser&&_firestoreLoaded){
+    if(!data.clients||data.clients.length===0){
+      console.warn('⚠️ saveData: clients가 비어있어 Firestore 저장 차단');
+      return;
+    }
     _suppressRemote=true;
     _saveToFirestore(0);
     // 1시간마다 자동 백업 스냅샷
@@ -1840,10 +1846,20 @@ function setupRealtimeSync(){
       if(dd.compressed&&dd.dataZ){remote=_decompressData(dd.dataZ);}
       else if(dd.data){remote=JSON.parse(dd.data);}
       if(!remote||!remote.clients)return;
+      // 원격 데이터가 비어있으면 무시 (빈 데이터로 덮어쓰기 방지)
+      if(remote.clients.length===0&&data.clients&&data.clients.length>0){
+        console.warn('⚠️ 실시간동기화: 원격 clients가 0건이라 무시 (로컬 '+data.clients.length+'건 유지)');
+        return;
+      }
       // 원격 타임스탬프가 현재 로컬보다 낮으면 무시 (구버전 덮어쓰기 방지)
       var remoteTs=dd.localTimestamp||0;
       var localTs=data._localTimestamp||0;
       if(remoteTs<=localTs)return;
+      // 원격이 로컬 대비 절반 미만이면 경고 후 무시
+      if(remote.clients.length<data.clients.length*0.5&&data.clients.length>10){
+        console.warn('⚠️ 실시간동기화: 원격 '+remote.clients.length+'건 < 로컬 '+data.clients.length+'건의 50% — 무시');
+        return;
+      }
       // 변경 적용
       data=migrate(remote);
       if(!data.closingData)data.closingData={};
@@ -1873,8 +1889,8 @@ let data=loadData();
 if(!data.activityLog)data.activityLog=[];
 if(!data.consultations)data.consultations=[];
 if(!data.consultCounter)data.consultCounter=0;
-// 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회)
-if(!data._docStatusMigrated){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;saveData()}
+// 기존 업체 자료상태 일괄 수령완료 마이그레이션 (1회) — Firestore 로드 전에는 저장 안 함
+if(!data._docStatusMigrated&&data.clients&&data.clients.length>0){data.clients.forEach(function(c){if(!c.docStatus)c.docStatus='수령완료'});data._docStatusMigrated=true;localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}
 // 체크리스트 완료 마이그레이션 함수 (Firestore 로드 후에도 실행)
 function runChecklistMigration(){if(data._ckInit0329)return;var keys=['katalk','hometax','flowTitle','flowSample','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi'];data.clients.forEach(function(c){var bs=c.billingStart||c.startMonth||'';if(bs>='2026-03')return;if(!c.onboardChecklist)c.onboardChecklist={};keys.forEach(function(k){c.onboardChecklist[k]=true})});data._ckInit0329=true;saveData()}
 runChecklistMigration();
@@ -2274,14 +2290,21 @@ async function loadFromFirestore(){
         }
       }
     }
+    // Firestore 초기 로드 완료 → 이후 saveData에서 Firestore 저장 허용
+    _firestoreLoaded=true;
     // 초기 로드 후 실시간 동기화 활성화
     setupRealtimeSync();
   }catch(e){
     console.error('Firestore load error:',e);
+    // 로드 실패해도 로컬에 데이터가 있으면 사용 허용
+    if(data.clients&&data.clients.length>0){
+      _firestoreLoaded=true;
+      refreshAll();
+    }
     if(e.code==='permission-denied'||/permission/i.test(e.message||'')){
       toast('⚠️ 데이터 접근 권한 없음 — 관리자에게 계정 권한 확인 요청','error');
     }else{
-      toast('⚠️ 데이터 로드 실패: '+e.message,'error');
+      toast('⚠️ 데이터 로드 실패: '+e.message+' (로컬 데이터 사용 중)','error');
     }
   }
 }
@@ -2968,14 +2991,12 @@ function popConvertedCorp(){
 }
 
 function saveClient(){
-  var isEditMode=!!document.getElementById('editId').value;
-  if(isEditMode&&!canEdit()){toast('🔒 수정 권한이 없습니다');return}
   const name=document.getElementById('f_name').value.trim();if(!name){toast('업체명 입력');return}
   var warnings=[];
   if(!document.getElementById('f_owner').value.trim())warnings.push('대표자명');
   if(!document.getElementById('f_ownerBirth').value)warnings.push('대표자 생년월일');
   if(!document.getElementById('f_entity').value)warnings.push('사업자구분');
-  if(!document.getElementById('f_biz').value)warnings.push('업종');
+  if(!document.getElementById('f_biz').value)warnings.push('종목');
   if(!document.getElementById('f_tax').value)warnings.push('신고대상');
   if(!document.getElementById('f_manager').value)warnings.push('담당자');
   if(!Number(document.getElementById('f_fee').value))warnings.push('기장료');
@@ -2990,7 +3011,7 @@ function saveClient(){
   if(!document.getElementById('f_sourceChannel').value)warnings.push('유입경로');
   if(!document.getElementById('f_bizAddress').value.trim())warnings.push('사업장주소');
   if(!document.getElementById('f_bizType').value.trim())warnings.push('업태');
-  if(!document.getElementById('f_bizItem').value.trim())warnings.push('종목');
+  if(!document.getElementById('f_bizItem').value.trim())warnings.push('업종');
   // 미입력 필드 빨간 테두리 표시
   var warnFieldMap={'대표자명':'f_owner','대표자 생년월일':'f_ownerBirth','사업자구분':'f_entity','업종':'f_biz','신고대상':'f_tax','담당자':'f_manager','기장료':'f_fee','기장계약 시작월':'f_startMonth','기장료 출금시작월':'f_billingStart','계약일':'f_contractDate','소급기장료 해당여부':'f_retroApply','소급기장료 금액':'f_retroFee','소급 개월수':'f_retroMonths','유입경로':'f_sourceChannel','사업장주소':'f_bizAddress','업태':'f_bizType','종목':'f_bizItem'};
   Object.values(warnFieldMap).forEach(function(fid){var el=document.getElementById(fid);if(el)el.style.borderColor=''});
@@ -3040,32 +3061,7 @@ function saveClient(){
     invoiceCarry:document.getElementById('f_invoiceCarry').value,docStatus:document.getElementById('f_docStatus').value,docMemo:document.getElementById('f_docMemo').value.trim(),
     onboardChecklist:(function(){var cl={};var ids=['katalk','hometax','flowTitle','wimembers','contract','semoReport','customerGuide','wehago','permission','wehagoIdPw','dataCollect','flowBasic','tpClient','cashReceipt','bizAccount','edi','basicUpload','hometaxConsent','cms'];ids.forEach(function(k){cl[k]=document.getElementById('f_chk_'+k).checked});return cl})(),
     notes:document.getElementById('f_notes').value.trim(),updatedAt:new Date().toISOString()};
-  // 비관리자: 승인 대기열로 보내기
-  if(!isAdmin()){
-    if(!data.pendingClients)data.pendingClients=[];
-    if(editId){
-      // 수정 요청 → 승인 대기
-      var oldC=data.clients.find(function(c){return c.id===editId});
-      var changeDesc=[];
-      if(oldC){
-        if(oldC.name!==cd.name)changeDesc.push('업체명: '+oldC.name+' → '+cd.name);
-        if(oldC.manager!==cd.manager)changeDesc.push('담당: '+(oldC.manager||'-')+' → '+cd.manager);
-        if(oldC.fee!==cd.fee)changeDesc.push('기장료: '+W(oldC.fee)+' → '+W(cd.fee));
-        if(oldC.status!==cd.status)changeDesc.push('상태: '+oldC.status+' → '+cd.status);
-      }
-      data.pendingClients.push({action:'수정',editId:editId,clientData:cd,changes:changeDesc.join(', ')||'상세정보 수정',requestedBy:auth.currentUser?auth.currentUser.email:'-',requestedAt:new Date().toISOString()});
-      saveData();closeClientModal();
-      toast('📋 수정 요청이 관리자 승인 대기열에 등록되었습니다');
-      return;
-    }else{
-      // 신규 등록 → 승인 대기
-      data.pendingClients.push({action:'등록',clientData:cd,requestedBy:auth.currentUser?auth.currentUser.email:'-',requestedAt:new Date().toISOString()});
-      saveData();closeClientModal();
-      toast('📋 등록 요청이 관리자 승인 대기열에 등록되었습니다');
-      return;
-    }
-  }
-  // 관리자: 기존 로직 그대로 실행
+  // 등록/수정 실행 (모든 계정 승인 없이 바로 처리)
   if(editId){
     const i=data.clients.findIndex(c=>c.id===editId);
     if(i>=0){
@@ -3162,7 +3158,7 @@ function viewClient(id){
     <div><small style="color:#64748b">구분</small><br>${c.entityType}</div>
     <div><small style="color:#64748b">업종</small><br>${bizLabel(c)}</div>
     ${c.bizType?'<div><small style="color:#64748b">업태</small><br>'+c.bizType+'</div>':''}
-    ${c.bizItem?'<div><small style="color:#64748b">종목</small><br>'+c.bizItem+'</div>':''}
+    ${c.bizItem?'<div><small style="color:#64748b">업종</small><br>'+c.bizItem+'</div>':''}
     <div><small style="color:#64748b">신고대상</small><br>${c.taxType}</div>
     ${c.taxType==='부가세신고대상'?'<div><small style="color:#64748b">부가세주기</small><br>'+vatFreqLabel(c)+'</div>':''}
     <div><small style="color:#64748b">담당</small><br>${c.manager||'-'}</div>
