@@ -5805,7 +5805,9 @@ function bulkDismiss(reason){
   var bulkMonth=document.getElementById('bulkDismissMonth').value;
   var bulkClosure=document.getElementById('bulkClosureDate').value;
   var dismissDate=bulkMonth||today.slice(0,7);
-  var closureDate=bulkClosure||today;
+  var closureDate=bulkClosure||'';
+  // 폐업/휴업 사유인데 폐업/휴업일을 입력하지 않은 경우 차단
+  if((reason==='폐업'||reason==='휴업')&&!closureDate){toast('폐업/휴업일을 입력하세요');return}
   selectedClients.forEach(id=>{
     var c=data.clients.find(function(x){return x.id===id});
     if(c&&c.status==='활성'){
