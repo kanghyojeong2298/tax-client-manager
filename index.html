@@ -4115,6 +4115,8 @@ function wasCorpTaxTarget(c, year) {
 
 // 소득세 귀속연도 판정: 사업자등록일 연도부터 신고대상
 function wasIncomeTaxTarget(c, year) {
+  // 이관 업체는 무조건 제외
+  if(c.status==='해임'&&c.dismissReason==='이관') return false;
   // 사업자등록일이 있으면 그 연도부터 신고대상
   var bizYear = c.bizRegDate ? parseInt(c.bizRegDate.split('-')[0]) : 0;
   if(bizYear && bizYear > year) return false;
