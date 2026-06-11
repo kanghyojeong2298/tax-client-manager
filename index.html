@@ -7249,9 +7249,9 @@ function handleExtraBulkUpload(input){
   reader.onload=function(e){
     try{
       var data_arr=new Uint8Array(e.target.result);
-      var workbook=XLSX.read(data_arr,{type:'array',cellDates:true});
+      var workbook=XLSX.read(data_arr,{type:'array'});
       var ws=workbook.Sheets[workbook.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws);
+      var rows=XLSX.utils.sheet_to_json(ws,{raw:false});
       var curMonth=document.getElementById('extraInvoiceMonth').value||document.getElementById('invoiceMonth').value;
       if(!curMonth){toast('조회월을 먼저 선택하세요');input.value='';return}
       var allClients=data.clients.filter(function(c){return c.status==='활성'||c.status==='해임'});
@@ -7259,18 +7259,10 @@ function handleExtraBulkUpload(input){
       rows.forEach(function(r){
         var type=String(r['유형']||'').trim();
         var clientRaw=String(r['업체명']||'').trim();
-        var amount=Number(r['입금액'])||0;
-        var rawMonth=r['해당월(6자리)']||r['해당월'];
-        var monthVal='';
-        if(rawMonth instanceof Date){
-          monthVal=rawMonth.getUTCFullYear()+'-'+String(rawMonth.getUTCMonth()+1).padStart(2,'0');
-        }else if(typeof rawMonth==='number'){
-          monthVal=String(Math.round(rawMonth));
-        }else{
-          monthVal=String(rawMonth||'').trim();
-        }
+        var amount=Number(String(r['입금액']||'').replace(/,/g,''))||0;
+        var monthVal=String(r['해당월(6자리)']||r['해당월']||'').trim();
         if(!type||!amount)return;
-        // 포맷 보정: 202605 → 2026-05
+        // 포맷 보정: 202605 → 2026-05, 2026.05 → 2026-05
         if(monthVal&&!/^\d{4}-\d{2}$/.test(monthVal)){
           monthVal=monthVal.replace(/[.\-\/ ]/g,'');
           if(/^\d{6}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4);
