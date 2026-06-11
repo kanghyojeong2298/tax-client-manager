@@ -7232,10 +7232,10 @@ function saveBu2Add(){
 function downloadExtraTemplate(){
   if(typeof XLSX==='undefined'){toast('SheetJS 로딩 중...');return}
   var wb=XLSX.utils.book_new();
-  var headers=['유형','업체명','입금액','해당월'];
-  var example=[['조정료','(주)예시업체','330000','2026-06']];
+  var headers=['유형','업체명','입금액','해당월(6자리)'];
+  var example=[['조정료','(주)예시업체','330000','202606']];
   var ws=XLSX.utils.aoa_to_sheet([headers].concat(example));
-  ws['!cols']=[{wch:18},{wch:22},{wch:15},{wch:12}];
+  ws['!cols']=[{wch:18},{wch:22},{wch:15},{wch:16}];
   XLSX.utils.book_append_sheet(wb,ws,'추가발행');
   XLSX.writeFile(wb,'추가발행_일괄등록_템플릿.xlsx');
   toast('템플릿 다운로드 완료');
@@ -7260,18 +7260,17 @@ function handleExtraBulkUpload(input){
         var type=String(r['유형']||'').trim();
         var clientRaw=String(r['업체명']||'').trim();
         var amount=Number(r['입금액'])||0;
-        var rawMonth=r['해당월'];
+        var rawMonth=r['해당월(6자리)']||r['해당월'];
         var monthVal='';
-        // 엑셀 날짜 객체 처리 (UTC 기준으로 변환 — 시간대 밀림 방지)
         if(rawMonth instanceof Date){
           monthVal=rawMonth.getUTCFullYear()+'-'+String(rawMonth.getUTCMonth()+1).padStart(2,'0');
         }else if(typeof rawMonth==='number'){
-          monthVal=String(rawMonth);
+          monthVal=String(Math.round(rawMonth));
         }else{
           monthVal=String(rawMonth||'').trim();
         }
         if(!type||!amount)return;
-        // 문자열 포맷 보정
+        // 포맷 보정: 202605 → 2026-05
         if(monthVal&&!/^\d{4}-\d{2}$/.test(monthVal)){
           monthVal=monthVal.replace(/[.\-\/ ]/g,'');
           if(/^\d{6}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4);
