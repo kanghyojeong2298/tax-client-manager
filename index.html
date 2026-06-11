@@ -566,7 +566,8 @@ tr:hover td{background:#f8fafc}
   <div class="MH"><h2 id="eiModalTitle">추가발행 등록</h2><button class="MC" onclick="closeExtraInvoiceModal()">&times;</button></div>
   <div class="MB">
     <div class="FG">
-      <div class="FGI"><label>유형 *</label><select id="ei_type"><option value="경정청구">경정청구</option><option value="수정신고">수정신고</option><option value="법인전환">법인전환</option><option value="재산세">재산세</option><option value="해명자료대응">해명자료대응</option><option value="기한후신고">기한후신고</option><option value="부가세신고수수료">부가세신고수수료</option><option value="조정료">조정료</option><option value="면세현황신고">면세현황신고</option><option value="양도세신고수수료">양도세신고수수료</option><option value="원천 소급신고">원천 소급신고</option><option value="부가세 분기신고">부가세 분기신고</option><option value="원천법인수정수수료">원천법인수정수수료</option><option value="소득세 검토 수수료">소득세 검토 수수료</option></select></div>
+      <div class="FGI"><label>유형 *</label><select id="ei_type" onchange="onEiTypeChange()"><option value="경정청구">경정청구</option><option value="수정신고">수정신고</option><option value="법인전환">법인전환</option><option value="재산세">재산세</option><option value="해명자료대응">해명자료대응</option><option value="기한후신고">기한후신고</option><option value="부가세신고수수료">부가세신고수수료</option><option value="조정료">조정료</option><option value="면세현황신고">면세현황신고</option><option value="양도세신고수수료">양도세신고수수료</option><option value="원천 소급신고">원천 소급신고</option><option value="부가세 분기신고">부가세 분기신고</option><option value="원천법인수정수수료">원천법인수정수수료</option><option value="소득세 검토 수수료">소득세 검토 수수료</option><option value="기타">기타</option></select></div>
+      <div class="FGI" id="eiCustomTypeGroup" style="display:none"><label>세부유형</label><input id="ei_customType" placeholder="예: 기초세팅비용"></div>
       <div class="FGI"><label>업체명</label><input id="ei_client" list="ei_clientList" autocomplete="off" placeholder="업체명 검색..."><datalist id="ei_clientList"></datalist></div>
       <div class="FGI"><label>담당자 *</label><select id="ei_staff"></select></div>
       <div class="FGI"><label>입금액 (원)</label><input id="ei_amount" type="number" min="0" step="10000"></div>
@@ -7405,11 +7406,26 @@ function confirmExtraBulkMatch(){
   toast('추가발행 '+cnt+'건 일괄등록 완료');
 }
 
+function onEiTypeChange(){
+  var isEtc=document.getElementById('ei_type').value==='기타';
+  document.getElementById('eiCustomTypeGroup').style.display=isEtc?'':'none';
+  if(!isEtc)document.getElementById('ei_customType').value='';
+}
+function getEiType(){
+  var sel=document.getElementById('ei_type').value;
+  if(sel==='기타'){
+    var custom=document.getElementById('ei_customType').value.trim();
+    return custom?'기타('+custom+')':'기타';
+  }
+  return sel;
+}
 var _eiEditIdx=-1;
 function openExtraInvoiceModal(){
   _eiEditIdx=-1;
   document.getElementById('ei_client').value='';
   document.getElementById('ei_amount').value='';
+  document.getElementById('ei_customType').value='';
+  document.getElementById('eiCustomTypeGroup').style.display='none';
   var curMonth=document.getElementById('extraInvoiceMonth').value||document.getElementById('invoiceMonth').value;
   document.getElementById('ei_month').value=curMonth;
   document.getElementById('ei_type').value='경정청구';
@@ -7432,7 +7448,18 @@ function editExtraInvoice(realIdx){
   var e=data.extraInvoices[realIdx];
   if(!e)return;
   document.getElementById('eiModalTitle').textContent='추가발행 수정';
-  document.getElementById('ei_type').value=e.type||'';
+  // 기타(세부유형) 파싱
+  var eType=e.type||'';
+  if(eType.indexOf('기타')===0){
+    document.getElementById('ei_type').value='기타';
+    var m=eType.match(/^기타\((.+)\)$/);
+    document.getElementById('ei_customType').value=m?m[1]:'';
+    document.getElementById('eiCustomTypeGroup').style.display='';
+  }else{
+    document.getElementById('ei_type').value=eType;
+    document.getElementById('ei_customType').value='';
+    document.getElementById('eiCustomTypeGroup').style.display='none';
+  }
   document.getElementById('ei_client').value=e.client||'';
   document.getElementById('ei_staff').value=e.staff||'';
   document.getElementById('ei_amount').value=e.amount||'';
@@ -7443,7 +7470,7 @@ function closeExtraInvoiceModal(){
 }
 function saveExtraInvoice(){
   if(!canEdit()){toast('🔒 등록 권한이 없습니다');return}
-  var type=document.getElementById('ei_type').value;
+  var type=getEiType();
   var client=document.getElementById('ei_client').value;
   var staff=document.getElementById('ei_staff').value;
   var amount=parseInt(document.getElementById('ei_amount').value)||0;
