@@ -7232,10 +7232,10 @@ function saveBu2Add(){
 function downloadExtraTemplate(){
   if(typeof XLSX==='undefined'){toast('SheetJS 로딩 중...');return}
   var wb=XLSX.utils.book_new();
-  var headers=['유형','업체명','담당자','입금액','해당월'];
-  var example=[['조정료','(주)예시업체','홍길동','330000','2026-06']];
+  var headers=['유형','업체명','입금액','해당월'];
+  var example=[['조정료','(주)예시업체','330000','2026-06']];
   var ws=XLSX.utils.aoa_to_sheet([headers].concat(example));
-  ws['!cols']=[{wch:18},{wch:22},{wch:12},{wch:15},{wch:12}];
+  ws['!cols']=[{wch:18},{wch:22},{wch:15},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws,'추가발행');
   XLSX.writeFile(wb,'추가발행_일괄등록_템플릿.xlsx');
   toast('템플릿 다운로드 완료');
@@ -7255,12 +7255,10 @@ function handleExtraBulkUpload(input){
       var curMonth=document.getElementById('extraInvoiceMonth').value||document.getElementById('invoiceMonth').value;
       if(!curMonth){toast('조회월을 먼저 선택하세요');input.value='';return}
       var allClients=data.clients.filter(function(c){return c.status==='활성'||c.status==='해임'});
-      var staffNames=data.staff.map(function(s){return s.name});
       var matchRows=[];
       rows.forEach(function(r){
         var type=String(r['유형']||'').trim();
         var clientRaw=String(r['업체명']||'').trim();
-        var staff=String(r['담당자']||'').trim();
         var amount=Number(r['입금액'])||0;
         var monthVal=String(r['해당월']||'').trim();
         if(!type||!amount)return;
@@ -7270,15 +7268,13 @@ function handleExtraBulkUpload(input){
           if(/^\d{6}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4);
         }
         if(!monthVal)monthVal=curMonth;
-        // 업체명 매칭
+        // 업체명 매칭 → 담당자 자동 적용
         var clientMatch=clientRaw?findBestMatch(clientRaw,allClients):null;
-        // 담당자 유효성
-        var staffValid=staffNames.indexOf(staff)!==-1;
+        var autoStaff=clientMatch?(clientMatch.client.manager||''):'';
         matchRows.push({
-          type:type,clientRaw:clientRaw,staff:staff,amount:amount,month:monthVal,
+          type:type,clientRaw:clientRaw,staff:autoStaff,amount:amount,month:monthVal,
           clientMatch:clientMatch,
-          clientSelected:clientMatch?clientMatch.client.name:clientRaw,
-          staffValid:staffValid
+          clientSelected:clientMatch?clientMatch.client.name:clientRaw
         });
       });
       if(!matchRows.length){toast('유효한 데이터가 없습니다');input.value='';return}
@@ -7303,8 +7299,8 @@ function renderExtraBulkMatchModal(){
     if(r.clientMatch&&r.clientMatch.type==='exact'){status='<span style="color:#38a169;font-size:10px;font-weight:600">✓ 일치</span>';exactCnt++}
     else if(r.clientMatch&&r.clientMatch.type==='fuzzy'){status='<span style="color:#d69e2e;font-size:10px;font-weight:600">≈ 유사 ('+Math.round(r.clientMatch.score*100)+'%)</span>';fuzzyCnt++}
     else if(r.clientRaw){status='<span style="color:#e53e3e;font-size:10px;font-weight:600">✗ 미매칭</span>';unmatchedCnt++}
-    var staffColor=r.staffValid?'#38a169':'#e53e3e';
-    var staffIcon=r.staffValid?'✓':'✗';
+    var staffColor=r.staff?'#38a169':'#e53e3e';
+    var staffLabel=r.staff?('✓ '+escH(r.staff)):'✗ 미매칭(담당자 없음)';
     var bg=(r.clientMatch&&r.clientMatch.type==='exact')?'#f0fff4':
       (r.clientMatch)?'#fffff0':'#fff5f5';
     return '<div style="background:'+bg+';border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:6px">'
@@ -7322,7 +7318,7 @@ function renderExtraBulkMatchModal(){
       +'<button class="btn btn-xs btn-secondary" onclick="openExtraBulkSearch('+i+')" style="padding:3px 6px;font-size:10px;white-space:nowrap">검색</button>'
       +'</div></div></div>'
       +'<div style="display:flex;gap:12px;font-size:11px;color:#718096">'
-      +'<span>담당: <span style="color:'+staffColor+';font-weight:600">'+staffIcon+' '+escH(r.staff)+'</span></span>'
+      +'<span>담당: <span style="color:'+staffColor+';font-weight:600">'+staffLabel+'</span></span>'
       +'</div></div>';
   }).join('');
   el.innerHTML=html;
@@ -7367,7 +7363,11 @@ function selectExtraBulkClient(rowIdx,name){
   var inp=document.getElementById('ebm_client_'+rowIdx);
   if(inp)inp.value=name;
   _extraBulkMatchData.rows[rowIdx].clientSelected=name;
+  // 선택한 업체의 담당자로 자동 업데이트
+  var matched=data.clients.find(function(c){return c.name===name});
+  if(matched)_extraBulkMatchData.rows[rowIdx].staff=matched.manager||'';
   var drop=document.getElementById('ebmSearchDrop');if(drop)drop.remove();
+  renderExtraBulkMatchModal();
 }
 function closeExtraBulkMatchModal(){
   document.getElementById('extraBulkMatchModal').classList.remove('show');
@@ -7377,6 +7377,9 @@ function confirmExtraBulkMatch(){
   if(!_extraBulkMatchData)return;
   if(!canEdit()){toast('🔒 등록 권한이 없습니다');return}
   var rows=_extraBulkMatchData.rows;
+  // 담당자 미매칭 건 확인
+  var noStaff=rows.filter(function(r){return !r.staff});
+  if(noStaff.length&&!confirm('담당자 미매칭 '+noStaff.length+'건이 있습니다. 그대로 등록하시겠습니까?'))return;
   if(!data.extraInvoices)data.extraInvoices=[];
   if(!data.bonusData)data.bonusData={};
   if(!data.bonusData.redItems)data.bonusData.redItems=[];
@@ -7384,10 +7387,11 @@ function confirmExtraBulkMatch(){
   rows.forEach(function(r,i){
     var clientName=document.getElementById('ebm_client_'+i);
     var client=clientName?clientName.value:(r.clientSelected||r.clientRaw);
+    var staff=r.staff||'';
     var now=new Date().toISOString();
-    var inv={type:r.type,client:client,staff:r.staff,amount:r.amount,month:r.month,paid:'N',date:now};
+    var inv={type:r.type,client:client,staff:staff,amount:r.amount,month:r.month,paid:'N',date:now};
     data.extraInvoices.push(inv);
-    data.bonusData.redItems.push({staff:r.staff,type:r.type,client:client,amount:r.amount,month:r.month,paid:'N',date:now});
+    data.bonusData.redItems.push({staff:staff,type:r.type,client:client,amount:r.amount,month:r.month,paid:'N',date:now});
     cnt++;
   });
   saveData();
