@@ -7397,13 +7397,41 @@ function confirmExtraBulkMatch(){
     data.bonusData.redItems.push({staff:staff,type:r.type,client:client,amount:r.amount,month:r.month,paid:'N',date:now});
     cnt++;
   });
-  saveData();
+  // localStorage 즉시 저장
+  _lastLocalSave=Date.now();
+  data._localTimestamp=_lastLocalSave;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  // Firestore 저장 (완료 확인)
   closeExtraBulkMatchModal();
   renderInvoice();renderExtraInvoices();renderBu2Fee();
-  // 섹션 열기
   var sec=document.getElementById('invSecExtra');
   if(sec&&sec.style.display==='none')toggleInvSection('invSecExtra');
-  toast('추가발행 '+cnt+'건 일괄등록 완료');
+  toast('추가발행 '+cnt+'건 등록 중... 클라우드 저장 대기');
+  if(auth.currentUser&&_firestoreLoaded){
+    _suppressRemote=true;
+    var rawJson=JSON.stringify(data);
+    var compressed=_compressData(data);
+    var useCompressed=compressed&&compressed.length<rawJson.length;
+    var payload={
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy:auth.currentUser?auth.currentUser.email:'',
+      localTimestamp:_lastLocalSave,
+      sessionId:_sessionId,
+      compressed:useCompressed
+    };
+    if(useCompressed){payload.dataZ=compressed;}else{payload.data=rawJson;}
+    db.collection('shared').doc('main').set(payload).then(function(){
+      setTimeout(function(){_suppressRemote=false},2000);
+      toast('✅ 추가발행 '+cnt+'건 일괄등록 + 클라우드 저장 완료');
+    }).catch(function(e){
+      console.error('Firestore bulk save error:',e);
+      _suppressRemote=false;
+      toast('⚠️ '+cnt+'건 등록됨 (로컬 저장 완료). 클라우드 저장 실패 — 새로고침 하지 마세요! 재시도 중...','error');
+      _saveToFirestore(0);
+    });
+  }else{
+    toast('추가발행 '+cnt+'건 일괄등록 완료 (로컬 저장)');
+  }
 }
 
 function onEiTypeChange(){
