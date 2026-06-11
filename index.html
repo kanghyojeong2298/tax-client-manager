@@ -7262,26 +7262,23 @@ function handleExtraBulkUpload(input){
         var amount=Number(r['입금액'])||0;
         var rawMonth=r['해당월'];
         var monthVal='';
-        // 엑셀 날짜 객체 처리
+        // 엑셀 날짜 객체 처리 (UTC 기준으로 변환 — 시간대 밀림 방지)
         if(rawMonth instanceof Date){
-          monthVal=rawMonth.getFullYear()+'-'+String(rawMonth.getMonth()+1).padStart(2,'0');
-        }else if(typeof rawMonth==='number'&&rawMonth>202000){
-          // 숫자 202606 형태
-          var ms=String(rawMonth);
-          if(ms.length===6)monthVal=ms.slice(0,4)+'-'+ms.slice(4);
-          else monthVal=ms;
+          monthVal=rawMonth.getUTCFullYear()+'-'+String(rawMonth.getUTCMonth()+1).padStart(2,'0');
+        }else if(typeof rawMonth==='number'){
+          monthVal=String(rawMonth);
         }else{
           monthVal=String(rawMonth||'').trim();
         }
         if(!type||!amount)return;
-        // 문자열 포맷 보정: 202606 → 2026-06, 2026.06 → 2026-06, 2026/06 → 2026-06
+        // 문자열 포맷 보정
         if(monthVal&&!/^\d{4}-\d{2}$/.test(monthVal)){
-          monthVal=monthVal.replace(/[.\/ ]/g,'');
+          monthVal=monthVal.replace(/[.\-\/ ]/g,'');
           if(/^\d{6}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4);
-          // 2026-06-01 같은 전체 날짜 → 앞 7자리만
-          if(/^\d{4}-\d{2}-\d{2}/.test(monthVal))monthVal=monthVal.slice(0,7);
+          else if(/^\d{8}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4,6);
         }
-        if(!monthVal)monthVal=curMonth;
+        // 최종 방어: YYYY-MM 형식이 아니면 현재 조회월 사용
+        if(!/^\d{4}-\d{2}$/.test(monthVal))monthVal=curMonth;
         // 업체명 매칭 → 담당자 자동 적용
         var clientMatch=clientRaw?findBestMatch(clientRaw,allClients):null;
         var autoStaff=clientMatch?(clientMatch.client.manager||''):'';
@@ -7526,8 +7523,17 @@ function renderExtraInvoices(monthParam){
   var extras=(data.extraInvoices||[]).filter(function(e){return e.month===month&&e.type!=='부가세신고수수료'});
   var bonusRates={경정청구:0.2,수정신고:0.2,법인전환:0.2,재산세:0.2,해명자료대응:0.1,기한후신고:0.2};
   if(!extras.length){var mp2=month.split('-');tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#a0aec0">'+mp2[0]+'년 '+parseInt(mp2[1])+'월 추가발행 없음</td></tr>';return}
-  tb.innerHTML=extras.map(function(e,i){
-    // 전체 인덱스 찾기
+  // 미매칭 업체 판별 (등록된 업체에 없는 이름)
+  var clientNames={};
+  (data.clients||[]).forEach(function(c){clientNames[c.name]=true;clientNames[normalizeName(c.name)]=true});
+  var unmatched=[];var matched=[];
+  extras.forEach(function(e){
+    var isMatch=clientNames[e.client]||clientNames[normalizeName(e.client)];
+    if(isMatch)matched.push(e);else unmatched.push(e);
+  });
+  // 미매칭 상단, 매칭 하단 순서로 합침
+  var sorted=unmatched.concat(matched);
+  function renderExtraRow(e,isUnmatched){
     var realIdx=data.extraInvoices.indexOf(e);
     var bonus=Math.round(e.amount*(bonusRates[e.type]||0.2));
     var dateStr=new Date(e.date).toLocaleDateString('ko-KR');
@@ -7539,8 +7545,18 @@ function renderExtraInvoices(monthParam){
       +'<option value="Y" '+(isPaid?'selected':'')+'>입금완료</option>'
       +'<option value="N" '+(isUnpaid?'selected':'')+'>미입금</option></select>';
     var bonusText=isPaid?W(bonus):'<span style="color:#a0aec0;text-decoration:line-through">'+W(bonus)+'</span>';
-    return '<tr><td>'+e.type+'</td><td>'+e.client+'</td><td style="text-align:center">'+e.staff+'</td><td style="text-align:center">'+W(e.amount)+'</td><td style="text-align:center">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-secondary" onclick="editExtraInvoice('+realIdx+')">수정</button> <button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
-  }).join('');
+    var rowStyle=isUnmatched?'background:#fff5f5':'';
+    var clientCell=isUnmatched?'<span style="color:#e53e3e;font-weight:600">'+e.client+'</span> <span style="font-size:9px;color:#e53e3e">미매칭</span>':e.client;
+    return '<tr style="'+rowStyle+'"><td>'+e.type+'</td><td>'+clientCell+'</td><td style="text-align:center">'+e.staff+'</td><td style="text-align:center">'+W(e.amount)+'</td><td style="text-align:center">'+bonusText+'</td><td style="text-align:center">'+paidBadge+'</td><td style="text-align:center">'+dateStr+'</td><td><button class="btn btn-xs btn-secondary" onclick="editExtraInvoice('+realIdx+')">수정</button> <button class="btn btn-xs btn-danger" onclick="delExtraInvoice('+realIdx+')">삭제</button></td></tr>';
+  }
+  var html='';
+  if(unmatched.length){
+    html+='<tr><td colspan="8" style="background:#fed7d7;padding:4px 10px;font-size:11px;font-weight:600;color:#c53030">⚠ 미매칭 업체 '+unmatched.length+'건</td></tr>';
+    html+=unmatched.map(function(e){return renderExtraRow(e,true)}).join('');
+    if(matched.length)html+='<tr><td colspan="8" style="background:#f7fafc;padding:4px 10px;font-size:11px;font-weight:600;color:#718096">매칭 업체 '+matched.length+'건</td></tr>';
+  }
+  html+=matched.map(function(e){return renderExtraRow(e,false)}).join('');
+  tb.innerHTML=html;
 }
 
 function renderRetroInvoices(monthParam){
