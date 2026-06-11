@@ -7249,7 +7249,7 @@ function handleExtraBulkUpload(input){
   reader.onload=function(e){
     try{
       var data_arr=new Uint8Array(e.target.result);
-      var workbook=XLSX.read(data_arr,{type:'array'});
+      var workbook=XLSX.read(data_arr,{type:'array',cellDates:true});
       var ws=workbook.Sheets[workbook.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws);
       var curMonth=document.getElementById('extraInvoiceMonth').value||document.getElementById('invoiceMonth').value;
@@ -7260,12 +7260,26 @@ function handleExtraBulkUpload(input){
         var type=String(r['유형']||'').trim();
         var clientRaw=String(r['업체명']||'').trim();
         var amount=Number(r['입금액'])||0;
-        var monthVal=String(r['해당월']||'').trim();
+        var rawMonth=r['해당월'];
+        var monthVal='';
+        // 엑셀 날짜 객체 처리
+        if(rawMonth instanceof Date){
+          monthVal=rawMonth.getFullYear()+'-'+String(rawMonth.getMonth()+1).padStart(2,'0');
+        }else if(typeof rawMonth==='number'&&rawMonth>202000){
+          // 숫자 202606 형태
+          var ms=String(rawMonth);
+          if(ms.length===6)monthVal=ms.slice(0,4)+'-'+ms.slice(4);
+          else monthVal=ms;
+        }else{
+          monthVal=String(rawMonth||'').trim();
+        }
         if(!type||!amount)return;
-        // 해당월 포맷 보정: 202606 → 2026-06, 2026.06 → 2026-06
+        // 문자열 포맷 보정: 202606 → 2026-06, 2026.06 → 2026-06, 2026/06 → 2026-06
         if(monthVal&&!/^\d{4}-\d{2}$/.test(monthVal)){
           monthVal=monthVal.replace(/[.\/ ]/g,'');
           if(/^\d{6}$/.test(monthVal))monthVal=monthVal.slice(0,4)+'-'+monthVal.slice(4);
+          // 2026-06-01 같은 전체 날짜 → 앞 7자리만
+          if(/^\d{4}-\d{2}-\d{2}/.test(monthVal))monthVal=monthVal.slice(0,7);
         }
         if(!monthVal)monthVal=curMonth;
         // 업체명 매칭 → 담당자 자동 적용
