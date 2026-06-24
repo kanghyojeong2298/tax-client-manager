@@ -6073,18 +6073,35 @@ function exportListExcel(type){
     });
     ws=XLSX.utils.aoa_to_sheet(rows);sheetName='법인세신고';fileName='법인세신고_'+(document.getElementById('corpYear').value||'')+'.xlsx';
   }else if(type==='income'){
-    var el=document.getElementById('incomeGroups');
+    // [수정] 화면(renderIncomeList)과 동일한 필터·그룹핑으로 데이터를 직접 생성.
+    // 기존에는 옛 표 구조(.GC/.GH/tbody)를 스크래핑했으나 현재 화면은 div 카드 구조라
+    // 일치하는 요소가 없어 헤더만 있는 빈 시트가 만들어지던 문제를 해결.
+    var incYear=parseInt(document.getElementById('incomeYear').value)||new Date().getFullYear();
+    var incS=(document.getElementById('incomeSearch').value||'').toLowerCase();
+    var incMgr=document.getElementById('incomeFilterManager').value;
     var headers=['대표자','번호','업체명','유형','구분','업종','신고','담당','기장료','조정료'];
     var rows=[headers];
-    el.querySelectorAll('.GC').forEach(function(gc){
-      var owner=gc.querySelector('.GH strong');
-      var ownerName=owner?owner.textContent.trim():'';
-      gc.querySelectorAll('tbody tr').forEach(function(tr){
-        var r=[ownerName];tr.querySelectorAll('td').forEach(function(td){r.push(td.textContent.trim())});
-        if(r.length>1)rows.push(r);
+    var incList=data.clients.filter(function(c){
+      return (c.entityType==='개인'||c.entityType==='성실개인'||c.entityType==='간이')
+        && wasIncomeTaxTarget(c,incYear)
+        && (!incS||c.name.toLowerCase().includes(incS)||(c.ownerName||'').toLowerCase().includes(incS)||c.id.toLowerCase().includes(incS))
+        && (!incMgr||c.manager===incMgr);
+    });
+    var incGroups={};
+    incList.forEach(function(c){
+      var ownerKey=(c.ownerName||'(미입력)')+'|'+(c.ownerBirth||'');
+      if(!incGroups[ownerKey])incGroups[ownerKey]=[];
+      incGroups[ownerKey].push(c);
+    });
+    Object.keys(incGroups).sort().forEach(function(k){
+      var displayName=k.split('|')[0];
+      incGroups[k].forEach(function(c){
+        var incTax=c.taxType==='부가세신고대상'?'부가세':c.taxType==='면세신고대상'?'면세':'-';
+        rows.push([displayName,c.id,c.name,c.type,c.entityType,bizLabel(c),incTax,c.manager||'-',Number(c.fee||0),Number(c.adjFee||0)]);
       });
     });
-    ws=XLSX.utils.aoa_to_sheet(rows);sheetName='소득세신고';fileName='소득세신고_'+(document.getElementById('incomeYear').value||'')+'.xlsx';
+    if(rows.length<=1){toast('소득세 신고대상이 없습니다');return}
+    ws=XLSX.utils.aoa_to_sheet(rows);sheetName='소득세신고';fileName='소득세신고_'+incYear+'.xlsx';
   }else if(type==='sincere'){
     var tbl=document.getElementById('sincereTable');
     var headers=['번호','업체명','대표자','유형','구분','업종','신고','담당','기장료','조정료','상태'];
