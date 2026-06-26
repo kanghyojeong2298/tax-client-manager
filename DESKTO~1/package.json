@@ -1,0 +1,35 @@
+{
+  "name": "tax-client-manager",
+  "productName": "세무고객관리",
+  "version": "1.0.0",
+  "description": "세무법인 엑스퍼트 강남 - 고객관리 시스템 데스크톱 앱",
+  "main": "main.js",
+  "author": "세무법인 엑스퍼트 강남",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-packager . 세무고객관리 --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite --app-version=1.0.0 --win32metadata.CompanyName=\"세무법인 엑스퍼트 강남\" --win32metadata.FileDescription=\"고객관리 시스템\"",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "kr.taxexpert.clientmanager",
+    "productName": "세무고객관리",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "세무고객관리"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "@electron/packager": "^18.3.0",
+    "electron-builder": "^24.13.3"
+  }
+}
