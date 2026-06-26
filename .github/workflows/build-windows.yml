@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+# 수동 실행(Run workflow) 또는 desktop-app 폴더 변경 시 자동 빌드
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'desktop-app/**'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 의존성 설치
+        run: npm install
+
+      - name: Windows 설치파일 빌드
+        run: npm run dist
+
+      - name: 결과물(.exe) 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: 세무고객관리-Windows-설치파일
+          path: desktop-app/dist/*.exe
+          if-no-files-found: error
